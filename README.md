@@ -2,8 +2,6 @@
 
 一个以本地 Markdown 文件为核心、内置 WebDAV / S3 同步的笔记应用，基于 [Native Shell (nsh)](https://nsh.dev) 使用 Rust 编写，在每个平台上使用系统原生 UI 渲染。
 
-> 状态：项目骨架。MVP 范围与相关文档待讨论（见 [docs/](docs/)）。
-
 ## 目标平台
 
 | 平台 | nsh 后端 | 运行方式 |
