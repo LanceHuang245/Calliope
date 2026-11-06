@@ -1,0 +1,16 @@
+# Cargo
+target/
+
+# nsh: generated runners, type declarations and build output (recreated by every nsh command)
+.nsh/
+
+# Editors and OS
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Agent related
+AGENTS.md
+CLAUDE.md
+docs/private/

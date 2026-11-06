@@ -1,0 +1,35 @@
+[workspace]
+resolver = "3"
+members = ["app", "crates/*"]
+# `nsh` writes a Cargo workspace of its own into `app/.nsh/rust` (the app's
+# runners, `describe` and the headless test runner).
+exclude = ["app/.nsh"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[workspace.dependencies]
+# Calliope's own crates.
+calliope-core = { path = "crates/calliope-core" }
+calliope-sync = { path = "crates/calliope-sync" }
+
+# Native Shell (https://nsh.dev), the release on crates.io. Keep every nsh
+# crate on one version: the `nsh` CLI builds the app's runners against the
+# version the app asks for.
+# `nsh-base`: `highlight` colors code blocks, `math` typesets formulas.
+nsh-core = "0.4.0"
+nsh-base = { version = "0.4.0", features = ["highlight", "math"] }
+nsh-engine = { version = "0.4.0", default-features = false }
+nsh-testing = "0.4.0"
+# The desktop backends `cargo run` uses (`app/src/main.rs`). Without `js`, a
+# Rust app links no QuickJS.
+nsh-platform-linux = { version = "0.4.0", default-features = false }
+nsh-platform-macos = { version = "0.4.0", default-features = false }
+nsh-platform-windows = { version = "0.4.0", default-features = false }
+
+# Shared third-party crates.
+env_logger = "0.11"
+log = "0.4"
+thiserror = "2"

@@ -1,0 +1,10 @@
+[package]
+name = "calliope-core"
+description = "Calliope's knowledge base: the vault of Markdown notes, links, backlinks and the graph. No UI."
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+log.workspace = true
+thiserror.workspace = true

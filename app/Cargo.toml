@@ -1,0 +1,31 @@
+[package]
+name = "calliope"
+description = "Calliope: a Markdown knowledge base with built-in WebDAV and S3 sync, on Native Shell."
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+calliope-core.workspace = true
+calliope-sync.workspace = true
+log.workspace = true
+nsh-base.workspace = true
+nsh-core.workspace = true
+
+# `cargo run` (src/main.rs) on this machine's desktop backend. `nsh run` and
+# `nsh package` build runners of their own for every target.
+[target.'cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))'.dependencies]
+env_logger.workspace = true
+
+[target.'cfg(target_os = "linux")'.dependencies]
+nsh-platform-linux.workspace = true
+
+[target.'cfg(target_os = "macos")'.dependencies]
+nsh-platform-macos.workspace = true
+
+[target.'cfg(target_os = "windows")'.dependencies]
+nsh-platform-windows.workspace = true
+
+[dev-dependencies]
+nsh-engine.workspace = true
+nsh-testing.workspace = true
