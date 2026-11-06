@@ -14,9 +14,6 @@ nsh-core.workspace = true
 
 # `cargo run` (src/main.rs) on this machine's desktop backend. `nsh run` and
 # `nsh package` build runners of their own for every target.
-[target.'cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))'.dependencies]
-env_logger.workspace = true
-
 [target.'cfg(target_os = "linux")'.dependencies]
 nsh-platform-linux.workspace = true
 

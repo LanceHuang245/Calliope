@@ -2,6 +2,10 @@
   "cssVars": {
     "theme": {
       "radius": "0.5rem"
+    },
+    "light": {
+      "sidebar": "oklch(0.955 0 0)",
+      "sidebar-border": "oklch(0.9 0 0)"
     }
   }
 }

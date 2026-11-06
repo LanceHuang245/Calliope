@@ -19,7 +19,8 @@ calliope-sync = { path = "crates/calliope-sync" }
 # crate on one version: the `nsh` CLI builds the app's runners against the
 # version the app asks for.
 # `nsh-base`: `highlight` colors code blocks, `math` typesets formulas.
-nsh-core = "0.4.0"
+# `svg`: the icons (`app/src/components/icons.rs`).
+nsh-core = { version = "0.4.0", features = ["svg"] }
 nsh-base = { version = "0.4.0", features = ["highlight", "math"] }
 nsh-engine = { version = "0.4.0", default-features = false }
 nsh-testing = "0.4.0"
@@ -30,6 +31,7 @@ nsh-platform-macos = { version = "0.4.0", default-features = false }
 nsh-platform-windows = { version = "0.4.0", default-features = false }
 
 # Shared third-party crates.
-env_logger = "0.11"
 log = "0.4"
+notify = "8"
 thiserror = "2"
+url = "2"

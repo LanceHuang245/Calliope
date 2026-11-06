@@ -8,3 +8,8 @@ publish.workspace = true
 [dependencies]
 log.workspace = true
 thiserror.workspace = true
+url.workspace = true
+
+# Watching a vault for other apps' changes: the desktops only.
+[target.'cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))'.dependencies]
+notify.workspace = true

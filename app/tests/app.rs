@@ -1,10 +1,142 @@
-//! The app, started headless on the real engine (`cargo test`).
+//! The app, started headless on the real engine (`cargo test`), each test
+//! on a vault of its own.
 
+use std::{fs, path::PathBuf, time::Duration};
+
+use nsh_core::{
+    file_dialog::FileRequest,
+    platform::{Idiom, Lifecycle, Os},
+    prelude::{px, size},
+};
 use nsh_engine::{EngineConfig, Root};
-use nsh_testing::Headless;
+use nsh_testing::{DialogAnswer, Headless, MemoryStorage};
 
+/// A vault in a fresh temporary folder: a folder and a note with front
+/// matter.
+fn vault(name: &str) -> PathBuf {
+    let root = std::env::temp_dir().join(format!("calliope-{name}-{}", std::process::id()));
+    let _ = fs::remove_dir_all(&root);
+    fs::create_dir_all(root.join("Journal")).unwrap();
+    fs::write(
+        root.join("Hello.md"),
+        "---\ntags: [a]\n---\n# Hello world\n\nSome **bold** text.\n",
+    )
+    .unwrap();
+    root
+}
+
+/// The phone layout `EngineConfig::new` gives: files, then a note.
 #[test]
-fn shows_the_welcome_note() {
+fn phone_opens_reads_and_creates_notes() {
+    let root = vault("phone");
+    // The phones open the vault `CALLIOPE_VAULT` names; the only test that
+    // reads it.
+    // SAFETY: set before the app starts, read by the app only.
+    unsafe { std::env::set_var("CALLIOPE_VAULT", &root) };
     let mut app = Headless::start(EngineConfig::new(Root::of::<calliope::App>())).unwrap();
-    app.wait_for("欢迎使用 Calliope").unwrap();
+
+    // The files: folders first, notes by their title.
+    app.wait_for("Journal").unwrap();
+    app.wait_for("Hello").unwrap();
+
+    // A note opens in Edit; Read renders it, its front matter folded.
+    app.press("Hello").unwrap();
+    app.wait_for("label:Markdown source").unwrap();
+    app.press("Read").unwrap();
+    app.wait_for("Hello world").unwrap();
+    app.wait_for("Properties").unwrap();
+
+    // Back to the files (the system's back), a new note is made on disk.
+    app.back().unwrap();
+    app.press("label:New note").unwrap();
+    app.wait_for("Untitled").unwrap();
+    assert!(root.join("Untitled.md").exists());
+
+    // Another app's change shows when the app comes back to the front.
+    fs::write(root.join("Untitled.md"), "# Changed elsewhere\n").unwrap();
+    app.set_environment("background", |e| e.lifecycle = Lifecycle::Background)
+        .unwrap();
+    app.set_environment("foreground", |e| e.lifecycle = Lifecycle::Active)
+        .unwrap();
+    app.wait_for("Changed elsewhere").unwrap();
+    let _ = fs::remove_dir_all(&root);
+}
+
+/// The desktop layout, on the last vault opened: autosave, and another
+/// app's change to a note with unsaved changes.
+#[test]
+fn desktop_autosaves_and_keeps_both_sides_of_a_conflict() {
+    let root = vault("desktop");
+    let mut config = EngineConfig::new(Root::of::<calliope::App>());
+    config.environment.idiom = Idiom::Desktop;
+    config.environment.os = Os::Linux;
+    config.environment.file_requests = true;
+    config.viewport = size(px(1200.0), px(800.0));
+    config.storage = Some(MemoryStorage::new([(
+        "vault".to_owned(),
+        root.display().to_string(),
+    )]));
+    let mut app = Headless::start(config).unwrap();
+
+    // Typing is saved within a second or so.
+    app.wait_for("Hello").unwrap();
+    app.press("Hello").unwrap();
+    app.type_text("label:Markdown source", "X").unwrap();
+    app.wait(Duration::from_millis(1500)).unwrap();
+    let saved = fs::read_to_string(root.join("Hello.md")).unwrap();
+    assert!(saved.contains('X'), "not saved: {saved:?}");
+
+    // Another app writes while there are unsaved changes: a conflict,
+    // neither side overwritten.
+    app.type_text("label:Markdown source", "Y").unwrap();
+    fs::write(root.join("Hello.md"), "# Theirs\n").unwrap();
+    app.wait_for_within(
+        "This note was changed by another app.",
+        Duration::from_secs(5),
+    )
+    .unwrap();
+    app.wait(Duration::from_millis(1500)).unwrap();
+    assert_eq!(
+        fs::read_to_string(root.join("Hello.md")).unwrap(),
+        "# Theirs\n"
+    );
+
+    // Keeping mine writes it.
+    app.press("Keep mine").unwrap();
+    let mine = fs::read_to_string(root.join("Hello.md")).unwrap();
+    assert!(mine.contains('Y'), "not kept: {mine:?}");
+
+    // The title renames the note in place.
+    app.clear("label:Title").unwrap();
+    app.type_text("label:Title", "Greeting").unwrap();
+    app.submit("label:Title").unwrap();
+    app.wait_for("Greeting").unwrap();
+    assert!(root.join("Greeting.md").exists() && !root.join("Hello.md").exists());
+    app.wait(Duration::from_millis(500)).unwrap();
+
+    // A folder's context menu makes a note in it.
+    app.right_click("text:Journal").unwrap();
+    app.press("text:New note").unwrap();
+    app.wait_for("Untitled").unwrap();
+    assert!(root.join("Journal").join("Untitled.md").exists());
+
+    // Renaming happens in a dialog.
+    app.right_click("text:Journal").unwrap();
+    app.press("text:Rename").unwrap();
+    app.clear("label:Name").unwrap();
+    app.type_text("label:Name", "Diary").unwrap();
+    app.submit("label:Name").unwrap();
+    app.wait_for("Diary").unwrap();
+    // The dialog fades out before the next right click.
+    app.wait(Duration::from_millis(500)).unwrap();
+    assert!(root.join("Diary").join("Untitled.md").exists());
+
+    // A note's context menu deletes it, once confirmed.
+    app.on_dialog(|_| DialogAnswer::Press("Delete".into()));
+    app.right_click("text:Greeting").unwrap();
+    app.press("text:Delete").unwrap();
+    // Headless records the request to the system's trash, and moves nothing.
+    let trash = FileRequest::MoveToTrash(root.join("Greeting.md"));
+    assert!(app.screen().file_requests().contains(&trash));
+    let _ = fs::remove_dir_all(&root);
 }
