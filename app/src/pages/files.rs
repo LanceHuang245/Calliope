@@ -11,7 +11,7 @@ use crate::{
     components::{
         action, card, field, icon_button,
         icons::{self, icon},
-        menu_entry, menu_popup,
+        menu_entry, menu_popup, overlay,
     },
     store::{self, Route},
     strings,
@@ -136,7 +136,7 @@ fn item_menu(path: String, kind: Option<EntryKind>, row: View) -> impl IntoEleme
     let (rename, delete) = (path.clone(), path);
     context_menu()
         .popup_style(menu_popup)
-        .backdrop_class("bg-black/40")
+        .backdrop_style(|s| s.bg(overlay()))
         .trigger(row)
         .child(folder)
         .child(menu_entry(
@@ -172,7 +172,7 @@ pub(crate) fn rename_dialog(path: String) -> impl IntoElement {
             view()
                 .absolute()
                 .inset_0()
-                .bg(rgba(0x00000066))
+                .bg(overlay)
                 .on_press(store::cancel_rename),
         )
         .child(

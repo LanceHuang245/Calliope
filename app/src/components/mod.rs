@@ -178,6 +178,15 @@ pub(crate) fn card() -> View {
         .shadow_sm()
 }
 
+/// The dimming behind dialogs and menu sheets: the theme's `overlay`
+/// (`theme.json`), the foreground faded where a theme has none.
+pub(crate) fn overlay() -> AdaptiveColor {
+    let theme = theme();
+    theme
+        .color("overlay")
+        .unwrap_or_else(|| theme.foreground.opacity(0.4))
+}
+
 /// A heading over a group of settings.
 pub(crate) fn section(title: &'static str) -> impl IntoElement {
     text(title)
