@@ -48,7 +48,6 @@ pub(crate) fn icon_button(
     )
 }
 
-/// A small label over what the pointer rests on.
 fn tooltip(label: &'static str) -> AnyElement {
     view()
         .px_2()
@@ -135,7 +134,6 @@ pub(crate) fn segmented<T: Copy + PartialEq + 'static>(
         }))
 }
 
-/// A one-line text field in the theme's look.
 pub(crate) fn field(placeholder: &'static str) -> nsh_base::Input {
     input()
         .placeholder(placeholder)
@@ -148,7 +146,6 @@ pub(crate) fn field(placeholder: &'static str) -> nsh_base::Input {
         .text_color(move || theme().foreground)
 }
 
-/// A bar across the top of an area: a message and its actions.
 pub(crate) fn banner(message: impl IntoReactive<SharedString>) -> View {
     view()
         .flex_row()
@@ -187,7 +184,6 @@ pub(crate) fn overlay() -> AdaptiveColor {
         .unwrap_or_else(|| theme.foreground.opacity(0.4))
 }
 
-/// A heading over a group of settings.
 pub(crate) fn section(title: &'static str) -> impl IntoElement {
     text(title)
         .text_sm()

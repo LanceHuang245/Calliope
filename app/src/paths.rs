@@ -12,7 +12,6 @@ const APP_ID: &str = "io.github.lancehuang245.calliope";
 pub(crate) fn data_dir() -> Option<PathBuf> {
     let env = |name: &str| std::env::var_os(name).map(PathBuf::from);
     let base = if cfg!(target_os = "android") {
-        // The internal files directory Android gives every app.
         return Some(PathBuf::from("/data/data").join(APP_ID).join("files"));
     } else if cfg!(any(target_os = "macos", target_os = "ios")) {
         env("HOME").map(|home| home.join("Library/Application Support"))

@@ -60,7 +60,6 @@ jobs:
       - run: rustup show
       - uses: Swatinem/rust-cache@v2
 
-      # The nsh CLI, from its release.
       - name: nsh (macOS, Linux)
         if: runner.os != 'Windows'
         run: |
@@ -73,7 +72,6 @@ jobs:
           irm https://nsh.dev/install.ps1 | iex
           "$env:LOCALAPPDATA\nsh\bin" >> $env:GITHUB_PATH
 
-      # What each target builds with.
       - name: GTK 4
         if: matrix.target == 'linux'
         run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev clang

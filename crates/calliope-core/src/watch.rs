@@ -19,7 +19,6 @@ pub struct Watcher {
 }
 
 impl Watcher {
-    /// Starts watching `root` and everything under it.
     pub fn new(root: &Path) -> notify::Result<Self> {
         let changed = Arc::new(AtomicBool::new(false));
         let flag = changed.clone();
@@ -37,7 +36,6 @@ impl Watcher {
         })
     }
 
-    /// Whether anything changed since the last call.
     pub fn take_changed(&self) -> bool {
         self.changed.swap(false, Ordering::Relaxed)
     }

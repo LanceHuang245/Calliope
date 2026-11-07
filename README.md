@@ -26,7 +26,7 @@ Calliope/
 │   │   ├── lib.rs          根组件 App 与 #[native_module]
 │   │   ├── main.rs         cargo run：桌面后端入口
 │   │   ├── shell.rs        应用外壳：桌面（侧边栏 + 工作区）/ 移动（系统 TabBar + 导航栈）
-│   │   ├── store.rs        UI 状态
+│   │   ├── store/          UI 状态：仓库与文件树、当前笔记与自动保存、文件操作
 │   │   ├── strings.rs      界面文案（集中管理）
 │   │   ├── paths.rs        应用数据目录、手机沙盒仓库；logging.rs：日志文件
 │   │   ├── pages/          页面（笔记、图谱、设置……）

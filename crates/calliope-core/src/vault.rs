@@ -1,6 +1,6 @@
 //! A vault: a folder of notes (`*.md`) and attachments (images, PDFs), with
 //! Calliope's own settings in `.calliope/`. Opening, listing, reading,
-//! writing, renaming and watching the files.
+//! writing and renaming the files.
 //!
 //! Paths inside a vault are relative, `/`-separated strings (`"a/b.md"`):
 //! the same on every platform, and usable as ids by the UI.
@@ -10,10 +10,8 @@ use std::{
     path::{Path, PathBuf},
 };
 
-/// The extensions shown as images in notes.
 const IMAGE_EXTENSIONS: &[&str] = &["png", "jpg", "jpeg", "gif", "webp", "svg"];
 
-/// What a file in the vault is.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EntryKind {
     Folder,
@@ -23,7 +21,6 @@ pub enum EntryKind {
 }
 
 impl EntryKind {
-    /// The kind of the file at `path` (not a folder), by its extension.
     pub fn of_file(path: &str) -> Self {
         let ext = Path::new(path)
             .extension()
@@ -45,41 +42,37 @@ impl EntryKind {
 pub struct Entry {
     /// The path relative to the vault's root, `/`-separated.
     pub path: String,
-    /// The file name.
     pub name: String,
     pub kind: EntryKind,
     pub children: Vec<Entry>,
 }
 
-/// A vault on disk.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Vault {
     root: PathBuf,
 }
 
 impl Vault {
-    /// Opens the folder at `root` as a vault, creating it (and its
-    /// `.calliope/`) when missing: opening and creating a vault are one.
+    /// Opens the folder at `root` as a vault, creating it when missing:
+    /// opening and creating a vault are one.
     pub fn open(root: impl Into<PathBuf>) -> io::Result<Self> {
         let root = root.into();
-        fs::create_dir_all(root.join(".calliope"))?;
+        fs::create_dir_all(&root)?;
         Ok(Self { root })
     }
 
-    /// The vault's folder.
     pub fn root(&self) -> &Path {
         &self.root
     }
 
-    /// The vault's name: its folder's name.
     pub fn name(&self) -> String {
         self.root
             .file_name()
-            .map(|n| n.to_string_lossy().into_owned())
-            .unwrap_or_else(|| self.root.display().to_string())
+            .unwrap_or_default()
+            .to_string_lossy()
+            .into_owned()
     }
 
-    /// The absolute path of `rel`.
     pub fn abs(&self, rel: &str) -> PathBuf {
         rel.split('/')
             .filter(|p| !p.is_empty())
@@ -92,7 +85,6 @@ impl Vault {
         scan_dir(&self.root, "")
     }
 
-    /// The text of the note at `rel`.
     pub fn read(&self, rel: &str) -> io::Result<String> {
         fs::read_to_string(self.abs(rel))
     }
@@ -168,12 +160,7 @@ impl Vault {
     /// there is no system trash: the phones).
     pub fn trash(&self, rel: &str) -> io::Result<()> {
         fs::create_dir_all(self.root.join(".trash"))?;
-        let (_, name) = split(rel);
-        let (stem, ext) = match name.rfind('.') {
-            Some(i) if i > 0 => name.split_at(i),
-            _ => (name, ""),
-        };
-        let target = self.unique(".trash", stem, ext);
+        let target = self.unique(".trash", split(rel).1, "");
         fs::rename(self.abs(rel), self.abs(&target))
     }
 
@@ -189,7 +176,6 @@ impl Vault {
     }
 }
 
-/// `dir/name`, or `name` at the root.
 fn join(dir: &str, name: &str) -> String {
     if dir.is_empty() {
         name.to_owned()
@@ -198,12 +184,10 @@ fn join(dir: &str, name: &str) -> String {
     }
 }
 
-/// `rel`'s folder and name.
 fn split(rel: &str) -> (&str, &str) {
     rel.rsplit_once('/').unwrap_or(("", rel))
 }
 
-/// The entries of `dir` (at `rel` in the vault), recursively.
 fn scan_dir(dir: &Path, rel: &str) -> io::Result<Vec<Entry>> {
     let mut entries = Vec::new();
     for item in fs::read_dir(dir)? {
@@ -230,7 +214,6 @@ fn scan_dir(dir: &Path, rel: &str) -> io::Result<Vec<Entry>> {
         };
         entries.push(entry);
     }
-    // Folders first, then by name (case-insensitive).
     entries.sort_by(|a, b| {
         (a.kind != EntryKind::Folder)
             .cmp(&(b.kind != EntryKind::Folder))
@@ -243,7 +226,6 @@ fn scan_dir(dir: &Path, rel: &str) -> io::Result<Vec<Entry>> {
 mod tests {
     use super::*;
 
-    /// A fresh vault in a temporary folder of its own.
     fn vault(name: &str) -> Vault {
         let root =
             std::env::temp_dir().join(format!("calliope-test-{name}-{}", std::process::id()));

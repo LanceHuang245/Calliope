@@ -6,7 +6,7 @@
 //! - [`shell`]: the app shell, the layout of each device idiom, no page logic;
 //! - [`pages`]: one module per page, reading and changing [`store`];
 //! - [`components`]: Calliope's own styled controls, built on `nsh-base`;
-//! - [`store`]: the UI state, over `calliope-core` and `calliope-sync`;
+//! - [`store`]: the UI state, over `calliope-core`;
 //! - [`strings`]: every text of the UI, [`paths`] and [`logging`]: the
 //!   app's own files.
 
@@ -28,7 +28,6 @@ fn native(registry: &mut Registry) {
     registry.register::<App>();
 }
 
-/// The app's root: the whole surface, on the theme's background.
 #[component]
 pub fn App() -> impl IntoElement {
     logging::init();

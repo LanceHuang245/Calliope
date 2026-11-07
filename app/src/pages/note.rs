@@ -80,7 +80,6 @@ fn note_view() -> impl IntoElement {
         }))
 }
 
-/// The title and the mode switch; on a phone, the way back to the files.
 fn header() -> impl IntoElement {
     let modes = match is_desktop() {
         true => vec![
@@ -133,7 +132,6 @@ fn title() -> impl IntoElement {
         .hover(|s| s.bg(theme().accent))
 }
 
-/// The Markdown source.
 fn source(editor: ComponentRef<Editor>, query: Signal<String>) -> impl IntoElement {
     nsh_base::editor()
         .value(move || Some(store::text()))
@@ -210,15 +208,14 @@ fn find_bar(
 
 /// The rendered note: its front matter folded away, then its Markdown.
 fn preview() -> impl IntoElement {
-    let split = move || {
+    let parts = computed(move || {
         let text = store::preview();
         let (front, body) = note::split_front_matter(&text);
         (
             front.map(str::to_owned),
             SharedString::from(body.to_owned()),
         )
-    };
-    let parts = computed(split);
+    });
     scroll().flex_1().child(
         view()
             .p_6()

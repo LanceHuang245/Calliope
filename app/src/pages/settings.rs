@@ -60,7 +60,6 @@ pub(crate) fn settings_page() -> impl IntoElement {
     )
 }
 
-/// Secondary text.
 fn muted(content: impl IntoReactive<SharedString>) -> impl IntoElement {
     text(content)
         .text_sm()

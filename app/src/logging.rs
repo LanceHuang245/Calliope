@@ -44,7 +44,6 @@ impl log::Log for FileLogger {
     }
 }
 
-/// The log file.
 pub(crate) fn path() -> Option<PathBuf> {
     crate::paths::data_dir().map(|dir| dir.join("calliope.log"))
 }

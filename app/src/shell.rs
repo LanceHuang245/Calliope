@@ -57,7 +57,6 @@ fn sidebar() -> impl IntoElement {
         .child(files_page())
 }
 
-/// The desktop without a vault: opening one.
 fn no_vault() -> impl IntoElement {
     view()
         .flex_1()
@@ -103,7 +102,6 @@ fn mobile() -> impl IntoElement {
         }))
 }
 
-/// The last message for the user (an error), until dismissed.
 fn notice() -> impl IntoElement {
     dynamic(move || {
         store::notice().map(|message| {

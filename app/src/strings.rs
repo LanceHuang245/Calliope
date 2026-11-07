@@ -54,12 +54,10 @@ pub(crate) const LICENSE: &str = "Calliope is licensed under the Apache License 
 pub(crate) const EXPORT_LOGS: &str = "Export logs…";
 pub(crate) const LOGS_COPIED: &str = "The logs were copied to the clipboard.";
 
-/// `Version 0.1.0`.
 pub(crate) fn version() -> String {
     format!("Version {}", env!("CARGO_PKG_VERSION"))
 }
 
-/// The notice after keeping the user's text of a note in conflict.
 pub(crate) fn saved_copy(path: &str) -> String {
     format!("Your changes were saved to {path}.")
 }
