@@ -9,12 +9,13 @@ use nsh_base::{SheetEvent, sheet, theme};
 use nsh_core::prelude::*;
 
 use crate::{
-    components::{action, banner, icon_button, icons},
+    components::{banner, icon_button, icons},
     pages::{
         files::{files_page, rename_dialog},
         home::home_page,
         note::note_page,
         settings::settings_page,
+        welcome::welcome_page,
     },
     store::{self, Route},
     strings,
@@ -45,7 +46,7 @@ fn desktop() -> impl IntoElement {
             untracked(|| match (route, has_vault) {
                 (Route::Settings, _) => settings_page().into_element(),
                 (_, true) => note_page().into_element(),
-                (_, false) => no_vault().into_element(),
+                (_, false) => welcome_page().into_element(),
             })
         })))
 }
@@ -56,28 +57,6 @@ fn sidebar() -> impl IntoElement {
         .border_r_1()
         .border_color(move || theme().sidebar_border)
         .child(files_page())
-}
-
-fn no_vault() -> impl IntoElement {
-    view()
-        .flex_1()
-        .items_center()
-        .justify_center()
-        .gap_3()
-        .child(
-            text(strings::APP_NAME)
-                .text_2xl()
-                .font_weight(FontWeight::SEMIBOLD)
-                .text_color(move || theme().foreground),
-        )
-        .child(text(strings::NO_VAULT).text_color(move || theme().muted_foreground))
-        .child(
-            view()
-                .flex_row()
-                .gap_2()
-                .child(action(strings::OPEN_FOLDER, || store::pick_vault(false)))
-                .child(action(strings::NEW_VAULT, || store::pick_vault(true))),
-        )
 }
 
 fn mobile() -> impl IntoElement {
@@ -95,7 +74,9 @@ fn mobile() -> impl IntoElement {
         .child(notice())
         .child(dynamic(move || {
             let route = store::route();
+            let has_vault = store::vault().is_some();
             untracked(|| match route {
+                _ if !has_vault => welcome_page().into_element(),
                 Route::Home => home_page().into_element(),
                 Route::Note => note_page().into_element(),
                 Route::Settings => settings_page().into_element(),

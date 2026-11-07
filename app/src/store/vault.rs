@@ -57,7 +57,11 @@ pub(crate) fn open_vault(root: PathBuf) {
     save_or_copy();
     match Vault::open(&root) {
         Ok(vault) => {
-            remember(&vault);
+            let last = match is_desktop() {
+                true => root.to_string_lossy().into_owned(),
+                false => vault.name(),
+            };
+            let _ = Storage::set_item(LAST_VAULT, last);
             watcher::watch(&vault);
             log::info!("opened the vault {}", root.display());
             set(OpenVault(Some(vault)));
@@ -71,39 +75,14 @@ pub(crate) fn open_vault(root: PathBuf) {
     }
 }
 
-fn remember(vault: &Vault) {
-    let last = match is_desktop() {
-        true => vault.root().to_string_lossy().into_owned(),
-        false => vault.name(),
-    };
-    let _ = Storage::set_item(LAST_VAULT, last);
-}
-
-pub(crate) fn renaming_vault() -> bool {
-    get::<RenamingVault>().0
-}
-
-pub(crate) fn start_rename_vault() {
-    set(RenamingVault(true));
-}
-
-pub(crate) fn cancel_rename_vault() {
-    set(RenamingVault(false));
-}
-
-/// Renames the vault's folder to `name` (the phones' vault in the sandbox);
-/// the open note stays open, its path being the vault's.
-pub(crate) fn rename_vault(name: &str) {
-    set(RenamingVault(false));
-    let Some(vault) = untracked(vault) else {
+/// Creates the phone's vault named `name` in the app's sandbox and opens
+/// it. An empty name would open the sandbox itself.
+pub(crate) fn create_vault(name: &str) {
+    if name.trim().is_empty() {
         return;
-    };
-    match vault.renamed(name) {
-        Ok(vault) => {
-            remember(&vault);
-            set(OpenVault(Some(vault)));
-        }
-        Err(e) => notify(e),
+    }
+    if let Some(root) = paths::sandbox_vault(name.trim()) {
+        open_vault(root);
     }
 }
 

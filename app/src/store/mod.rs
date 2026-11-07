@@ -30,8 +30,8 @@ pub(crate) use self::{
         select, text,
     },
     vault::{
-        cancel_rename_vault, has_files, kind_of, open_vault, pick_vault, refresh, rename_vault,
-        renaming_vault, start_rename_vault, tree_items, vault, vault_name, vault_path,
+        create_vault, has_files, kind_of, open_vault, pick_vault, refresh, tree_items, vault,
+        vault_name, vault_path,
     },
 };
 use self::{
@@ -99,8 +99,6 @@ struct Conflict(bool);
 #[derive(Clone, Default)]
 struct Renaming(Option<String>);
 #[derive(Clone, Default)]
-struct RenamingVault(bool);
-#[derive(Clone, Default)]
 struct Notice(Option<String>);
 #[derive(Clone, Default)]
 struct SidebarHidden(bool);
@@ -138,17 +136,13 @@ pub(crate) fn init() {
     };
     set_theme(theme);
 
-    // The desktops reopen the last vault; the phones always use the one in
-    // the app's sandbox, made on first start.
-    let start = match is_desktop() {
-        true => Storage::get_item(LAST_VAULT)
-            .map(PathBuf::from)
-            .filter(|root| root.is_dir()),
-        false => {
-            let name = Storage::get_item(LAST_VAULT);
-            paths::sandbox_vault(name.as_deref().unwrap_or("Vault"))
-        }
-    };
+    // The last vault opened, if it is still there; a phone without one
+    // creates one first.
+    let start = Storage::get_item(LAST_VAULT).and_then(|last| match is_desktop() {
+        true => Some(PathBuf::from(last)),
+        false => paths::sandbox_vault(&last),
+    });
+    let start = start.filter(|root| root.is_dir());
     if let Some(root) = start {
         open_vault(root);
     }

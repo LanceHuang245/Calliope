@@ -30,19 +30,25 @@ fn vault(name: &str) -> PathBuf {
     root
 }
 
-/// The phone layout `EngineConfig::new` gives: the home page, the files in
-/// the menu, then a note.
+/// The phone layout `EngineConfig::new` gives: creating the vault, the home
+/// page, the files in the menu, then a note.
 #[test]
 fn phone_opens_reads_and_creates_notes() {
     let root = vault("phone");
-    // The phones open the vault `CALLIOPE_VAULT` names; the only test that
+    // The phones keep their vaults in `CALLIOPE_SANDBOX`; the only test that
     // reads it.
     // SAFETY: set before the app starts, read by the app only.
-    unsafe { std::env::set_var("CALLIOPE_VAULT", &root) };
+    unsafe { std::env::set_var("CALLIOPE_SANDBOX", root.parent().unwrap()) };
     let mut app = Headless::start(EngineConfig::new(Root::of::<calliope::App>())).unwrap();
 
-    // The app opens on the home page; the menu shows the files, folders
-    // first, notes by their title.
+    // Without a vault the phone names one; here the vault made above.
+    let name = root.file_name().unwrap().to_str().unwrap();
+    app.wait_for("label:Vault name").unwrap();
+    app.type_text("label:Vault name", name).unwrap();
+    app.press("text:Create").unwrap();
+
+    // The home page; the menu shows the files, folders first, notes by
+    // their title.
     app.wait_for("Select a note, or create one.").unwrap();
     app.press("label:Menu").unwrap();
     app.wait_for("Journal").unwrap();
@@ -71,22 +77,7 @@ fn phone_opens_reads_and_creates_notes() {
     app.set_environment("foreground", |e| e.lifecycle = Lifecycle::Active)
         .unwrap();
     app.wait_for("Changed elsewhere").unwrap();
-
-    // The phone renames its vault from the settings.
-    app.press("label:Menu").unwrap();
-    app.press("label:Settings").unwrap();
-    app.press("text:Rename").unwrap();
-    let name = format!("calliope-phone-renamed-{}", std::process::id());
-    app.clear("label:Name").unwrap();
-    app.type_text("label:Name", &name).unwrap();
-    app.submit("label:Name").unwrap();
-    let renamed = root.with_file_name(&name);
-    app.wait_until("the vault renamed", Duration::from_secs(2), |_| {
-        renamed.join("Untitled.md").exists()
-    })
-    .unwrap();
-    assert!(!root.exists());
-    let _ = fs::remove_dir_all(&renamed);
+    let _ = fs::remove_dir_all(&root);
 }
 
 /// The desktop layout, on the last vault opened: autosave, and another

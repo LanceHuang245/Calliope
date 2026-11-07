@@ -4,7 +4,7 @@ use nsh_base::theme;
 use nsh_core::prelude::*;
 
 use crate::{
-    components::{action, icon_button, icons, name_dialog, section, segmented},
+    components::{action, icon_button, icons, section, segmented},
     store::{self, Route, Theme},
     strings,
 };
@@ -46,24 +46,12 @@ pub(crate) fn settings_page() -> impl IntoElement {
             ))
             .child(section(strings::VAULT))
             .child(muted(store::vault_path))
-            // The phones keep their vault in the app's sandbox: they can
-            // rename it, not move it.
-            .child(match is_desktop() {
-                true => view()
+            // The phones keep their vault in the app's sandbox.
+            .child(is_desktop().then(|| {
+                view()
                     .flex_row()
                     .child(action(strings::OPEN_FOLDER, || store::pick_vault(false)))
                     .child(action(strings::NEW_VAULT, || store::pick_vault(true)))
-                    .into_element(),
-                false => action(strings::RENAME, store::start_rename_vault).into_element(),
-            })
-            .child(dynamic(move || {
-                store::renaming_vault().then(|| {
-                    name_dialog(
-                        store::vault_name(),
-                        store::rename_vault,
-                        store::cancel_rename_vault,
-                    )
-                })
             }))
             .child(section(strings::ABOUT))
             .child(muted(strings::version()))

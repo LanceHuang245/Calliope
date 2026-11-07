@@ -4,14 +4,14 @@
 //! sidebar, the phones as a screen.
 
 use calliope_core::vault::EntryKind;
-use nsh_base::{TreeEntry, context_menu, menu_separator, theme, tree};
+use nsh_base::{TreeEntry, context_menu, dialog, menu_separator, theme, tree};
 use nsh_core::prelude::*;
 
 use crate::{
     components::{
-        card, icon_button,
+        action, card, field, icon_button,
         icons::{self, icon},
-        menu_entry, menu_popup, name_dialog, overlay,
+        menu_entry, menu_popup, overlay, primary,
     },
     store::{self, Route},
     strings,
@@ -164,9 +164,54 @@ fn separator() -> impl IntoElement {
         .bg(move || theme().border)
 }
 
-/// The dialog renaming the item at `path` (a note by its title).
+/// The dialog renaming the item at `path` (a note by its title), centered
+/// over a dimmed backdrop: Return or Rename renames; Cancel, Escape or the
+/// backdrop closes it.
 pub(crate) fn rename_dialog(path: String) -> impl IntoElement {
     let name = path.rsplit('/').next().unwrap_or(&path);
     let name = name.strip_suffix(".md").unwrap_or(name).to_owned();
-    name_dialog(name, store::rename, store::cancel_rename)
+    let typed = signal(name.clone());
+    dialog()
+        .animation(ModalAnimation::Fade)
+        .on_cancel(store::cancel_rename)
+        .flex_1()
+        .child(
+            view()
+                .absolute()
+                .inset_0()
+                .bg(overlay)
+                .on_press(store::cancel_rename),
+        )
+        .child(
+            card()
+                .m(auto())
+                .w_80()
+                .gap_3()
+                .p_5()
+                .shadow_lg()
+                .child(
+                    text(strings::RENAME)
+                        .text_lg()
+                        .font_weight(FontWeight::SEMIBOLD)
+                        .text_color(move || theme().foreground),
+                )
+                .child(
+                    field(strings::NAME)
+                        .label(strings::NAME)
+                        .default_value(name)
+                        .auto_focus(true)
+                        .on_change(move |text: &str| typed.set(text.to_owned()))
+                        .on_submit(|text: &str| store::rename(text)),
+                )
+                .child(
+                    view()
+                        .flex_row()
+                        .justify_end()
+                        .gap_2()
+                        .child(action(strings::CANCEL, store::cancel_rename))
+                        .child(primary(strings::RENAME, move || {
+                            store::rename(&typed.get())
+                        })),
+                ),
+        )
 }

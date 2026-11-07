@@ -23,10 +23,11 @@ pub(crate) fn data_dir() -> Option<PathBuf> {
     base.map(|dir| dir.join(APP_ID))
 }
 
-/// The phones' vault named `name`, in the app's sandbox. `CALLIOPE_VAULT`
-/// names another folder, for tests and development.
+/// The phones' vault named `name`, in the app's sandbox (the data
+/// directory, or `CALLIOPE_SANDBOX` for tests and development).
 pub(crate) fn sandbox_vault(name: &str) -> Option<PathBuf> {
-    std::env::var_os("CALLIOPE_VAULT")
+    std::env::var_os("CALLIOPE_SANDBOX")
         .map(PathBuf::from)
-        .or_else(|| data_dir().map(|dir| dir.join(name)))
+        .or_else(data_dir)
+        .map(|dir| dir.join(name))
 }

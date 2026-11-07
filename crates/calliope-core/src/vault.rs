@@ -61,20 +61,6 @@ impl Vault {
         Ok(Self { root })
     }
 
-    /// Renames the vault's folder to `name`, next to where it is; an
-    /// `AlreadyExists` error when the name is taken.
-    pub fn renamed(&self, name: &str) -> io::Result<Vault> {
-        let root = self.root.with_file_name(name.trim());
-        if root.exists() {
-            return Err(io::Error::new(
-                io::ErrorKind::AlreadyExists,
-                format!("{name} already exists"),
-            ));
-        }
-        fs::rename(&self.root, &root)?;
-        Ok(Self { root })
-    }
-
     pub fn root(&self) -> &Path {
         &self.root
     }
@@ -287,23 +273,6 @@ mod tests {
         let other = v.create_note(&dir).unwrap();
         let err = v.rename(&other, "Ideas").unwrap_err();
         assert_eq!(err.kind(), io::ErrorKind::AlreadyExists);
-    }
-
-    #[test]
-    fn renames_the_vault_keeping_its_notes() {
-        let v = vault("renamed");
-        let note = v.create_note("").unwrap();
-        let taken = vault("renamed-taken");
-        let name = taken.root().file_name().unwrap().to_str().unwrap();
-        assert_eq!(
-            v.renamed(name).unwrap_err().kind(),
-            io::ErrorKind::AlreadyExists
-        );
-        let to = format!("calliope-test-renamed-to-{}", std::process::id());
-        let renamed = v.renamed(&to).unwrap();
-        assert_eq!(renamed.name(), to);
-        assert!(renamed.abs(&note).exists() && !v.root().exists());
-        let _ = fs::remove_dir_all(renamed.root());
     }
 
     #[test]

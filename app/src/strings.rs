@@ -20,6 +20,9 @@ pub(crate) const CANCEL: &str = "Cancel";
 pub(crate) const NO_VAULT: &str = "Open a folder of Markdown notes, or create a new vault.";
 pub(crate) const OPEN_FOLDER: &str = "Open folder…";
 pub(crate) const NEW_VAULT: &str = "New vault…";
+pub(crate) const NAME_VAULT: &str = "Name a vault to keep your notes in.";
+pub(crate) const VAULT_NAME: &str = "Vault name";
+pub(crate) const CREATE: &str = "Create";
 
 // Note.
 pub(crate) const NO_NOTE: &str = "Select a note, or create one.";
