@@ -1,6 +1,3 @@
-# Every push: the checks on the three desktops (formatting, lints and
-# every test; the app's UI tests run headless, no display needed), then the
-# installable app for the five platforms, as artifacts of the run.
 name: CI
 
 on:
@@ -8,8 +5,6 @@ on:
   pull_request:
 
 env:
-  # The nsh CLI builds the app against the nsh crates of its own version:
-  # keep it on the version `Cargo.toml` asks for.
   NSH_VERSION: v0.4.0
 
 jobs:
@@ -17,7 +12,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # GTK 4.14+ is on Ubuntu 24.04.
         os: [ubuntu-24.04, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
@@ -25,7 +19,6 @@ jobs:
       - name: GTK 4
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev
-      # rust-toolchain.toml picks the toolchain, its components and targets.
       - run: rustup show
       - uses: Swatinem/rust-cache@v2
       - run: cargo fmt --all --check
@@ -50,7 +43,6 @@ jobs:
           - target: android
             os: ubuntu-24.04
             artifact: dist/Calliope.apk
-          # Unsigned: the developer signs it to install it on a device.
           - target: ios
             os: macos-latest
             artifact: dist/Calliope.ipa
@@ -73,7 +65,7 @@ jobs:
           "$env:LOCALAPPDATA\nsh\bin" >> $env:GITHUB_PATH
 
       - name: GTK 4
-        if: matrix.target == 'linux'
+        if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev clang
       - name: Android SDK and NDK
         if: matrix.target == 'android'
@@ -83,7 +75,6 @@ jobs:
 
       - run: nsh package app --target ${{ matrix.target }} -o dist
 
-      # Bundles zipped whole: the macOS app, and the iOS app as an IPA.
       - name: Zip the macOS app
         if: matrix.target == 'macos'
         run: ditto -c -k --keepParent dist/Calliope.app dist/Calliope-macos.zip
