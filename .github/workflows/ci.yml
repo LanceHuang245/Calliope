@@ -18,10 +18,10 @@ jobs:
       fail-fast: false
       matrix:
         # GTK 4.14+ is on Ubuntu 24.04.
-        os: [ubuntu-24.04, macos-14, windows-latest]
+        os: [ubuntu-24.04, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: GTK 4
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev
@@ -45,18 +45,18 @@ jobs:
             os: windows-latest
             artifact: dist/Calliope.zip
           - target: macos
-            os: macos-14
+            os: macos-latest
             artifact: dist/Calliope-macos.zip
           - target: android
             os: ubuntu-24.04
             artifact: dist/Calliope.apk
           # Unsigned: the developer signs it to install it on a device.
           - target: ios
-            os: macos-14
+            os: macos-latest
             artifact: dist/Calliope.ipa
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: rustup show
       - uses: Swatinem/rust-cache@v2
 
@@ -96,7 +96,7 @@ jobs:
           mv dist/Calliope.app dist/Payload/
           cd dist && zip -qry Calliope.ipa Payload
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: Calliope-${{ matrix.target }}
           path: ${{ matrix.artifact }}
