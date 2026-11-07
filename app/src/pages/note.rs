@@ -6,8 +6,8 @@
 
 use calliope_core::note;
 use nsh_base::{
-    Editor, EditorApi, EditorCommand, EditorSearch, TextViewLinks, h_resizable, input,
-    resizable_panel, text_view, text_view::Image, theme,
+    Editor, EditorApi, EditorClasses, EditorCommand, EditorSearch, TextViewLinks, h_resizable,
+    input, resizable_panel, text_view, text_view::Image, theme,
 };
 use nsh_core::{keymap::When, prelude::*};
 
@@ -127,6 +127,11 @@ fn title() -> impl IntoElement {
 }
 
 fn source(editor: ComponentRef<Editor>, query: Signal<String>) -> impl IntoElement {
+    // Room around the text: the gutter (its fold markers) already makes the
+    // left side's; its rows move down with the text's.
+    let mut classes = EditorClasses::default();
+    classes.gutter = Some("py-4".into());
+    classes.content = Some("py-4 pr-10".into());
     nsh_base::editor()
         .value(move || Some(store::text()))
         .on_change(store::edit)
@@ -134,6 +139,8 @@ fn source(editor: ComponentRef<Editor>, query: Signal<String>) -> impl IntoEleme
         .accessibility_label(strings::SOURCE)
         .soft_wrap(true)
         .line_numbers(false)
+        .active_line(false)
+        .classes(classes)
         .search(move || {
             let query = query.get();
             (!query.is_empty()).then(|| EditorSearch::new(query))
