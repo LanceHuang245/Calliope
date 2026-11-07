@@ -1,12 +1,17 @@
 //! The app, started headless on the real engine (`cargo test`), each test
 //! on a vault of its own.
 
-use std::{fs, path::PathBuf, time::Duration};
+use std::{
+    fs,
+    path::PathBuf,
+    time::{Duration, SystemTime},
+};
 
 use nsh_core::{
     file_dialog::FileRequest,
     platform::{Idiom, Lifecycle, Os},
     prelude::{px, size},
+    time::Clock,
 };
 use nsh_engine::{EngineConfig, Root};
 use nsh_testing::{DialogAnswer, Headless, MemoryStorage};
@@ -71,6 +76,9 @@ fn desktop_autosaves_and_keeps_both_sides_of_a_conflict() {
     config.environment.idiom = Idiom::Desktop;
     config.environment.os = Os::Linux;
     config.environment.file_requests = true;
+    // Time moves only with the test's steps: no autosave can come between
+    // typing and another app's write, on a fast machine or a slow one.
+    config.clock = Clock::manual(SystemTime::now());
     config.viewport = size(px(1200.0), px(800.0));
     config.storage = Some(MemoryStorage::new([(
         "vault".to_owned(),
