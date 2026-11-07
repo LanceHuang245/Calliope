@@ -24,6 +24,7 @@ pub(crate) const NEW_VAULT: &str = "New vault…";
 // Note.
 pub(crate) const NO_NOTE: &str = "Select a note, or create one.";
 pub(crate) const BACK: &str = "Back";
+pub(crate) const MENU: &str = "Menu";
 pub(crate) const EDIT: &str = "Edit";
 pub(crate) const SPLIT: &str = "Split";
 pub(crate) const READ: &str = "Read";

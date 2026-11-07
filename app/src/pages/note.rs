@@ -11,9 +11,10 @@ use nsh_base::{
 };
 use nsh_core::{keymap::When, prelude::*};
 
+use super::home::{home_page, menu_button};
 use crate::{
     components::{action, banner, field, icon_button, icons, segmented},
-    store::{self, Mode, Route},
+    store::{self, Mode},
     strings,
 };
 
@@ -26,10 +27,7 @@ pub(crate) fn note_page() -> impl IntoElement {
     let opened = computed(store::opened);
     dynamic(move || match opened.get() {
         Some(_) => untracked(note_view).into_element(),
-        None => text(strings::NO_NOTE)
-            .m_6()
-            .text_color(move || theme().muted_foreground)
-            .into_element(),
+        None => home_page().into_element(),
     })
 }
 
@@ -99,11 +97,7 @@ fn header() -> impl IntoElement {
         .border_b_1()
         .border_color(move || theme().sidebar_border)
         .shadow_sm()
-        .child((!is_desktop()).then(|| {
-            icon_button(icons::CHEVRON_LEFT, strings::BACK, || {
-                store::set_route(Route::Files)
-            })
-        }))
+        .child((!is_desktop()).then(menu_button))
         .child(title())
         .child(segmented(modes, store::mode, store::set_mode))
 }

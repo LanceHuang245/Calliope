@@ -57,19 +57,53 @@ pub(crate) fn open_vault(root: PathBuf) {
     save_or_copy();
     match Vault::open(&root) {
         Ok(vault) => {
-            if is_desktop() {
-                let _ = Storage::set_item(LAST_VAULT, root.to_string_lossy());
-            }
+            remember(&vault);
             watcher::watch(&vault);
             log::info!("opened the vault {}", root.display());
             set(OpenVault(Some(vault)));
             set(NotePath(None));
             set(Selected(None));
             set(Expanded(Vec::new()));
-            set(Route::Files);
+            set(Route::Home);
             refresh();
         }
         Err(e) => notify(format!("{}: {e}", root.display())),
+    }
+}
+
+fn remember(vault: &Vault) {
+    let last = match is_desktop() {
+        true => vault.root().to_string_lossy().into_owned(),
+        false => vault.name(),
+    };
+    let _ = Storage::set_item(LAST_VAULT, last);
+}
+
+pub(crate) fn renaming_vault() -> bool {
+    get::<RenamingVault>().0
+}
+
+pub(crate) fn start_rename_vault() {
+    set(RenamingVault(true));
+}
+
+pub(crate) fn cancel_rename_vault() {
+    set(RenamingVault(false));
+}
+
+/// Renames the vault's folder to `name` (the phones' vault in the sandbox);
+/// the open note stays open, its path being the vault's.
+pub(crate) fn rename_vault(name: &str) {
+    set(RenamingVault(false));
+    let Some(vault) = untracked(vault) else {
+        return;
+    };
+    match vault.renamed(name) {
+        Ok(vault) => {
+            remember(&vault);
+            set(OpenVault(Some(vault)));
+        }
+        Err(e) => notify(e),
     }
 }
 

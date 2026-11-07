@@ -2,5 +2,6 @@
 //! reaches into another page.
 
 pub(crate) mod files;
+pub(crate) mod home;
 pub(crate) mod note;
 pub(crate) mod settings;

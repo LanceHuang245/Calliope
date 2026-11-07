@@ -30,8 +30,8 @@ pub(crate) use self::{
         select, text,
     },
     vault::{
-        has_files, kind_of, open_vault, pick_vault, refresh, tree_items, vault, vault_name,
-        vault_path,
+        cancel_rename_vault, has_files, kind_of, open_vault, pick_vault, refresh, rename_vault,
+        renaming_vault, start_rename_vault, tree_items, vault, vault_name, vault_path,
     },
 };
 use self::{
@@ -40,6 +40,8 @@ use self::{
 };
 use crate::{logging, paths, strings};
 
+/// The last vault opened: its folder on the desktops, its name in the
+/// sandbox on the phones.
 const LAST_VAULT: &str = "vault";
 const THEME: &str = "theme";
 
@@ -52,11 +54,12 @@ pub(crate) enum Mode {
 }
 
 /// What the main area shows: on a phone the whole screen, on a desktop the
-/// workspace beside the sidebar (`Files` and `Note` both show the note).
+/// workspace beside the sidebar (`Home` and `Note` both show the open note,
+/// the home page without one).
 #[derive(Clone, Copy, PartialEq, Eq, Default)]
 pub(crate) enum Route {
     #[default]
-    Files,
+    Home,
     Note,
     Settings,
 }
@@ -96,9 +99,14 @@ struct Conflict(bool);
 #[derive(Clone, Default)]
 struct Renaming(Option<String>);
 #[derive(Clone, Default)]
+struct RenamingVault(bool);
+#[derive(Clone, Default)]
 struct Notice(Option<String>);
 #[derive(Clone, Default)]
 struct SidebarHidden(bool);
+/// The phone's menu: the files, slid in from the left over the page.
+#[derive(Clone, Default)]
+struct MenuOpen(bool);
 /// The root's owner: tasks run under it outlive the view that started
 /// them (a menu closes as its item is chosen).
 #[derive(Clone, Default)]
@@ -136,7 +144,10 @@ pub(crate) fn init() {
         true => Storage::get_item(LAST_VAULT)
             .map(PathBuf::from)
             .filter(|root| root.is_dir()),
-        false => paths::sandbox_vault(),
+        false => {
+            let name = Storage::get_item(LAST_VAULT);
+            paths::sandbox_vault(name.as_deref().unwrap_or("Vault"))
+        }
     };
     if let Some(root) = start {
         open_vault(root);
@@ -166,6 +177,14 @@ pub(crate) fn sidebar_hidden() -> bool {
     get::<SidebarHidden>().0
 }
 
+pub(crate) fn menu_open() -> bool {
+    get::<MenuOpen>().0
+}
+
+pub(crate) fn set_menu_open(open: bool) {
+    set(MenuOpen(open));
+}
+
 pub(crate) fn set_mode(mode: Mode) {
     set(mode);
 }
@@ -178,11 +197,12 @@ pub(crate) fn toggle_read() {
     });
 }
 
-/// Shows `route`; leaving the note saves it.
+/// Shows `route`, closing the menu; leaving the note saves it.
 pub(crate) fn set_route(route: Route) {
     if route != Route::Note {
         save_or_copy();
     }
+    set(MenuOpen(false));
     set(route);
 }
 

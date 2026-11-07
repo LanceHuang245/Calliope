@@ -5,10 +5,11 @@
 
 pub(crate) mod icons;
 
-use nsh_base::{button, input, menu_item, theme};
+use nsh_base::{button, dialog, input, menu_item, theme};
 use nsh_core::{element::StyleRefinement, prelude::*};
 
 use self::icons::icon;
+use crate::strings;
 
 /// A quiet text button: no surface until hovered or pressed.
 pub(crate) fn action(
@@ -26,6 +27,22 @@ pub(crate) fn action(
             text(label.into())
                 .text_sm()
                 .text_color(move || theme().foreground),
+        )
+}
+
+/// The main action of a page or a dialog, in the theme's `primary`.
+pub(crate) fn primary(label: &'static str, on_press: impl Fn() + 'static) -> impl IntoElement {
+    button()
+        .px_4()
+        .py_2()
+        .rounded(move || theme().radius)
+        .bg(move || theme().primary)
+        .active(|s| s.opacity(0.8))
+        .on_press(on_press)
+        .child(
+            text(label)
+                .text_sm()
+                .text_color(move || theme().primary_foreground),
         )
 }
 
@@ -190,4 +207,45 @@ pub(crate) fn section(title: &'static str) -> impl IntoElement {
         .font_weight(FontWeight::SEMIBOLD)
         .text_color(move || theme().muted_foreground)
         .mt_4()
+}
+
+/// A dialog renaming something, centered over a dimmed backdrop: Return or
+/// Rename gives `submit` the name; Cancel, Escape or the backdrop `cancel`.
+pub(crate) fn name_dialog(name: String, submit: fn(&str), cancel: fn()) -> impl IntoElement {
+    let typed = signal(name.clone());
+    dialog()
+        .animation(ModalAnimation::Fade)
+        .on_cancel(cancel)
+        .flex_1()
+        .child(view().absolute().inset_0().bg(overlay).on_press(cancel))
+        .child(
+            card()
+                .m(auto())
+                .w_80()
+                .gap_3()
+                .p_5()
+                .shadow_lg()
+                .child(
+                    text(strings::RENAME)
+                        .text_lg()
+                        .font_weight(FontWeight::SEMIBOLD)
+                        .text_color(move || theme().foreground),
+                )
+                .child(
+                    field(strings::NAME)
+                        .label(strings::NAME)
+                        .default_value(name)
+                        .auto_focus(true)
+                        .on_change(move |text: &str| typed.set(text.to_owned()))
+                        .on_submit(move |text: &str| submit(text)),
+                )
+                .child(
+                    view()
+                        .flex_row()
+                        .justify_end()
+                        .gap_2()
+                        .child(action(strings::CANCEL, cancel))
+                        .child(primary(strings::RENAME, move || submit(&typed.get()))),
+                ),
+        )
 }

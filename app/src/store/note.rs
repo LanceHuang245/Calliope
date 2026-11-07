@@ -71,7 +71,7 @@ fn open_note(path: String) {
             set(NotePath(Some(path)));
             global::<Opened>().update(|o| o.0 += 1);
             set(Conflict(false));
-            set(Route::Note);
+            set_route(Route::Note);
         }
         Err(e) => notify(format!("{path}: {e}")),
     }

@@ -30,7 +30,8 @@ fn vault(name: &str) -> PathBuf {
     root
 }
 
-/// The phone layout `EngineConfig::new` gives: files, then a note.
+/// The phone layout `EngineConfig::new` gives: the home page, the files in
+/// the menu, then a note.
 #[test]
 fn phone_opens_reads_and_creates_notes() {
     let root = vault("phone");
@@ -40,21 +41,27 @@ fn phone_opens_reads_and_creates_notes() {
     unsafe { std::env::set_var("CALLIOPE_VAULT", &root) };
     let mut app = Headless::start(EngineConfig::new(Root::of::<calliope::App>())).unwrap();
 
-    // The files: folders first, notes by their title.
+    // The app opens on the home page; the menu shows the files, folders
+    // first, notes by their title.
+    app.wait_for("Select a note, or create one.").unwrap();
+    app.press("label:Menu").unwrap();
     app.wait_for("Journal").unwrap();
     app.wait_for("Hello").unwrap();
 
-    // A note opens in Edit; Read renders it, its front matter folded.
+    // A note opens in Edit, closing the menu; Read renders it, its front
+    // matter folded.
     app.press("Hello").unwrap();
     app.wait_for("label:Markdown source").unwrap();
+    app.wait_for_gone("Journal", Duration::from_secs(2))
+        .unwrap();
     app.press("Read").unwrap();
     app.wait_for("Hello world").unwrap();
     app.wait_for("Properties").unwrap();
 
-    // Back to the files (the system's back), a new note is made on disk.
+    // Back to the home page (the system's back), a new note is made on disk.
     app.back().unwrap();
-    app.press("label:New note").unwrap();
-    app.wait_for("Untitled").unwrap();
+    app.press("text:New note").unwrap();
+    app.wait_for("label:Title").unwrap();
     assert!(root.join("Untitled.md").exists());
 
     // Another app's change shows when the app comes back to the front.
@@ -64,7 +71,22 @@ fn phone_opens_reads_and_creates_notes() {
     app.set_environment("foreground", |e| e.lifecycle = Lifecycle::Active)
         .unwrap();
     app.wait_for("Changed elsewhere").unwrap();
-    let _ = fs::remove_dir_all(&root);
+
+    // The phone renames its vault from the settings.
+    app.press("label:Menu").unwrap();
+    app.press("label:Settings").unwrap();
+    app.press("text:Rename").unwrap();
+    let name = format!("calliope-phone-renamed-{}", std::process::id());
+    app.clear("label:Name").unwrap();
+    app.type_text("label:Name", &name).unwrap();
+    app.submit("label:Name").unwrap();
+    let renamed = root.with_file_name(&name);
+    app.wait_until("the vault renamed", Duration::from_secs(2), |_| {
+        renamed.join("Untitled.md").exists()
+    })
+    .unwrap();
+    assert!(!root.exists());
+    let _ = fs::remove_dir_all(&renamed);
 }
 
 /// The desktop layout, on the last vault opened: autosave, and another

@@ -5,13 +5,14 @@
 //! - Phone (iOS, Android): one screen at a time, the files, a note or the
 //!   settings (the system tab bar and navigation stacks come later).
 
-use nsh_base::theme;
+use nsh_base::{SheetEvent, sheet, theme};
 use nsh_core::prelude::*;
 
 use crate::{
     components::{action, banner, icon_button, icons},
     pages::{
         files::{files_page, rename_dialog},
+        home::home_page,
         note::note_page,
         settings::settings_page,
     },
@@ -80,11 +81,11 @@ fn no_vault() -> impl IntoElement {
 }
 
 fn mobile() -> impl IntoElement {
-    // The system's back (Android) goes back to the files.
+    // The system's back (Android) goes back to the home page.
     on_back_press(|| match untracked(store::route) {
-        Route::Files => false,
+        Route::Home => false,
         _ => {
-            store::set_route(Route::Files);
+            store::set_route(Route::Home);
             true
         }
     });
@@ -95,11 +96,26 @@ fn mobile() -> impl IntoElement {
         .child(dynamic(move || {
             let route = store::route();
             untracked(|| match route {
-                Route::Files => files_page().into_element(),
+                Route::Home => home_page().into_element(),
                 Route::Note => note_page().into_element(),
                 Route::Settings => settings_page().into_element(),
             })
         }))
+        .child(menu())
+}
+
+/// The phone's menu: the files, slid in from the left over the whole page.
+fn menu() -> impl IntoElement {
+    sheet()
+        .side(Placement::Left)
+        .open(move || Some(store::menu_open()))
+        .on_open_change(|e: &SheetEvent| {
+            if let SheetEvent::OpenChange(open, _) = e {
+                store::set_menu_open(*open);
+            }
+        })
+        .popup_style(|s| s.w_full().h_full())
+        .child(view().flex_1().p_safe_area().child(files_page()))
 }
 
 fn notice() -> impl IntoElement {

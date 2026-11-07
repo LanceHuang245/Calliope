@@ -4,14 +4,14 @@
 //! sidebar, the phones as a screen.
 
 use calliope_core::vault::EntryKind;
-use nsh_base::{TreeEntry, button, context_menu, dialog, menu_separator, theme, tree};
+use nsh_base::{TreeEntry, context_menu, menu_separator, theme, tree};
 use nsh_core::prelude::*;
 
 use crate::{
     components::{
-        action, card, field, icon_button,
+        card, icon_button,
         icons::{self, icon},
-        menu_entry, menu_popup, overlay,
+        menu_entry, menu_popup, name_dialog, overlay,
     },
     store::{self, Route},
     strings,
@@ -28,6 +28,12 @@ pub(crate) fn files_page() -> impl IntoElement {
                 .flex_row()
                 .items_center()
                 .p_1()
+                // On a phone the files are the menu, over the page.
+                .child(
+                    (!is_desktop()).then(|| {
+                        icon_button(icons::X, strings::CLOSE, || store::set_menu_open(false))
+                    }),
+                )
                 .child(
                     text(store::vault_name)
                         .flex_1()
@@ -158,64 +164,9 @@ fn separator() -> impl IntoElement {
         .bg(move || theme().border)
 }
 
-/// The dialog renaming an item, centered over a dimmed backdrop: Return or
-/// Rename renames; Cancel, Escape or the backdrop closes it.
+/// The dialog renaming the item at `path` (a note by its title).
 pub(crate) fn rename_dialog(path: String) -> impl IntoElement {
     let name = path.rsplit('/').next().unwrap_or(&path);
     let name = name.strip_suffix(".md").unwrap_or(name).to_owned();
-    let typed = signal(name.clone());
-    dialog()
-        .animation(ModalAnimation::Fade)
-        .on_cancel(store::cancel_rename)
-        .flex_1()
-        .child(
-            view()
-                .absolute()
-                .inset_0()
-                .bg(overlay)
-                .on_press(store::cancel_rename),
-        )
-        .child(
-            card()
-                .m(auto())
-                .w_80()
-                .gap_3()
-                .p_5()
-                .shadow_lg()
-                .child(
-                    text(strings::RENAME)
-                        .text_lg()
-                        .font_weight(FontWeight::SEMIBOLD)
-                        .text_color(move || theme().foreground),
-                )
-                .child(
-                    field(strings::NAME)
-                        .label(strings::NAME)
-                        .default_value(name)
-                        .auto_focus(true)
-                        .on_change(move |text: &str| typed.set(text.to_owned()))
-                        .on_submit(|text: &str| store::rename(text)),
-                )
-                .child(
-                    view()
-                        .flex_row()
-                        .justify_end()
-                        .gap_2()
-                        .child(action(strings::CANCEL, store::cancel_rename))
-                        .child(
-                            button()
-                                .px_3()
-                                .py_1()
-                                .rounded(move || theme().radius)
-                                .bg(move || theme().primary)
-                                .active(|s| s.opacity(0.8))
-                                .on_press(move || store::rename(&typed.get()))
-                                .child(
-                                    text(strings::RENAME)
-                                        .text_sm()
-                                        .text_color(move || theme().primary_foreground),
-                                ),
-                        ),
-                ),
-        )
+    name_dialog(name, store::rename, store::cancel_rename)
 }
