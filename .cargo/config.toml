@@ -1,0 +1,6 @@
+[env]
+# One deployment target for Rust and the C code (oniguruma, zstd, ring) of
+# the iOS build, as nsh's own workspace sets it; without it rustc links for
+# iOS 10.0 while cc builds for the SDK's version, and the link fails
+# (`___chkstk_darwin`). `nsh package` writes the same `MinimumOSVersion`.
+IPHONEOS_DEPLOYMENT_TARGET = "15.0"
