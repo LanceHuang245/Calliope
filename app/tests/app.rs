@@ -99,8 +99,14 @@ fn desktop_autosaves_and_keeps_both_sides_of_a_conflict() {
     )]));
     let mut app = Headless::start(config).unwrap();
 
-    // Typing is saved within a second or so.
+    // The app draws its own title bar where the platform reports one.
     app.wait_for("Hello").unwrap();
+    assert!(!app.shows("Calliope"));
+    app.set_environment("title bar", |e| e.title_bar.top = px(32.0))
+        .unwrap();
+    app.wait_for("text:Calliope").unwrap();
+
+    // Typing is saved within a second or so.
     app.press("Hello").unwrap();
     app.type_text("label:Markdown source", "X").unwrap();
     app.wait(Duration::from_millis(1500)).unwrap();

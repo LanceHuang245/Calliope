@@ -1,12 +1,18 @@
 //! The app shell: the layout of each device idiom, with no page logic.
 //!
-//! - Desktop (Windows, macOS, Linux): a sidebar (the files) beside the
-//!   workspace (the note, or the settings), with the app's shortcuts.
+//! - Desktop (Windows, macOS, Linux): the app's own title bar over a
+//!   sidebar (the files) beside the workspace (the note, or the settings),
+//!   with the app's shortcuts.
 //! - Phone (iOS, Android): one screen at a time, the files, a note or the
 //!   settings (the system tab bar and navigation stacks come later).
 
 use nsh_base::{SheetEvent, sheet, theme};
-use nsh_core::prelude::*;
+use nsh_core::{
+    desktop::{TitleBarOptions, TitleBarStyle, WindowAttributes},
+    element::desktop::{current_window, title_bar},
+    platform::Os,
+    prelude::*,
+};
 
 use crate::{
     components::{banner, icon_button, icons},
@@ -36,7 +42,8 @@ fn desktop() -> impl IntoElement {
     on_key("mod+n", |_| store::new_note());
     on_key("mod+e", |_| store::toggle_read());
     on_key("mod+\\", |_| store::toggle_sidebar());
-    view()
+    hide_system_title_bar();
+    let body = view()
         .flex_1()
         .flex_row()
         .child(dynamic(move || (!store::sidebar_hidden()).then(sidebar)))
@@ -48,7 +55,53 @@ fn desktop() -> impl IntoElement {
                 (_, true) => note_page().into_element(),
                 (_, false) => welcome_page().into_element(),
             })
-        })))
+        })));
+    view().flex_1().child(app_title_bar()).child(body)
+}
+
+/// Hides the system's title bar: the app fills the window up to its top
+/// edge and draws its own ([`app_title_bar`]); the system's window controls
+/// stay.
+fn hide_system_title_bar() {
+    let mut bar = TitleBarOptions::default();
+    bar.style = TitleBarStyle::Hidden;
+    let mut attributes = WindowAttributes::default();
+    attributes.title_bar = Some(bar);
+    current_window().set(attributes);
+}
+
+/// The app's title bar: it drags the window and leaves its ends to the
+/// system's window controls (macOS's traffic lights on the left, Windows'
+/// and Linux's buttons on the right). macOS centers the title, Windows and
+/// Linux start it on the left. Nothing while the platform reports no bar
+/// (full screen).
+fn app_title_bar() -> impl IntoElement {
+    let centered = os() == Os::MacOs;
+    dynamic(move || {
+        let area = title_bar();
+        (area.top > px(0.0)).then(|| {
+            let bar = view()
+                .h(area.top)
+                .pl(area.left)
+                .pr(area.right)
+                .flex_row()
+                .items_center()
+                .bg(move || theme().sidebar)
+                .border_b_1()
+                .border_color(move || theme().sidebar_border)
+                .window_drag(true)
+                .child(
+                    text(strings::APP_NAME)
+                        .px_3()
+                        .text_sm()
+                        .text_color(move || theme().muted_foreground),
+                );
+            match centered {
+                true => bar.justify_center(),
+                false => bar,
+            }
+        })
+    })
 }
 
 fn sidebar() -> impl IntoElement {
