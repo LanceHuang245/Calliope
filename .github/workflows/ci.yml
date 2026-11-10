@@ -5,7 +5,8 @@ on:
   pull_request:
 
 env:
-  NSH_VERSION: v0.4.0
+  # The nightly CLI; Cargo.toml takes nsh's crates from its commit.
+  NSH_VERSION: nightly
 
 jobs:
   check:

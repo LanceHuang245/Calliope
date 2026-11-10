@@ -15,20 +15,21 @@ publish = false
 calliope-core = { path = "crates/calliope-core" }
 calliope-sync = { path = "crates/calliope-sync" }
 
-# Native Shell (https://nsh.dev), the release on crates.io. Keep every nsh
-# crate on one version: the `nsh` CLI builds the app's runners against the
-# version the app asks for.
+# Native Shell (https://nsh.dev), the nightly build of `main`: every nsh
+# crate comes from Git at the commit of the nightly CLI CI installs
+# (`NSH_VERSION: nightly`, see its `nsh --version`). Move `rev` with the
+# nightly: the `nsh` CLI builds the app's runners from this checkout.
 # `nsh-base`: `highlight` colors code blocks, `math` typesets formulas.
 # `svg`: the icons (`app/src/components/icons.rs`).
-nsh-core = { version = "0.4.0", features = ["svg"] }
-nsh-base = { version = "0.4.0", features = ["highlight", "math"] }
-nsh-engine = { version = "0.4.0", default-features = false }
-nsh-testing = "0.4.0"
+nsh-core = { git = "https://github.com/longbridge/nsh", rev = "c5214aaf4bbdf33bc1d59e9595e009b6aa54d702", features = ["svg"] }
+nsh-base = { git = "https://github.com/longbridge/nsh", rev = "c5214aaf4bbdf33bc1d59e9595e009b6aa54d702", features = ["highlight", "math"] }
+nsh-engine = { git = "https://github.com/longbridge/nsh", rev = "c5214aaf4bbdf33bc1d59e9595e009b6aa54d702", default-features = false }
+nsh-testing = { git = "https://github.com/longbridge/nsh", rev = "c5214aaf4bbdf33bc1d59e9595e009b6aa54d702" }
 # The desktop backends `cargo run` uses (`app/src/main.rs`). Without `js`, a
 # Rust app links no QuickJS.
-nsh-platform-linux = { version = "0.4.0", default-features = false }
-nsh-platform-macos = { version = "0.4.0", default-features = false }
-nsh-platform-windows = { version = "0.4.0", default-features = false }
+nsh-platform-linux = { git = "https://github.com/longbridge/nsh", rev = "c5214aaf4bbdf33bc1d59e9595e009b6aa54d702", default-features = false }
+nsh-platform-macos = { git = "https://github.com/longbridge/nsh", rev = "c5214aaf4bbdf33bc1d59e9595e009b6aa54d702", default-features = false }
+nsh-platform-windows = { git = "https://github.com/longbridge/nsh", rev = "c5214aaf4bbdf33bc1d59e9595e009b6aa54d702", default-features = false }
 
 # Shared third-party crates.
 log = "0.4"
