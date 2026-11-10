@@ -1,8 +1,9 @@
 //! The app shell: the layout of each device idiom, with no page logic.
 //!
 //! - Desktop (Windows, macOS, Linux): the app's own title bar over a
-//!   sidebar (the files) beside the workspace (the note, or the settings),
-//!   with the app's shortcuts.
+//!   sidebar (the files and the app's actions) beside the workspace (the
+//!   note, or the settings) and the open note's backlinks, with the app's
+//!   shortcuts.
 //! - Phone (iOS, Android): one screen at a time, the files, a note or the
 //!   settings (the system tab bar and navigation stacks come later).
 
@@ -19,8 +20,10 @@ use crate::{
     pages::{
         files::{files_page, rename_dialog},
         home::home_page,
+        links::backlinks_panel,
         note::note_page,
         settings::settings_page,
+        switcher::quick_switcher,
         welcome::welcome_page,
     },
     store::{self, Route},
@@ -36,11 +39,13 @@ pub(crate) fn shell() -> impl IntoElement {
         .flex_1()
         .child(layout)
         .child(dynamic(move || store::renaming().map(rename_dialog)))
+        .child(dynamic(move || store::switching().then(quick_switcher)))
 }
 
 fn desktop() -> impl IntoElement {
     on_key("mod+n", |_| store::new_note());
     on_key("mod+e", |_| store::toggle_read());
+    on_key("mod+o", |_| store::set_switching(true));
     on_key("mod+\\", |_| store::toggle_sidebar());
     hide_system_title_bar();
     let body = view()
@@ -55,7 +60,14 @@ fn desktop() -> impl IntoElement {
                 (_, true) => note_page().into_element(),
                 (_, false) => welcome_page().into_element(),
             })
-        })));
+        })))
+        // The open note's backlinks, on the right.
+        .child(dynamic(move || {
+            let shown = !store::backlinks_hidden()
+                && store::route() != Route::Settings
+                && store::opened().is_some();
+            shown.then(|| view().w(px(260.0)).child(backlinks_panel()))
+        }));
     view().flex_1().child(app_title_bar()).child(body)
 }
 
@@ -103,9 +115,7 @@ fn app_title_bar() -> impl IntoElement {
 }
 
 fn sidebar() -> impl IntoElement {
-    view()
-        .w(px(260.0))
-        .child(files_page())
+    view().w(px(260.0)).child(files_page())
 }
 
 fn mobile() -> impl IntoElement {

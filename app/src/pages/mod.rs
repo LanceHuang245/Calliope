@@ -3,6 +3,8 @@
 
 pub(crate) mod files;
 pub(crate) mod home;
+pub(crate) mod links;
 pub(crate) mod note;
 pub(crate) mod settings;
+pub(crate) mod switcher;
 pub(crate) mod welcome;

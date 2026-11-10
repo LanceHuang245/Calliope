@@ -9,9 +9,11 @@
 //! - [`vault`]: the open vault, its files and other apps' changes;
 //! - [`note`]: the open note, autosave and conflicts;
 //! - [`files`]: creating, renaming and deleting files and folders;
+//! - [`links`]: the link index, backlinks and following a link;
 //! - here: the view (mode, route, theme), notices and the start.
 
 mod files;
+mod links;
 mod note;
 mod vault;
 
@@ -25,6 +27,10 @@ pub(crate) use self::{
         cancel_rename, delete, expanded, new_folder, new_folder_in, new_note, new_note_in, rename,
         rename_note, renaming, selected, set_expanded, start_rename,
     },
+    links::{
+        backlinks, backlinks_hidden, create_note, link_exists, note_paths, open_link,
+        set_switching, switching, toggle_backlinks,
+    },
     note::{
         conflict, edit, image_src, note_path, note_title, opened, preview, resolve_conflict,
         select, text,
@@ -35,6 +41,7 @@ pub(crate) use self::{
     },
 };
 use self::{
+    links::{reindex, reset_links},
     note::{load, save_or_copy, start_autosave},
     vault::watch_other_apps,
 };

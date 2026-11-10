@@ -136,7 +136,10 @@ fn write_note() {
     };
     let text = text();
     match vault.write(&path, &text) {
-        Ok(()) => set(Saved(text.to_string())),
+        Ok(()) => {
+            set(Saved(text.to_string()));
+            reindex();
+        }
         Err(e) => notify(format!("{path}: {e}")),
     }
 }

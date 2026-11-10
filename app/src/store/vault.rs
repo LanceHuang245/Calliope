@@ -69,6 +69,7 @@ pub(crate) fn open_vault(root: PathBuf) {
             set(Selected(None));
             set(Expanded(Vec::new()));
             set(Route::Home);
+            reset_links();
             refresh();
         }
         Err(e) => notify(format!("{}: {e}", root.display())),
@@ -121,6 +122,7 @@ pub(crate) fn refresh() {
         Ok(entries) => set(Entries(entries)),
         Err(e) => notify(e),
     }
+    reindex();
     let Some(path) = untracked(note_path) else {
         return;
     };

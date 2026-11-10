@@ -6,12 +6,18 @@
 
 use calliope_core::note;
 use nsh_base::{
-    Editor, EditorApi, EditorClasses, EditorCommand, EditorSearch, TextViewLinks, h_resizable,
-    input, resizable_panel, text_view, text_view::Image, theme,
+    Editor, EditorApi, EditorClasses, EditorCommand, EditorSearch, TextViewLinks,
+    editor::{EditorCompletionItem, EditorCompletionRequest},
+    h_resizable, input, resizable_panel, text_view,
+    text_view::{CustomNode, Image},
+    theme,
 };
 use nsh_core::{keymap::When, prelude::*};
 
-use super::home::{home_page, menu_button};
+use super::{
+    home::{home_page, menu_button},
+    links::{WIKI_LINK, backlinks_panel, wiki_link, wiki_links},
+};
 use crate::{
     components::{action, banner, field, icon_button, icons, segmented},
     store::{self, Mode},
@@ -74,6 +80,13 @@ fn note_view() -> impl IntoElement {
                     .child(resizable_panel().child(source(editor, query)))
                     .child(resizable_panel().child(preview()))
                     .into_element(),
+            })
+        }))
+        // A phone shows the backlinks under the note.
+        .child((!is_desktop()).then(|| {
+            dynamic(|| {
+                (!store::backlinks().is_empty())
+                    .then(|| view().h(px(180.0)).child(backlinks_panel()))
             })
         }))
 }
@@ -140,6 +153,27 @@ fn source(editor: ComponentRef<Editor>, query: Signal<String>) -> impl IntoEleme
         .search(move || {
             let query = query.get();
             (!query.is_empty()).then(|| EditorSearch::new(query))
+        })
+        // `[[` offers the notes' titles.
+        .completion(true)
+        .completion_trigger_characters(vec![SharedString::from("[[")])
+        .on_completion_request(move |request: &EditorCompletionRequest| {
+            let Some(api) = editor.api::<EditorApi>() else {
+                return;
+            };
+            let before: Vec<u16> = api
+                .value()
+                .encode_utf16()
+                .take(request.query_start as usize)
+                .collect();
+            let items = match before.ends_with(&[u16::from(b'['); 2]) {
+                true => store::note_paths()
+                    .iter()
+                    .map(|path| EditorCompletionItem::new(note::title(path).to_owned()))
+                    .collect(),
+                false => Vec::new(),
+            };
+            api.present_completions(request.id, items, None);
         })
         .component_ref(&editor)
         .flex_1()
@@ -223,6 +257,11 @@ fn preview() -> impl IntoElement {
                     .markdown(move || parts.get().1)
                     .selectable(true)
                     .links(TextViewLinks::Open)
+                    .extensions(vec![wiki_links()])
+                    .render_custom(|node: &CustomNode| match node.name.as_str() {
+                        WIKI_LINK => wiki_link(node),
+                        _ => text(node.text.clone()).into_element(),
+                    })
                     .render_image(|img: &Image| vault_image(img))
                     .text_color(move || theme().foreground),
             ),

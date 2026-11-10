@@ -167,3 +167,66 @@ fn desktop_autosaves_and_keeps_both_sides_of_a_conflict() {
     assert!(app.screen().file_requests().contains(&trash));
     let _ = fs::remove_dir_all(&root);
 }
+
+/// Links between notes: the backlinks of the open note, a wiki link
+/// followed in the rendered note, and a note created from a link to none.
+#[test]
+fn desktop_follows_links_and_lists_backlinks() {
+    let root = vault("links");
+    fs::write(
+        root.join("A.md"),
+        "see [[Bee|my bee]] and [[Journal/New idea]]\n",
+    )
+    .unwrap();
+    fs::write(root.join("Bee.md"), "# The bee\n").unwrap();
+    let mut config = EngineConfig::new(Root::of::<calliope::App>());
+    config.environment.idiom = Idiom::Desktop;
+    config.environment.os = Os::Linux;
+    config.viewport = size(px(1200.0), px(800.0));
+    config.storage = Some(MemoryStorage::new([(
+        "vault".to_owned(),
+        root.display().to_string(),
+    )]));
+    let mut app = Headless::start(config).unwrap();
+
+    // The note linked to lists the link's note and line; a press opens it.
+    app.wait_for("Bee").unwrap();
+    app.press("text:Bee").unwrap();
+    app.wait_for("Backlinks").unwrap();
+    let line = "see [[Bee|my bee]] and [[Journal/New idea]]";
+    app.wait_for_within(line, Duration::from_secs(5)).unwrap();
+    app.press(line).unwrap();
+    app.wait_for("No other note links here.").unwrap();
+
+    // Rendered, a link opens its note.
+    app.press("Read").unwrap();
+    app.press("text:my bee").unwrap();
+    app.wait_for("The bee").unwrap();
+
+    // A link to no note creates it, once confirmed, and the new note
+    // has the link's note as a backlink within a second.
+    app.press(line).unwrap();
+    app.on_dialog(|_| DialogAnswer::Press("Create".into()));
+    app.press("text:Journal/New idea").unwrap();
+    app.wait_for_within(line, Duration::from_secs(1)).unwrap();
+    assert!(root.join("Journal").join("New idea.md").exists());
+
+    // The quick switcher opens the note found by its title, and creates
+    // the note of a name no note has.
+    app.press_key("mod+o").unwrap();
+    app.type_text("label:Find or create a note", "bee").unwrap();
+    app.press_key("enter").unwrap();
+    app.wait_for("The bee").unwrap();
+    app.press("label:Search").unwrap();
+    app.type_text("label:Find or create a note", "Plan")
+        .unwrap();
+    app.press("Create the note “Plan”").unwrap();
+    app.wait_for("label:Title").unwrap();
+    assert!(root.join("Plan.md").exists());
+
+    // Typing `[[` in the source offers the notes' titles.
+    app.press("Edit").unwrap();
+    app.type_text("label:Markdown source", "[[").unwrap();
+    app.wait_for("New idea").unwrap();
+    let _ = fs::remove_dir_all(&root);
+}

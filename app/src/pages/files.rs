@@ -1,5 +1,5 @@
 //! The vault's files: a tree of folders and notes. The header creates
-//! notes and folders; each row's context menu (a right click, or a held
+//! notes and folders, the row under the tree holds the app's actions; each row's context menu (a right click, or a held
 //! finger on a phone) acts on its item. The desktops show it in the
 //! sidebar, the phones as a screen.
 
@@ -64,9 +64,20 @@ pub(crate) fn files_page() -> impl IntoElement {
             }
         })))
         .child(
+            // The app's actions, in one row under the files.
             view()
                 .flex_row()
+                .gap_1()
                 .pt_1()
+                .child(icon_button(icons::SEARCH, strings::SEARCH, || {
+                    store::set_switching(true)
+                }))
+                .child(
+                    is_desktop().then(|| {
+                        icon_button(icons::LINK, strings::BACKLINKS, store::toggle_backlinks)
+                    }),
+                )
+                .child(view().flex_1())
                 .child(icon_button(icons::SETTINGS, strings::SETTINGS, || {
                     store::set_route(Route::Settings)
                 })),
