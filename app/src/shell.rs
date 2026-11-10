@@ -87,8 +87,6 @@ fn app_title_bar() -> impl IntoElement {
                 .flex_row()
                 .items_center()
                 .bg(move || theme().sidebar)
-                .border_b_1()
-                .border_color(move || theme().sidebar_border)
                 .window_drag(true)
                 .child(
                     text(strings::APP_NAME)
@@ -107,8 +105,6 @@ fn app_title_bar() -> impl IntoElement {
 fn sidebar() -> impl IntoElement {
     view()
         .w(px(260.0))
-        .border_r_1()
-        .border_color(move || theme().sidebar_border)
         .child(files_page())
 }
 

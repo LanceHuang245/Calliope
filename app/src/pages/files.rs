@@ -67,8 +67,6 @@ pub(crate) fn files_page() -> impl IntoElement {
             view()
                 .flex_row()
                 .pt_1()
-                .border_t_1()
-                .border_color(move || theme().sidebar_border)
                 .child(icon_button(icons::SETTINGS, strings::SETTINGS, || {
                     store::set_route(Route::Settings)
                 })),
@@ -104,11 +102,8 @@ fn files_tree() -> impl IntoElement {
                 .h_8()
                 .pl(px(8.0 + 16.0 * entry.depth as f32))
                 .rounded(move || theme().radius)
-                .bg(move || match selected() {
-                    true => theme().accent,
-                    false => theme().background,
-                })
                 .hover(|s| s.bg(theme().accent))
+                .style_when(selected, |s| s.bg(theme().sidebar_accent))
                 .child(icon(paths).text_color(move || theme().muted_foreground))
                 .child(
                     text(entry.label.clone())

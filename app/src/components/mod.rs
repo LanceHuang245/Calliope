@@ -5,7 +5,7 @@
 
 pub(crate) mod icons;
 
-use nsh_base::{button, input, menu_item, theme};
+use nsh_base::{button, input, menu_item, tab, tabs, theme};
 use nsh_core::{element::StyleRefinement, prelude::*};
 
 use self::icons::icon;
@@ -123,26 +123,28 @@ pub(crate) fn segmented<T: Copy + PartialEq + 'static>(
     current: impl Fn() -> T + Copy + 'static,
     choose: impl Fn(T) + Copy + 'static,
 ) -> impl IntoElement {
-    view()
+    // The selected option's highlight is the tab list's indicator, which
+    // slides to the next option natively (a spring).
+    tabs()
         .flex_row()
         .p(px(2.0))
         .gap(px(2.0))
         .rounded(move || theme().radius)
         .bg(move || theme().muted)
+        .indicator_style(move |s| {
+            s.top(px(2.0))
+                .bottom(px(2.0))
+                .rounded(theme().radius)
+                .bg(theme().background)
+                .shadow_sm()
+        })
         .child(options.into_iter().map(move |(value, label)| {
             let on = move || current() == value;
-            button()
+            tab()
+                .selected(on)
                 .px_3()
                 .py_1()
-                .rounded(move || theme().radius)
-                .bg(move || {
-                    if on() {
-                        theme().background
-                    } else {
-                        theme().muted
-                    }
-                })
-                .on_press(move || choose(value))
+                .on_press(move |_: &()| choose(value))
                 .child(text(label).text_sm().text_color(move || match on() {
                     true => theme().foreground,
                     false => theme().muted_foreground,
@@ -181,13 +183,11 @@ pub(crate) fn banner(message: impl IntoReactive<SharedString>) -> View {
 }
 
 /// A raised surface that sets a group apart from what is around it: the
-/// app's background, a border and a light shadow.
+/// app's background and a light shadow, no border.
 pub(crate) fn card() -> View {
     view()
         .bg(move || theme().background)
         .rounded(move || theme().radius)
-        .border_1()
-        .border_color(move || theme().border)
         .shadow_sm()
 }
 
