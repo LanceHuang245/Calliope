@@ -9,8 +9,11 @@ publish.workspace = true
 calliope-core.workspace = true
 calliope-sync.workspace = true
 log.workspace = true
+merman.workspace = true
+merman-export.workspace = true
 nsh-base.workspace = true
 nsh-core.workspace = true
+usvg.workspace = true
 
 # `cargo run` (src/main.rs) on this machine's desktop backend. `nsh run` and
 # `nsh package` build runners of their own for every target.

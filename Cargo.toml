@@ -31,6 +31,22 @@ nsh-platform-linux = { git = "https://github.com/longbridge/nsh", rev = "c5214aa
 nsh-platform-macos = { git = "https://github.com/longbridge/nsh", rev = "c5214aaf4bbdf33bc1d59e9595e009b6aa54d702", default-features = false }
 nsh-platform-windows = { git = "https://github.com/longbridge/nsh", rev = "c5214aaf4bbdf33bc1d59e9595e009b6aa54d702", default-features = false }
 
+# Mermaid diagrams (`app/src/pages/mermaid.rs`): only the diagrams Calliope
+# shows, as SVG laid out with the system's fonts; no ELK layout (EPL-2.0).
+# `usvg` (the version `merman-export` uses) turns the labels into paths.
+merman = { version = "0.9.3", default-features = false, features = [
+    "svg",
+    "system-fonts",
+    "diagram-flowchart",
+    "diagram-sequence",
+    "diagram-class",
+    "diagram-state",
+    "diagram-gantt",
+    "diagram-pie",
+] }
+merman-export = { version = "0.9.3", features = ["system-fonts"] }
+usvg = { version = "0.47", default-features = false, features = ["text"] }
+
 # Shared third-party crates.
 log = "0.4"
 notify = "8"
