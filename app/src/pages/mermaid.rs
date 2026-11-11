@@ -2,7 +2,7 @@
 //! drawn by `merman` as SVG, shown as an image; code it cannot draw shows
 //! with the reason.
 
-use std::{panic, sync::OnceLock};
+use std::{cell::RefCell, collections::HashMap, panic, sync::OnceLock};
 
 use merman::{
     OperationControl, RenderOutput, RenderRequest, Renderer, SvgEnvironment, SvgRequest,
@@ -16,6 +16,18 @@ use crate::strings;
 
 /// The name of the custom nodes Mermaid code is read as.
 const MERMAID: &str = "mermaid";
+/// At most this many diagrams are kept drawn.
+const KEPT: usize = 64;
+
+/// What a diagram's code draws, or why it cannot be drawn.
+type Drawn = Result<String, String>;
+
+thread_local! {
+    /// The diagrams drawn, by code and appearance: the text view makes a
+    /// diagram's block again when the blocks before it change, and it then
+    /// shows at once, drawing nothing again.
+    static DRAWN: RefCell<HashMap<(String, bool), Drawn>> = RefCell::default();
+}
 
 /// Reads fenced code of the language `mermaid` as a diagram; other code
 /// keeps its highlighting.
@@ -24,17 +36,23 @@ pub(crate) fn mermaid_blocks() -> MarkdownExtension {
 }
 
 /// A diagram of the rendered note, drawn off the UI thread, and again when
-/// the appearance changes.
+/// the appearance changes; one drawn before shows at once.
 pub(crate) fn mermaid(node: &CustomNode) -> AnyElement {
     let source = node.text.clone();
-    let drawn = signal(None::<Result<String, String>>);
+    let drawn = signal(untracked(|| cached(&source, dark())));
     effect({
         let source = source.clone();
         move || {
             let (source, dark) = (source.clone(), dark());
+            if let Some(hit) = cached(&source, dark) {
+                return drawn.set(Some(hit));
+            }
             spawn(async move {
+                let key = source.clone();
                 let done = background(async move { draw(&source, dark) }).await;
-                drawn.set(Some(done.unwrap_or_else(|e| Err(e.to_string()))));
+                let done = done.unwrap_or_else(|e| Err(e.to_string()));
+                remember(key, dark, done.clone());
+                drawn.set(Some(done));
             });
         }
     });
@@ -61,6 +79,21 @@ pub(crate) fn mermaid(node: &CustomNode) -> AnyElement {
     .into_element()
 }
 
+fn cached(source: &str, dark: bool) -> Option<Drawn> {
+    DRAWN.with(|d| d.borrow().get(&(source.to_owned(), dark)).cloned())
+}
+
+/// Keeps what `source` draws; past [`KEPT`] diagrams, the others go.
+fn remember(source: String, dark: bool, drawn: Drawn) {
+    DRAWN.with(|d| {
+        let mut d = d.borrow_mut();
+        if d.len() >= KEPT {
+            d.clear();
+        }
+        d.insert((source, dark), drawn);
+    });
+}
+
 /// The system's fonts, found once: the labels are measured and drawn with
 /// them.
 fn fonts() -> Result<NativeFontContext, String> {
@@ -83,7 +116,7 @@ fn fonts() -> Result<NativeFontContext, String> {
 
 /// The diagram of Mermaid `source` as SVG markup, or why it cannot be
 /// drawn. No Mermaid code makes it panic.
-fn draw(source: &str, dark: bool) -> Result<String, String> {
+fn draw(source: &str, dark: bool) -> Drawn {
     panic::catch_unwind(|| {
         let fonts = fonts()?;
         let source = match dark {
@@ -133,6 +166,17 @@ mod tests {
                 assert!(svg.contains("<path") && !svg.contains("<text"), "{source}");
             }
         }
+    }
+
+    #[test]
+    fn keeps_what_was_drawn_within_bounds() {
+        remember("pie".into(), false, Ok("<svg/>".into()));
+        assert_eq!(cached("pie", false), Some(Ok("<svg/>".into())));
+        assert_eq!(cached("pie", true), None);
+        for i in 0..KEPT {
+            remember(i.to_string(), false, Err(String::new()));
+        }
+        assert!(DRAWN.with(|d| d.borrow().len()) <= KEPT);
     }
 
     #[test]
