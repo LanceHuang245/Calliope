@@ -110,6 +110,7 @@ fn fonts() -> Result<NativeFontContext, String> {
         .get_or_init(|| {
             // A desktop with many fonts has more than merman reads by default.
             let limits = NativeFontLimits {
+                max_bytes: 512 << 20,
                 max_system_cmap_bytes: 256 << 20,
                 ..Default::default()
             };
