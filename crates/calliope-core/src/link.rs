@@ -6,8 +6,6 @@
 pub struct Link {
     /// The note it names: a title, or a path ending in one (`Folder/Note`).
     pub target: String,
-    pub heading: Option<String>,
-    pub alias: Option<String>,
     /// The line it is on, trimmed: what a backlink shows around it.
     pub context: String,
 }
@@ -49,11 +47,9 @@ pub fn links(text: &str) -> Vec<Link> {
                 let Some(close) = rest.find("]]") else {
                     break;
                 };
-                if let Some((target, heading, alias)) = parse(&rest[..close]) {
+                if let Some((target, _, _)) = parse(&rest[..close]) {
                     found.push(Link {
                         target: target.to_owned(),
-                        heading: heading.map(str::to_owned),
-                        alias: alias.map(str::to_owned),
                         context: trimmed.to_owned(),
                     });
                 }
@@ -74,23 +70,13 @@ mod tests {
 
     #[test]
     fn reads_every_form() {
-        let found = links("See [[笔记]], [[B|the b]] and [[C#Intro]].\n[[dir/D#h|d]]");
-        assert_eq!(found.len(), 4);
-        assert_eq!(found[0].target, "笔记");
+        let text = "See [[笔记]], [[B|the b]] and [[C#Intro]].\n[[dir/D#h|d]]";
+        assert_eq!(targets(text), ["笔记", "B", "C", "dir/D"]);
         assert_eq!(
-            found[0].context,
+            links(text)[0].context,
             "See [[笔记]], [[B|the b]] and [[C#Intro]]."
         );
-        assert_eq!(found[1].alias.as_deref(), Some("the b"));
-        assert_eq!(found[2].heading.as_deref(), Some("Intro"));
-        assert_eq!(
-            (
-                found[3].target.as_str(),
-                found[3].heading.as_deref(),
-                found[3].alias.as_deref()
-            ),
-            ("dir/D", Some("h"), Some("d"))
-        );
+        assert_eq!(parse("dir/D#h|d"), Some(("dir/D", Some("h"), Some("d"))));
     }
 
     #[test]

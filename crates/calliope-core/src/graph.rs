@@ -31,8 +31,8 @@ impl Graph {
         let mut ids: HashMap<String, usize> =
             (nodes.iter().map(|n| n.id.clone())).zip(0..).collect();
         let mut edges = BTreeSet::new();
-        for from in 0..ids.len() {
-            for link in index.links(&nodes[from].id.clone()) {
+        for (from, path) in index.notes().enumerate() {
+            for link in index.links(path) {
                 let to = match index.resolve(&link.target) {
                     Some(path) => ids[path],
                     None if !missing => continue,

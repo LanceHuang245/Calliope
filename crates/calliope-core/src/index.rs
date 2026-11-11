@@ -41,22 +41,26 @@ impl Index {
     pub fn sync(&mut self, vault: &Vault) -> io::Result<bool> {
         let mut paths = Vec::new();
         note_paths(&vault.scan()?, &mut paths);
-        let before = self.notes.len();
-        self.notes
-            .retain(|path, _| paths.binary_search(path).is_ok());
-        let mut changed = self.notes.len() != before;
+        let mut old = std::mem::take(&mut self.notes);
+        let mut changed = false;
         for path in paths {
-            let Ok(meta) = fs::metadata(vault.abs(&path)) else {
+            let stamp = fs::metadata(vault.abs(&path)).and_then(|m| Ok((m.modified()?, m.len())));
+            let Ok(stamp) = stamp else {
                 continue;
             };
-            let stamp = (meta.modified()?, meta.len());
-            if self.notes.get(&path).is_some_and(|n| n.stamp == stamp) {
-                continue;
-            }
-            let links = link::links(&vault.read(&path).unwrap_or_default());
-            self.notes.insert(path, Note { stamp, links });
-            changed = true;
+            // An unchanged note keeps its links; a new or changed one is read.
+            let note = match old.remove(&path) {
+                Some(note) if note.stamp == stamp => note,
+                _ => {
+                    changed = true;
+                    let links = link::links(&vault.read(&path).unwrap_or_default());
+                    Note { stamp, links }
+                }
+            };
+            self.notes.insert(path, note);
         }
+        // What is left of the old notes was deleted.
+        changed |= !old.is_empty();
         if changed {
             self.titles.clear();
             for path in self.notes.keys() {
@@ -82,13 +86,13 @@ impl Index {
     /// the root.
     pub fn resolve(&self, target: &str) -> Option<&str> {
         let target = target.strip_suffix(".md").unwrap_or(target);
-        let suffix = format!("/{target}");
         self.titles
             .get(note::title(target))?
             .iter()
             .filter(|path| {
-                let path = &path[..path.len() - ".md".len()];
-                path == target || path.ends_with(&suffix)
+                // The path without `.md` is the target, or ends in `/target`.
+                let rest = path[..path.len() - ".md".len()].strip_suffix(target);
+                rest.is_some_and(|rest| rest.is_empty() || rest.ends_with('/'))
             })
             .min_by_key(|path| (path.matches('/').count(), path.as_str()))
             .map(String::as_str)
@@ -111,7 +115,7 @@ impl Index {
     }
 }
 
-/// The paths of the notes among `entries`, sorted.
+/// The paths of the notes among `entries`.
 fn note_paths(entries: &[Entry], paths: &mut Vec<String>) {
     for entry in entries {
         if entry.kind == EntryKind::Note {
@@ -119,7 +123,6 @@ fn note_paths(entries: &[Entry], paths: &mut Vec<String>) {
         }
         note_paths(&entry.children, paths);
     }
-    paths.sort();
 }
 
 #[cfg(test)]

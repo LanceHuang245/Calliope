@@ -214,11 +214,7 @@ fn scan_dir(dir: &Path, rel: &str) -> io::Result<Vec<Entry>> {
         };
         entries.push(entry);
     }
-    entries.sort_by(|a, b| {
-        (a.kind != EntryKind::Folder)
-            .cmp(&(b.kind != EntryKind::Folder))
-            .then_with(|| a.name.to_lowercase().cmp(&b.name.to_lowercase()))
-    });
+    entries.sort_by_cached_key(|e| (e.kind != EntryKind::Folder, e.name.to_lowercase()));
     Ok(entries)
 }
 
