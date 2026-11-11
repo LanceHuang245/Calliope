@@ -3,7 +3,7 @@
 
 use std::time::Duration;
 
-use calliope_core::{note, vault::EntryKind};
+use calliope_core::note;
 use nsh_base::TreeItem;
 use nsh_core::{file_dialog::OpenDialog, platform::Lifecycle};
 
@@ -34,22 +34,28 @@ pub(crate) fn tree_items() -> Vec<TreeItem> {
         TreeItem::new(entry.path.clone(), label.to_owned())
             .children(entry.children.iter().map(item))
     }
-    global::<Entries>().with(|e| e.0.iter().map(item).collect())
+    global::<Entries>().with(|e| e.tree.iter().map(item).collect())
 }
 
 pub(crate) fn has_files() -> bool {
-    global::<Entries>().with(|e| !e.0.is_empty())
+    global::<Entries>().with(|e| !e.tree.is_empty())
 }
 
 /// The kind of the file or folder at `path`, read untracked.
 pub(crate) fn kind_of(path: &str) -> Option<EntryKind> {
-    fn find(entries: &[Entry], path: &str) -> Option<EntryKind> {
-        entries.iter().find_map(|e| match e.path == path {
-            true => Some(e.kind),
-            false => find(&e.children, path),
-        })
+    untracked(|| global::<Entries>().with(|e| e.kinds.get(path).copied()))
+}
+
+fn entries(tree: Vec<Entry>) -> Entries {
+    fn add(entries: &[Entry], kinds: &mut HashMap<String, EntryKind>) {
+        for e in entries {
+            kinds.insert(e.path.clone(), e.kind);
+            add(&e.children, kinds);
+        }
     }
-    untracked(|| global::<Entries>().with(|e| find(&e.0, path)))
+    let mut kinds = HashMap::new();
+    add(&tree, &mut kinds);
+    Entries { tree, kinds }
 }
 
 /// Opens (or creates) the vault at `root`.
@@ -119,7 +125,7 @@ pub(crate) fn refresh() {
         return;
     };
     match vault.scan() {
-        Ok(entries) => set(Entries(entries)),
+        Ok(tree) => set(entries(tree)),
         Err(e) => notify(e),
     }
     reindex();

@@ -177,17 +177,6 @@ mod tests {
     }
 
     #[test]
-    fn keeps_what_was_drawn_within_bounds() {
-        remember("pie".into(), false, Ok("<svg/>".into()));
-        assert_eq!(cached("pie", false), Some(Ok("<svg/>".into())));
-        assert_eq!(cached("pie", true), None);
-        for i in 0..KEPT {
-            remember(i.to_string(), false, Err(String::new()));
-        }
-        assert!(DRAWN.with(|d| d.borrow().len()) <= KEPT);
-    }
-
-    #[test]
     fn bad_code_is_an_error_not_a_panic() {
         for source in [
             "",

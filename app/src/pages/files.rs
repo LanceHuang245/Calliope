@@ -1,7 +1,7 @@
 //! The vault's files: a tree of folders and notes. The header creates
-//! notes and folders, the row under the tree holds the app's actions; each row's context menu (a right click, or a held
-//! finger on a phone) acts on its item. The desktops show it in the
-//! sidebar, the phones as a screen.
+//! notes and folders, the row under the tree holds the app's actions; each
+//! row's context menu (a right click, or a held finger on a phone) acts on
+//! its item. The desktops show it in the sidebar, the phones as a screen.
 
 use calliope_core::vault::EntryKind;
 use nsh_base::{TreeEntry, context_menu, dialog, menu_separator, theme, tree};

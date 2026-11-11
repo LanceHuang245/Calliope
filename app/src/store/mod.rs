@@ -17,9 +17,9 @@ mod links;
 mod note;
 mod vault;
 
-use std::{fs, path::PathBuf};
+use std::{collections::HashMap, fs, path::PathBuf};
 
-use calliope_core::vault::{Entry, Vault};
+use calliope_core::vault::{Entry, EntryKind, Vault};
 use nsh_core::{file_dialog::SaveDialog, prelude::*, storage::Storage};
 
 pub(crate) use self::{
@@ -82,8 +82,13 @@ pub(crate) enum Theme {
 
 #[derive(Clone, Default)]
 struct OpenVault(Option<Vault>);
+/// The vault's files as the tree shows them, and each one's kind by path:
+/// each row of the tree looks its kind up.
 #[derive(Clone, Default)]
-struct Entries(Vec<Entry>);
+struct Entries {
+    tree: Vec<Entry>,
+    kinds: HashMap<String, EntryKind>,
+}
 #[derive(Clone, Default)]
 struct Expanded(Vec<SharedString>);
 #[derive(Clone, Default)]

@@ -282,7 +282,6 @@ name = "calliope"
 version = "0.1.0"
 dependencies = [
  "calliope-core",
- "calliope-sync",
  "log",
  "merman",
  "merman-export",

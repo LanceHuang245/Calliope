@@ -3,7 +3,7 @@
 
 use std::time::Duration;
 
-use calliope_core::{note, vault::EntryKind};
+use calliope_core::note;
 use nsh_core::platform::Lifecycle;
 
 use super::*;

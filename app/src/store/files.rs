@@ -1,7 +1,6 @@
 //! Files and folders: the tree's expansion and selection, and creating,
 //! renaming and deleting items.
 
-use calliope_core::vault::EntryKind;
 use nsh_base::alert_dialog;
 
 use super::*;

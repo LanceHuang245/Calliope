@@ -3,7 +3,7 @@
 
 use std::{
     fs,
-    path::PathBuf,
+    path::{Path, PathBuf},
     time::{Duration, SystemTime},
 };
 
@@ -28,6 +28,20 @@ fn vault(name: &str) -> PathBuf {
     )
     .unwrap();
     root
+}
+
+/// The desktop layout, in a 1200 × 800 window, on the vault at `root` as
+/// the last one opened.
+fn desktop(root: &Path) -> EngineConfig {
+    let mut config = EngineConfig::new(Root::of::<calliope::App>());
+    config.environment.idiom = Idiom::Desktop;
+    config.environment.os = Os::Linux;
+    config.viewport = size(px(1200.0), px(800.0));
+    config.storage = Some(MemoryStorage::new([(
+        "vault".to_owned(),
+        root.display().to_string(),
+    )]));
+    config
 }
 
 /// The phone layout `EngineConfig::new` gives: creating the vault, the home
@@ -85,18 +99,11 @@ fn phone_opens_reads_and_creates_notes() {
 #[test]
 fn desktop_autosaves_and_keeps_both_sides_of_a_conflict() {
     let root = vault("desktop");
-    let mut config = EngineConfig::new(Root::of::<calliope::App>());
-    config.environment.idiom = Idiom::Desktop;
-    config.environment.os = Os::Linux;
+    let mut config = desktop(&root);
     config.environment.file_requests = true;
     // Time moves only with the test's steps: no autosave can come between
     // typing and another app's write, on a fast machine or a slow one.
     config.clock = Clock::manual(SystemTime::now());
-    config.viewport = size(px(1200.0), px(800.0));
-    config.storage = Some(MemoryStorage::new([(
-        "vault".to_owned(),
-        root.display().to_string(),
-    )]));
     let mut app = Headless::start(config).unwrap();
 
     // The app draws its own title bar where the platform reports one.
@@ -179,15 +186,7 @@ fn desktop_follows_links_and_lists_backlinks() {
     )
     .unwrap();
     fs::write(root.join("Bee.md"), "# The bee\n").unwrap();
-    let mut config = EngineConfig::new(Root::of::<calliope::App>());
-    config.environment.idiom = Idiom::Desktop;
-    config.environment.os = Os::Linux;
-    config.viewport = size(px(1200.0), px(800.0));
-    config.storage = Some(MemoryStorage::new([(
-        "vault".to_owned(),
-        root.display().to_string(),
-    )]));
-    let mut app = Headless::start(config).unwrap();
+    let mut app = Headless::start(desktop(&root)).unwrap();
 
     // The note linked to lists the link's note and line; a press opens it.
     app.wait_for("Bee").unwrap();
@@ -241,15 +240,7 @@ fn desktop_shows_why_a_diagram_cannot_be_drawn() {
         "```mermaid\nnotADiagram here\n```\n\n```rust\nlet kept = 1;\n```\n",
     )
     .unwrap();
-    let mut config = EngineConfig::new(Root::of::<calliope::App>());
-    config.environment.idiom = Idiom::Desktop;
-    config.environment.os = Os::Linux;
-    config.viewport = size(px(1200.0), px(800.0));
-    config.storage = Some(MemoryStorage::new([(
-        "vault".to_owned(),
-        root.display().to_string(),
-    )]));
-    let mut app = Headless::start(config).unwrap();
+    let mut app = Headless::start(desktop(&root)).unwrap();
 
     app.wait_for("Chart").unwrap();
     app.press("text:Chart").unwrap();
@@ -269,15 +260,7 @@ fn desktop_draws_the_graph_and_opens_a_node() {
     let root = vault("graph");
     fs::write(root.join("A.md"), "[[Bee]] and [[Later]]\n").unwrap();
     fs::write(root.join("Bee.md"), "# The bee\n").unwrap();
-    let mut config = EngineConfig::new(Root::of::<calliope::App>());
-    config.environment.idiom = Idiom::Desktop;
-    config.environment.os = Os::Linux;
-    config.viewport = size(px(1200.0), px(800.0));
-    config.storage = Some(MemoryStorage::new([(
-        "vault".to_owned(),
-        root.display().to_string(),
-    )]));
-    let mut app = Headless::start(config).unwrap();
+    let mut app = Headless::start(desktop(&root)).unwrap();
 
     // Linked notes only, at first.
     app.wait_for("Bee").unwrap();

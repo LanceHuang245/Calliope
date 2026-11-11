@@ -7,7 +7,6 @@ publish.workspace = true
 
 [dependencies]
 calliope-core.workspace = true
-calliope-sync.workspace = true
 log.workspace = true
 merman.workspace = true
 merman-export.workspace = true
