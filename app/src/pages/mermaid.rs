@@ -49,7 +49,7 @@ pub(crate) fn mermaid(node: &CustomNode) -> AnyElement {
             }
             spawn(async move {
                 let key = source.clone();
-                let done = background(async move { draw(&source, dark) }).await;
+                let done = blocking(move || draw(&source, dark)).await;
                 let done = done.unwrap_or_else(|e| Err(e.to_string()));
                 remember(key, dark, done.clone());
                 drawn.set(Some(done));
@@ -91,6 +91,14 @@ fn remember(source: String, dark: bool, drawn: Drawn) {
             d.clear();
         }
         d.insert((source, dark), drawn);
+    });
+}
+
+/// Finds the system's fonts off the UI thread before a diagram needs them,
+/// so that the first diagram shown does not wait for them.
+pub(crate) fn warm_up() {
+    spawn(async {
+        let _ = blocking(|| fonts().is_ok()).await;
     });
 }
 

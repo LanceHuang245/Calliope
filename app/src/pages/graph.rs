@@ -36,7 +36,7 @@ pub(crate) fn graph_page() -> impl IntoElement {
     effect(move || {
         let graph = store::graph(orphans.get(), missing.get());
         spawn(async move {
-            let done = background(async move {
+            let done = blocking(move || {
                 let at = graph.layout();
                 (graph, at)
             });

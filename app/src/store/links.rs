@@ -36,7 +36,7 @@ pub(super) fn reindex() {
     let run = untracked(|| get::<Reindexing>().0);
     let mut index = untracked(|| Index::clone(&get::<Links>().0));
     spawn_task(async move {
-        let done = background(async move { index.sync(&vault).map(|changed| (changed, index)) });
+        let done = blocking(move || index.sync(&vault).map(|changed| (changed, index)));
         match done.await {
             // A run started since replaces this one.
             _ if untracked(|| get::<Reindexing>().0) != run => {}

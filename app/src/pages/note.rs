@@ -17,7 +17,7 @@ use nsh_core::{keymap::When, prelude::*};
 use super::{
     home::{home_page, menu_button},
     links::{WikiLinks, backlinks_panel, wiki_links},
-    mermaid::{mermaid, mermaid_blocks},
+    mermaid::{mermaid, mermaid_blocks, warm_up},
 };
 use crate::{
     components::{action, banner, field, icon_button, icons, segmented},
@@ -42,6 +42,10 @@ fn note_view() -> impl IntoElement {
     let finding = signal(false);
     let query = signal(String::new());
     let editor = component_ref::<Editor>();
+    // A note with diagrams: their fonts are found while it is edited.
+    if untracked(store::text).contains("```mermaid") {
+        warm_up();
+    }
     // Whether Split fits: a memo, so resizing the window rebuilds nothing
     // until it crosses the width.
     let wide = computed(move || window().width >= px(SPLIT_MIN_WIDTH));
