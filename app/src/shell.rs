@@ -16,7 +16,7 @@ use nsh_core::{
 };
 
 use crate::{
-    components::{banner, icon_button, icons},
+    components::{banner, card, icon_button, icons},
     pages::{
         files::{files_page, rename_dialog},
         graph::graph_page,
@@ -50,26 +50,38 @@ fn desktop() -> impl IntoElement {
     on_key("mod+g", |_| store::set_route(Route::Graph));
     on_key("mod+\\", |_| store::toggle_sidebar());
     hide_system_title_bar();
+    // Three cards on the sidebar's color, as far from each other as from
+    // the window's edges: the files, the workspace, the backlinks.
     let body = view()
         .flex_1()
         .flex_row()
+        .gap_2()
+        .p_2()
+        .pt_0()
+        .bg(move || theme().sidebar)
         .child(dynamic(move || (!store::sidebar_hidden()).then(sidebar)))
-        .child(view().flex_1().child(notice()).child(dynamic(move || {
-            let route = store::route();
-            let has_vault = store::vault().is_some();
-            untracked(|| match (route, has_vault) {
-                (Route::Settings, _) => settings_page().into_element(),
-                (Route::Graph, true) => graph_page().into_element(),
-                (_, true) => note_page().into_element(),
-                (_, false) => welcome_page().into_element(),
-            })
-        })))
+        .child(
+            card()
+                .flex_1()
+                .overflow_hidden()
+                .child(notice())
+                .child(dynamic(move || {
+                    let route = store::route();
+                    let has_vault = store::vault().is_some();
+                    untracked(|| match (route, has_vault) {
+                        (Route::Settings, _) => settings_page().into_element(),
+                        (Route::Graph, true) => graph_page().into_element(),
+                        (_, true) => note_page().into_element(),
+                        (_, false) => welcome_page().into_element(),
+                    })
+                })),
+        )
         // The open note's backlinks, on the right.
         .child(dynamic(move || {
             let shown = !store::backlinks_hidden()
                 && !matches!(store::route(), Route::Settings | Route::Graph)
                 && store::opened().is_some();
-            shown.then(|| view().w(px(260.0)).child(backlinks_panel()))
+            shown.then(|| card().w(px(260.0)).child(backlinks_panel()))
         }));
     view().flex_1().child(app_title_bar()).child(body)
 }
@@ -159,7 +171,13 @@ fn menu() -> impl IntoElement {
             }
         })
         .popup_style(|s| s.w_full().h_full())
-        .child(view().flex_1().p_safe_area().child(files_page()))
+        .child(
+            view()
+                .flex_1()
+                .p_safe_area()
+                .bg(move || theme().sidebar)
+                .child(view().flex_1().p_2().child(files_page())),
+        )
 }
 
 fn notice() -> impl IntoElement {

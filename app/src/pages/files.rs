@@ -21,8 +21,6 @@ pub(crate) fn files_page() -> impl IntoElement {
     view()
         .flex_1()
         .gap_2()
-        .p_2()
-        .bg(move || theme().sidebar)
         .child(
             card()
                 .flex_row()

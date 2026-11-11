@@ -86,8 +86,12 @@ fn note_view() -> impl IntoElement {
         // A phone shows the backlinks under the note.
         .child((!is_desktop()).then(|| {
             dynamic(|| {
-                (!store::backlinks().is_empty())
-                    .then(|| view().h(px(180.0)).child(backlinks_panel()))
+                (!store::backlinks().is_empty()).then(|| {
+                    view()
+                        .h(px(180.0))
+                        .bg(move || theme().sidebar)
+                        .child(backlinks_panel())
+                })
             })
         }))
 }

@@ -59,7 +59,6 @@ pub(crate) fn backlinks_panel() -> impl IntoElement {
         .flex_1()
         .gap_2()
         .p_3()
-        .bg(move || theme().sidebar)
         .child(
             text(strings::BACKLINKS)
                 .text_sm()
