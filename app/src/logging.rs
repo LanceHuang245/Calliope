@@ -12,16 +12,27 @@ use std::{
 /// A log over this size is started afresh when the app starts.
 const MAX_BYTES: u64 = 1024 * 1024;
 
+/// What reads and draws a Mermaid diagram's SVG warns about each part of it
+/// skipped (merman's CSS selectors, `transform="none"`, filters), for every
+/// diagram, and the diagram looks the same: only their errors are kept.
+const QUIET: [&str; 3] = ["usvg", "simplecss", "nsh_core::svg"];
+
 struct FileLogger {
     file: Mutex<Option<File>>,
 }
 
 impl log::Log for FileLogger {
     fn enabled(&self, metadata: &log::Metadata) -> bool {
-        metadata.level() <= log::Level::Info
+        match QUIET.iter().any(|t| metadata.target().starts_with(t)) {
+            true => metadata.level() <= log::Level::Error,
+            false => metadata.level() <= log::Level::Info,
+        }
     }
 
     fn log(&self, record: &log::Record) {
+        if !self.enabled(record.metadata()) {
+            return;
+        }
         let secs = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map_or(0, |d| d.as_secs());
