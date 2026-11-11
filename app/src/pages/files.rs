@@ -72,6 +72,9 @@ pub(crate) fn files_page() -> impl IntoElement {
                 .child(icon_button(icons::SEARCH, strings::SEARCH, || {
                     store::set_switching(true)
                 }))
+                .child(icon_button(icons::NETWORK, strings::GRAPH, || {
+                    store::set_route(Route::Graph)
+                }))
                 .child(
                     is_desktop().then(|| {
                         icon_button(icons::LINK, strings::BACKLINKS, store::toggle_backlinks)

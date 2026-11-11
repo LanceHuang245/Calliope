@@ -118,7 +118,7 @@ fn node(id: &str, exists: bool) -> Node {
 
 /// The distance linked nodes settle at, about.
 const SPACING: f32 = 40.0;
-const GRAVITY: f32 = 0.05;
+const GRAVITY: f32 = 0.3;
 /// A cell this many times farther than it is wide acts as one body.
 const FAR: f32 = 1.2;
 

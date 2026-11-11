@@ -19,6 +19,7 @@ use crate::{
     components::{banner, icon_button, icons},
     pages::{
         files::{files_page, rename_dialog},
+        graph::graph_page,
         home::home_page,
         links::backlinks_panel,
         note::note_page,
@@ -46,6 +47,7 @@ fn desktop() -> impl IntoElement {
     on_key("mod+n", |_| store::new_note());
     on_key("mod+e", |_| store::toggle_read());
     on_key("mod+o", |_| store::set_switching(true));
+    on_key("mod+g", |_| store::set_route(Route::Graph));
     on_key("mod+\\", |_| store::toggle_sidebar());
     hide_system_title_bar();
     let body = view()
@@ -57,6 +59,7 @@ fn desktop() -> impl IntoElement {
             let has_vault = store::vault().is_some();
             untracked(|| match (route, has_vault) {
                 (Route::Settings, _) => settings_page().into_element(),
+                (Route::Graph, true) => graph_page().into_element(),
                 (_, true) => note_page().into_element(),
                 (_, false) => welcome_page().into_element(),
             })
@@ -64,7 +67,7 @@ fn desktop() -> impl IntoElement {
         // The open note's backlinks, on the right.
         .child(dynamic(move || {
             let shown = !store::backlinks_hidden()
-                && store::route() != Route::Settings
+                && !matches!(store::route(), Route::Settings | Route::Graph)
                 && store::opened().is_some();
             shown.then(|| view().w(px(260.0)).child(backlinks_panel()))
         }));
@@ -138,6 +141,7 @@ fn mobile() -> impl IntoElement {
                 _ if !has_vault => welcome_page().into_element(),
                 Route::Home => home_page().into_element(),
                 Route::Note => note_page().into_element(),
+                Route::Graph => graph_page().into_element(),
                 Route::Settings => settings_page().into_element(),
             })
         }))

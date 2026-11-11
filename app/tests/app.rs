@@ -261,3 +261,37 @@ fn desktop_shows_why_a_diagram_cannot_be_drawn() {
     app.wait_for("let kept = 1;").unwrap();
     let _ = fs::remove_dir_all(&root);
 }
+
+/// The graph: linked notes as nodes, a press on one opens its note; the
+/// options add the notes without links and those not yet created.
+#[test]
+fn desktop_draws_the_graph_and_opens_a_node() {
+    let root = vault("graph");
+    fs::write(root.join("A.md"), "[[Bee]] and [[Later]]\n").unwrap();
+    fs::write(root.join("Bee.md"), "# The bee\n").unwrap();
+    let mut config = EngineConfig::new(Root::of::<calliope::App>());
+    config.environment.idiom = Idiom::Desktop;
+    config.environment.os = Os::Linux;
+    config.viewport = size(px(1200.0), px(800.0));
+    config.storage = Some(MemoryStorage::new([(
+        "vault".to_owned(),
+        root.display().to_string(),
+    )]));
+    let mut app = Headless::start(config).unwrap();
+
+    // Linked notes only, at first.
+    app.wait_for("Bee").unwrap();
+    app.press_key("mod+g").unwrap();
+    app.wait_for("id:Bee.md").unwrap();
+    assert!(!app.shows("id:Later") && !app.shows("id:Hello.md"));
+    app.press("Orphans").unwrap();
+    app.wait_for("id:Hello.md").unwrap();
+    app.press("Uncreated notes").unwrap();
+    app.wait_for("id:Later").unwrap();
+
+    // A node opens its note.
+    app.press("id:Bee.md").unwrap();
+    app.press("Read").unwrap();
+    app.wait_for("The bee").unwrap();
+    let _ = fs::remove_dir_all(&root);
+}

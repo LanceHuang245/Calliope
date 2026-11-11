@@ -3,7 +3,10 @@
 
 use std::sync::Arc;
 
-use calliope_core::index::{Backlink, Index};
+use calliope_core::{
+    graph::Graph,
+    index::{Backlink, Index},
+};
 use nsh_base::alert_dialog;
 
 use super::*;
@@ -51,6 +54,11 @@ pub(crate) fn backlinks() -> Vec<Backlink> {
     note_path()
         .map(|path| index.backlinks(&path))
         .unwrap_or_default()
+}
+
+/// The vault's graph; `orphans` and `missing` as [`Graph::of`] takes them.
+pub(crate) fn graph(orphans: bool, missing: bool) -> Graph {
+    Graph::of(&get::<Links>().0, orphans, missing)
 }
 
 pub(crate) fn backlinks_hidden() -> bool {

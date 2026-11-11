@@ -2,6 +2,7 @@
 //! reaches into another page.
 
 pub(crate) mod files;
+pub(crate) mod graph;
 pub(crate) mod home;
 pub(crate) mod links;
 pub(crate) mod mermaid;
