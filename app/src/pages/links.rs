@@ -2,22 +2,37 @@
 //! backlinks of the open note.
 
 use calliope_core::{index::Backlink, link, note};
-use nsh_base::{MarkdownExtension, text_view::CustomNode, theme};
+use nsh_base::{MarkdownExtension, MarkdownPlugin, text_view::CustomNode, theme};
 use nsh_core::prelude::*;
 
 use crate::{store, strings};
 
 /// The name of the custom nodes wiki links are read as.
-pub(crate) const WIKI_LINK: &str = "wikilink";
+const WIKI_LINK: &str = "wikilink";
 
 /// Reads `[[…]]` in a note's text as a wiki link, outside code.
 pub(crate) fn wiki_links() -> MarkdownExtension {
     MarkdownExtension::pattern(WIKI_LINK, r"\[\[([^\[\]]+)\]\]")
 }
 
+/// Shows the wiki links as text of their line: a custom node shown by the
+/// text view's `render_custom` is a view in the line, which the Linux
+/// backend does not draw.
+pub(crate) struct WikiLinks;
+
+impl MarkdownPlugin for WikiLinks {
+    fn name(&self) -> &str {
+        WIKI_LINK
+    }
+
+    fn render(&self, node: &CustomNode) -> Option<AnyElement> {
+        (node.name == WIKI_LINK).then(|| wiki_link(node))
+    }
+}
+
 /// A wiki link of the rendered note: its alias, else what it names,
 /// underlined (dashed while no note has that name). A press follows it.
-pub(crate) fn wiki_link(node: &CustomNode) -> AnyElement {
+fn wiki_link(node: &CustomNode) -> AnyElement {
     let inner = node.attributes.get("1").map_or("", String::as_str);
     let Some((target, _, alias)) = link::parse(inner) else {
         return text(node.text.clone()).into_element();

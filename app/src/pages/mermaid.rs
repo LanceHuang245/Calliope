@@ -15,7 +15,7 @@ use nsh_core::{element::ImageSrc, prelude::*};
 use crate::strings;
 
 /// The name of the custom nodes Mermaid code is read as.
-pub(crate) const MERMAID: &str = "mermaid";
+const MERMAID: &str = "mermaid";
 
 /// Reads fenced code of the language `mermaid` as a diagram; other code
 /// keeps its highlighting.

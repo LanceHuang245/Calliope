@@ -6,7 +6,7 @@
 
 use calliope_core::note;
 use nsh_base::{
-    Editor, EditorApi, EditorClasses, EditorCommand, EditorSearch, TextViewLinks,
+    Editor, EditorApi, EditorClasses, EditorCommand, EditorSearch, MarkdownPlugins, TextViewLinks,
     editor::{EditorCompletionItem, EditorCompletionRequest},
     h_resizable, input, resizable_panel, text_view,
     text_view::{CustomNode, Image},
@@ -16,8 +16,8 @@ use nsh_core::{keymap::When, prelude::*};
 
 use super::{
     home::{home_page, menu_button},
-    links::{WIKI_LINK, backlinks_panel, wiki_link, wiki_links},
-    mermaid::{MERMAID, mermaid, mermaid_blocks},
+    links::{WikiLinks, backlinks_panel, wiki_links},
+    mermaid::{mermaid, mermaid_blocks},
 };
 use crate::{
     components::{action, banner, field, icon_button, icons, segmented},
@@ -248,6 +248,7 @@ fn preview() -> impl IntoElement {
             SharedString::from(body.to_owned()),
         )
     });
+    provide_context(MarkdownPlugins::new().with(WikiLinks));
     scroll().flex_1().child(
         view()
             .p_6()
@@ -259,11 +260,8 @@ fn preview() -> impl IntoElement {
                     .selectable(true)
                     .links(TextViewLinks::Open)
                     .extensions(vec![wiki_links(), mermaid_blocks()])
-                    .render_custom(|node: &CustomNode| match node.name.as_str() {
-                        WIKI_LINK => wiki_link(node),
-                        MERMAID => mermaid(node),
-                        _ => text(node.text.clone()).into_element(),
-                    })
+                    // The wiki links are `WikiLinks`' to show.
+                    .render_custom(|node: &CustomNode| mermaid(node))
                     .render_image(|img: &Image| vault_image(img))
                     .text_color(move || theme().foreground),
             ),
