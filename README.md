@@ -1,58 +1,85 @@
+English | [简体中文](README_CN.md)
+
 # Calliope
 
-一个以本地 Markdown 文件为核心、内置 WebDAV / S3 同步的笔记应用，基于 [Native Shell (nsh)](https://nsh.dev) 使用 Rust 编写，在每个平台上使用系统原生 UI 渲染。
+[![CI](https://github.com/LanceHuang245/Calliope/actions/workflows/ci.yml/badge.svg)](https://github.com/LanceHuang245/Calliope/actions/workflows/ci.yml)
 
-## 目标平台
+Calliope is a local-first, cross-platform Markdown knowledge base written in Rust. It renders with each platform's native UI through [Native Shell (nsh)](https://nsh.dev) and runs on Windows, macOS, Linux, Android and iOS.\
+Notes stay as plain Markdown files in a folder you own, connected through wiki links, backlinks and a graph of the whole vault. Synchronization will go directly to your own WebDAV or S3 storage, with no intermediary server.
+> **Note**
+>
+> Calliope is in early development. Sync is not available yet, and things will change. Keep a backup of the notes you open with it.
+---
+## Features
+- Plain files: any folder of Markdown notes is a vault; Calliope only adds a hidden `.calliope/` folder
+- Three modes: Edit, Read, and Split side by side, with find and replace in the source
+- Markdown rendering: GitHub-flavored Markdown (tables, task lists, footnotes), code highlighting, LaTeX formulas, images and GitHub's five callouts
+- Wiki links: `[[Note]]`, `[[Note|alias]]`, `[[Note#Heading]]` and `[[Folder/Note]]`, resolved by name across the vault; a link to a missing note offers to create it
+- Backlinks: every note linking to the open one, with the line of the link
+- Link completion: type `[[` for the notes' titles
+- Quick switcher: find a note by its title, or create one
+- Mermaid diagrams: flowcharts, sequence, class, state, Gantt and pie charts, drawn natively in Rust by [merman](https://crates.io/crates/merman) (no WebView)
+- Graph view: every note and link, with pan, zoom, hover highlighting, and optional orphans and not-yet-created notes
+- Safe editing: autosave within a second, atomic writes, deleted files go to the trash, and changes made by other apps are picked up without overwriting yours
+- Themes: light, dark, or following the system
+- Native on five platforms: Windows, macOS, Linux, Android and iOS
 
-| 平台 | nsh 后端 | 运行方式 |
-|---|---|---|
-| Windows | Win32 / Direct2D / DirectWrite | `cargo run -p calliope` 或 `nsh run app --target windows` |
-| macOS | AppKit / Core Animation | `cargo run -p calliope` 或 `nsh run app --target macos` |
-| Linux | GTK 4 / Pango | `cargo run -p calliope` 或 `nsh run app --target linux` |
-| Android | Android Views（Material 3 导航栏） | `nsh run app --target android` |
-| iOS（暂不上架） | UIKit（iOS 26 Liquid Glass） | `nsh run app --target ios`（需要 macOS + Xcode） |
+## Roadmap
+Calliope is built in stages; links and the graph are done. Next:
+- Sync with WebDAV and S3: three-way comparison, conflict copies instead of overwrites, protection against mass deletes
+- Mobile: the system's tab bar and navigation, Material 3 on Android and Liquid Glass on iOS
+- End-to-end encryption of synced notes, file names and folder names
+- Polish: tabs, full-text search, a command palette, a local graph and an outline
 
-## 目录结构
+## Usage
+1. Open a folder of Markdown notes, or create a new vault. On a phone, Calliope creates a vault in its own storage
+2. Create a note with `Ctrl+N`; its title is its file name. Folders, renaming and deleting are in the file tree's context menu
+3. Link notes with `[[Note]]`, then follow the links in Read mode and see them in the Backlinks panel
+4. Open the graph with `Ctrl+G` or the button under the file tree; drag to move it, `Ctrl` + scroll (or pinch) to zoom
 
-```text
-Calliope/
-├── Cargo.toml              Cargo workspace：成员与共享依赖（nsh 0.4）
-├── rust-toolchain.toml     stable 工具链与移动端 target
-├── app/                    nsh 应用（UI 层）
-│   ├── nsh.json            应用名、id、版本、根组件、主题、外观（跟随系统）
-│   ├── theme.json          设计令牌（shadcn/ui cssVars，浅色/深色）
-│   ├── Cargo.toml
-│   ├── src/
-│   │   ├── lib.rs          根组件 App 与 #[native_module]
-│   │   ├── main.rs         cargo run：桌面后端入口
-│   │   ├── shell.rs        应用外壳：桌面（侧边栏 + 工作区）/ 移动（系统 TabBar + 导航栈）
-│   │   ├── store/          UI 状态：仓库与文件树、当前笔记与自动保存、文件操作
-│   │   ├── strings.rs      界面文案（集中管理）
-│   │   ├── paths.rs        应用数据目录、手机沙盒仓库；logging.rs：日志文件
-│   │   ├── pages/          页面（笔记、图谱、设置……）
-│   │   └── components/     Calliope 自己的样式组件层（基于 nsh-base）
-│   └── tests/              无头 UI 测试（cargo test）
-├── crates/
-│   ├── calliope-core/      知识库：Vault、笔记、链接解析、反向链接索引、图谱（无 UI）
-│   └── calliope-sync/      同步：存储后端（WebDAV、S3）、同步引擎、状态、冲突处理（无 UI）
-├── docs/                   产品与设计文档
-└── .github/workflows/      CI：三个桌面平台上的 fmt、clippy、test，5 个平台的安装包
-```
+| Shortcut | Action |
+|---|---|
+| `Ctrl+N` | New note |
+| `Ctrl+E` | Switch between Edit and Read |
+| `Ctrl+F` | Find in the note |
+| `Ctrl+O` | Quick switcher |
+| `Ctrl+G` | Graph |
+| `Ctrl+\` | Hide or show the sidebar |
 
-UI 层只依赖 `calliope-core` / `calliope-sync` 的公开接口；两个核心 crate 不依赖 nsh，可以单独测试。
+On macOS, use `Cmd` in place of `Ctrl`.
 
-## 开发
+## Contributing
+We welcome community users to contribute! Feel free to fork this repository, submit Pull Requests, and make suggestions and report bugs through [Issues](https://github.com/LanceHuang245/Calliope/issues).
 
-需要：
-
-- Rust stable（`rust-toolchain.toml` 会自动安装所需 target）
-- Windows：Visual Studio Build Tools（C++ 桌面开发 + Windows SDK）
-- Linux：GTK 4.14+ 开发包
-- 移动端与打包：[nsh CLI](https://nsh.dev/docs/installation)；Android 需要 SDK + NDK，iOS 需要 Xcode
+### Building
+You need:
+- Rust stable (`rust-toolchain.toml` installs the targets it needs)
+- Windows: Visual Studio Build Tools (Desktop development with C++, Windows SDK)
+- Linux: GTK 4.14 or later, and GStreamer, with their development packages
+- Mobile builds and packages: the [nsh CLI](https://nsh.dev/docs/installation); Android needs its SDK and NDK, iOS needs Xcode
 
 ```sh
-cargo run -p calliope          # 在本机桌面后端运行
-cargo test --workspace         # 运行全部测试（含无头 UI 测试）
-nsh run app --target android   # 在 Android 模拟器/设备运行
-nsh package app --target windows
+cargo run -p calliope            # run on this desktop
+cargo test --workspace           # every test, the headless UI tests included
+nsh run app --target android     # run on an Android emulator or device
+nsh package app --target windows # build an installer
 ```
+
+The UI lives in `app/`; the vault, links, index and graph in `crates/calliope-core`, and sync in `crates/calliope-sync`. Neither crate depends on the UI, so both are tested on their own.
+
+### Translation
+The interface is English only for now. Every text of it is in [`app/src/strings.rs`](app/src/strings.rs), so other languages can be added later.
+
+## Download
+There is no release yet. Every push builds installers for all five platforms: [Calliope Action](https://github.com/LanceHuang245/Calliope/actions/workflows/ci.yml) (sign in to GitHub to download them).
+
+| Platform | Minimum version | Notes |
+|---|---|---|
+| Windows | Windows 10 1809 | |
+| macOS | macOS 14 | Built and tested in CI only |
+| Linux | GTK 4.14 | |
+| Android | Android 9 | APK |
+| iOS | iOS 15 | Unsigned IPA: sign it yourself to install |
+
+## License
+[Apache License 2.0](LICENSE) © Linxing Huang
