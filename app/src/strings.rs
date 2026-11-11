@@ -62,6 +62,8 @@ pub(crate) const LOGS_COPIED: &str = "The logs were copied to the clipboard.";
 pub(crate) const BACKLINKS: &str = "Backlinks";
 pub(crate) const NO_BACKLINKS: &str = "No other note links here.";
 
+pub(crate) const NO_DIAGRAM: &str = "This is not a Mermaid diagram.";
+pub(crate) const DIAGRAM_FAILED: &str = "This diagram could not be drawn.";
 pub(crate) const SEARCH: &str = "Search";
 pub(crate) const FIND_NOTE: &str = "Find or create a note";
 

@@ -230,3 +230,34 @@ fn desktop_follows_links_and_lists_backlinks() {
     app.wait_for("New idea").unwrap();
     let _ = fs::remove_dir_all(&root);
 }
+
+/// Mermaid code that is no diagram shows its reason and the code, and
+/// other code blocks stay code.
+#[test]
+fn desktop_shows_why_a_diagram_cannot_be_drawn() {
+    let root = vault("mermaid");
+    fs::write(
+        root.join("Chart.md"),
+        "```mermaid\nnotADiagram here\n```\n\n```rust\nlet kept = 1;\n```\n",
+    )
+    .unwrap();
+    let mut config = EngineConfig::new(Root::of::<calliope::App>());
+    config.environment.idiom = Idiom::Desktop;
+    config.environment.os = Os::Linux;
+    config.viewport = size(px(1200.0), px(800.0));
+    config.storage = Some(MemoryStorage::new([(
+        "vault".to_owned(),
+        root.display().to_string(),
+    )]));
+    let mut app = Headless::start(config).unwrap();
+
+    app.wait_for("Chart").unwrap();
+    app.press("text:Chart").unwrap();
+    app.press("Read").unwrap();
+    // The system's fonts are read first, once: slow in a debug build.
+    app.wait_for_within("No Mermaid diagram type detected", Duration::from_secs(120))
+        .unwrap();
+    app.wait_for("notADiagram here").unwrap();
+    app.wait_for("let kept = 1;").unwrap();
+    let _ = fs::remove_dir_all(&root);
+}

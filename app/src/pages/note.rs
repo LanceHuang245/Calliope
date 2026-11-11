@@ -17,6 +17,7 @@ use nsh_core::{keymap::When, prelude::*};
 use super::{
     home::{home_page, menu_button},
     links::{WIKI_LINK, backlinks_panel, wiki_link, wiki_links},
+    mermaid::{MERMAID, mermaid, mermaid_blocks},
 };
 use crate::{
     components::{action, banner, field, icon_button, icons, segmented},
@@ -257,9 +258,10 @@ fn preview() -> impl IntoElement {
                     .markdown(move || parts.get().1)
                     .selectable(true)
                     .links(TextViewLinks::Open)
-                    .extensions(vec![wiki_links()])
+                    .extensions(vec![wiki_links(), mermaid_blocks()])
                     .render_custom(|node: &CustomNode| match node.name.as_str() {
                         WIKI_LINK => wiki_link(node),
+                        MERMAID => mermaid(node),
                         _ => text(node.text.clone()).into_element(),
                     })
                     .render_image(|img: &Image| vault_image(img))
