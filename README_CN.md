@@ -78,7 +78,7 @@ UI 位于 `app/`；仓库、链接、索引和图谱位于 `crates/calliope-core
 | Windows | Windows 10 1809 | |
 | macOS | macOS 14 | 仅在 CI 中构建和测试 |
 | Linux | GTK 4.14 | |
-| Android | Android 9 | APK |
+| Android | Android 9 | APK：64 位（arm64-v8a）或 32 位（armeabi-v7a）手机各一个，以及通用包（模拟器也能用） |
 | iOS | iOS 15 | 未签名的 IPA，需要自行签名后安装 |
 
 ## 许可证

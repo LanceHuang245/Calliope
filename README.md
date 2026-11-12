@@ -78,7 +78,7 @@ There is no release yet. Every push builds installers for all five platforms: [C
 | Windows | Windows 10 1809 | |
 | macOS | macOS 14 | Built and tested in CI only |
 | Linux | GTK 4.14 | |
-| Android | Android 9 | APK |
+| Android | Android 9 | APK for 64-bit (arm64-v8a) or 32-bit (armeabi-v7a) phones, or universal (emulators too) |
 | iOS | iOS 15 | Unsigned IPA: sign it yourself to install |
 
 ## License
