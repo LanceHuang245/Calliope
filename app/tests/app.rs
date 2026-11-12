@@ -297,7 +297,7 @@ fn desktop_draws_the_graph_and_opens_a_node() {
 /// Sync in the settings: the sync button opens them while sync is off;
 /// WebDAV's settings go to the vault's `.calliope/sync.json` (the password,
 /// left empty here, would go to the system's keyring). The notice saying so
-/// goes after three seconds.
+/// goes after three seconds; a problem stays until closed.
 #[test]
 fn desktop_saves_the_sync_settings() {
     let root = vault("sync");
@@ -306,6 +306,9 @@ fn desktop_saves_the_sync_settings() {
 
     app.press("label:Sync").unwrap();
     app.wait_for("text:Test connection").unwrap();
+    // A problem stays until closed, under the notices that come after it.
+    app.press("text:Test connection").unwrap();
+    app.wait_for("Sync failed: sync is off.").unwrap();
     app.press("text:WebDAV").unwrap();
     app.type_text("label:Server address", "https://dav.example.com/dav")
         .unwrap();
@@ -316,6 +319,10 @@ fn desktop_saves_the_sync_settings() {
     app.wait(Duration::from_secs(1)).unwrap();
     assert!(app.shows("The sync settings were saved."));
     app.wait_for_gone("The sync settings were saved.", Duration::from_secs(5))
+        .unwrap();
+    assert!(app.shows("Sync failed: sync is off."));
+    app.press("label:Close").unwrap();
+    app.wait_for_gone("Sync failed: sync is off.", Duration::from_secs(2))
         .unwrap();
     let saved = fs::read_to_string(root.join(".calliope/sync.json")).unwrap();
     assert!(saved.contains(r#""provider": "webdav""#), "{saved}");

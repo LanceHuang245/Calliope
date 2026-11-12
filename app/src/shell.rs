@@ -3,7 +3,7 @@
 //! - Desktop (Windows, macOS, Linux): the app's own title bar over a
 //!   sidebar (the files and the app's actions) beside the workspace (the
 //!   note, or the settings) and the open note's backlinks, with the app's
-//!   shortcuts.
+//!   shortcuts and a status bar in the bottom right corner.
 //! - Phone (iOS, Android): one screen at a time, the files, a note or the
 //!   settings (the system tab bar and navigation stacks come later).
 
@@ -18,7 +18,7 @@ use nsh_core::{
 };
 
 use crate::{
-    components::{banner, card, icon_button, icons},
+    components::{card, icon_button, icons},
     pages::{
         files::{files_page, rename_dialog},
         graph::graph_page,
@@ -26,11 +26,12 @@ use crate::{
         links::backlinks_panel,
         note::note_page,
         settings::settings_page,
+        status::status_bar,
         switcher::quick_switcher,
         sync::deletions_dialog,
         welcome::welcome_page,
     },
-    store::{self, Route},
+    store::{self, Notice, Route},
     strings,
 };
 
@@ -80,13 +81,17 @@ fn desktop() -> impl IntoElement {
                         (_, false) => welcome_page().into_element(),
                     })
                 }))
-                .child(notice()),
+                .child(notices()),
         )
         // The open note's backlinks, on the right.
         .child(dynamic(move || {
             store::backlinks_shown().then(|| card().w(px(260.0)).child(backlinks_panel()))
         }));
-    view().flex_1().child(app_title_bar()).child(body)
+    view()
+        .flex_1()
+        .child(app_title_bar())
+        .child(body)
+        .child(status_bar())
 }
 
 /// Hides the system's title bar: the app fills the window up to its top
@@ -160,7 +165,7 @@ fn mobile() -> impl IntoElement {
     view()
         .flex_1()
         .p_safe_area()
-        .child(view().flex_1().child(page).child(notice()))
+        .child(view().flex_1().child(page).child(notices()))
         .child(menu())
 }
 
@@ -184,34 +189,61 @@ fn menu() -> impl IntoElement {
         )
 }
 
-/// How long a notice stays.
-const NOTICE_TIME: Duration = Duration::from_secs(3);
+/// How long news stays.
+const NEWS_TIME: Duration = Duration::from_secs(3);
 
-/// The latest notice, over the top of the page: it drops in fading, stays
-/// three seconds (or until closed) and rises away fading. A new notice
-/// replaces it, and its time starts again.
-fn notice() -> impl IntoElement {
-    dynamic(move || store::notice().map(|message| untracked(|| toast(message))))
-}
-
-fn toast(message: String) -> impl IntoElement {
-    let motion = motion().entering(MotionPreset::FadeInDown);
-    // The tasks end with the toast, so an old one never hides a new notice.
-    let hide = move || {
-        spawn(async move {
-            motion.play(MotionPreset::FadeOutUp).await;
-            store::dismiss_notice();
-        });
-    };
-    spawn(async move {
-        timer(NOTICE_TIME).await;
-        hide();
-    });
+/// The notices over the top of the page, the newest on top: each drops in
+/// fading and rises away fading, news after three seconds, a problem (an
+/// error, a conflict) only when closed.
+fn notices() -> impl IntoElement {
     view()
         .absolute()
         .top_0()
         .left_0()
         .right_0()
+        .p_2()
+        .gap_2()
+        .child(each(
+            store::notices,
+            |notice| notice.id,
+            |notice, _| untracked(|| toast(notice.get())),
+        ))
+}
+
+fn toast(notice: Notice) -> impl IntoElement {
+    let motion = motion().entering(MotionPreset::FadeInDown);
+    let hide = move || {
+        spawn(async move {
+            motion.play(MotionPreset::FadeOutUp).await;
+            store::dismiss_notice(notice.id);
+        });
+    };
+    // The task ends with the toast: closed first, it does nothing.
+    if !notice.stays {
+        spawn(async move {
+            timer(NEWS_TIME).await;
+            hide();
+        });
+    }
+    view()
         .bind_motion(&motion)
-        .child(banner(message).child(icon_button(icons::X, strings::CLOSE, hide)))
+        .flex_row()
+        .items_center()
+        .gap_2()
+        .pl_4()
+        .pr_1()
+        .py_1()
+        .rounded(move || theme().radius)
+        .border_1()
+        .border_color(move || theme().border)
+        .bg(move || theme().popover)
+        .shadow_md()
+        .child(
+            text(notice.message)
+                .flex_1()
+                .text_sm()
+                .text_color(move || theme().popover_foreground)
+                .select_text(),
+        )
+        .child(icon_button(icons::X, strings::CLOSE, hide))
 }

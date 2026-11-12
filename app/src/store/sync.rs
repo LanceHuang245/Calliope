@@ -115,7 +115,7 @@ pub(crate) fn save_sync(config: Config, secret: &str) {
         show_secret_in_file(&vault);
     }
     set(SyncConfig(config));
-    notify(strings::SYNC_SAVED);
+    inform(strings::SYNC_SAVED);
 }
 
 /// Checks the settings being edited, `secret` empty for the saved one.
@@ -133,7 +133,7 @@ pub(crate) fn test_sync(config: Config, secret: String) {
             calliope_sync::test(&config, &secret).await
         });
         match tested.await {
-            Ok(Ok(())) => notify(strings::SYNC_WORKS),
+            Ok(Ok(())) => inform(strings::SYNC_WORKS),
             Ok(Err(e)) => notify(strings::sync_failed(&e)),
             Err(e) => notify(e),
         }

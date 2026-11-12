@@ -118,8 +118,9 @@ struct Saved(String);
 struct Conflict(bool);
 #[derive(Clone, Default)]
 struct Renaming(Option<String>);
+/// The notices showing, the newest first, and the next one's id.
 #[derive(Clone, Default)]
-struct Notice(Option<String>);
+struct Notices(Vec<Notice>, u64);
 #[derive(Clone, Default)]
 struct SidebarHidden(bool);
 /// The phone's menu: the files, slid in from the left over the page.
@@ -172,8 +173,17 @@ pub(crate) fn init() {
     start_sync_timers();
 }
 
-pub(crate) fn notice() -> Option<String> {
-    get::<Notice>().0
+/// A message to the user at the top of the page.
+#[derive(Clone, PartialEq)]
+pub(crate) struct Notice {
+    pub id: u64,
+    pub message: String,
+    /// Stays until closed (a problem); else it goes after a while.
+    pub stays: bool,
+}
+
+pub(crate) fn notices() -> Vec<Notice> {
+    get::<Notices>().0
 }
 
 pub(crate) fn mode() -> Mode {
@@ -236,15 +246,34 @@ pub(crate) fn set_theme(theme: Theme) {
     set(theme);
 }
 
-/// Shows `message` to the user (and logs it).
+/// Shows `message`, a problem (an error, a conflict), until the user closes
+/// it; and logs it.
 pub(crate) fn notify(message: impl ToString) {
     let message = message.to_string();
     log::warn!("{message}");
-    set(Notice(Some(message)));
+    show(message, true);
 }
 
-pub(crate) fn dismiss_notice() {
-    set(Notice(None));
+/// Shows `message`, news, for a while; and logs it.
+pub(crate) fn inform(message: impl ToString) {
+    let message = message.to_string();
+    log::info!("{message}");
+    show(message, false);
+}
+
+/// Puts `message` on top of the notices; the same message showing goes, so
+/// a repeated one (a sync failing again) does not pile up.
+fn show(message: String, stays: bool) {
+    global::<Notices>().update(|n| {
+        n.0.retain(|old| old.message != message);
+        n.1 += 1;
+        let id = n.1;
+        n.0.insert(0, Notice { id, message, stays });
+    });
+}
+
+pub(crate) fn dismiss_notice(id: u64) {
+    global::<Notices>().update(|n| n.0.retain(|notice| notice.id != id));
 }
 
 /// Hands the log to the user: saved where they choose on the desktops,
@@ -256,7 +285,7 @@ pub(crate) fn export_logs() {
     log::logger().flush();
     if !is_desktop() {
         set_clipboard(fs::read_to_string(&log).unwrap_or_default());
-        notify(strings::LOGS_COPIED);
+        inform(strings::LOGS_COPIED);
         return;
     }
     let picked = pick_save_path(SaveDialog::new().file_name("calliope.log"));

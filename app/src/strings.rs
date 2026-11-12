@@ -97,7 +97,8 @@ pub(crate) const TEST_CONNECTION: &str = "Test connection";
 pub(crate) const SYNC_NOW: &str = "Sync now";
 pub(crate) const SYNC_SAVED: &str = "The sync settings were saved.";
 pub(crate) const SYNC_WORKS: &str = "The connection works.";
-pub(crate) const NOT_SYNCED: &str = "Not synced yet.";
+pub(crate) const NOT_SYNCED: &str = "Not synced yet";
+pub(crate) const SYNC_FAILED: &str = "Sync failed";
 pub(crate) const SECRET_IN_FILE: &str = "No keyring was found, so the password is kept in a \
      file only Calliope reads. Install GNOME Keyring or KWallet, then save the password \
      again to keep it in the keyring.";
@@ -115,7 +116,7 @@ pub(crate) fn syncing(done: usize, total: usize) -> String {
 }
 
 pub(crate) fn synced_at(time: &str) -> String {
-    format!("Last synced at {time}.")
+    format!("Synced at {time}")
 }
 
 pub(crate) fn sync_failed(error: &dyn std::fmt::Display) -> String {
