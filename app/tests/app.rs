@@ -288,7 +288,8 @@ fn desktop_draws_the_graph_and_opens_a_node() {
 
 /// Sync in the settings: the sync button opens them while sync is off;
 /// WebDAV's settings go to the vault's `.calliope/sync.json` (the password,
-/// left empty here, would go to the system's keyring).
+/// left empty here, would go to the system's keyring). The notice saying so
+/// goes after three seconds.
 #[test]
 fn desktop_saves_the_sync_settings() {
     let root = vault("sync");
@@ -303,6 +304,11 @@ fn desktop_saves_the_sync_settings() {
     app.type_text("label:User name", "me").unwrap();
     app.press("text:Save").unwrap();
     app.wait_for("The sync settings were saved.").unwrap();
+    // The notice stays three seconds, then goes on its own.
+    app.wait(Duration::from_secs(1)).unwrap();
+    assert!(app.shows("The sync settings were saved."));
+    app.wait_for_gone("The sync settings were saved.", Duration::from_secs(5))
+        .unwrap();
     let saved = fs::read_to_string(root.join(".calliope/sync.json")).unwrap();
     assert!(saved.contains(r#""provider": "webdav""#), "{saved}");
     assert!(saved.contains("https://dav.example.com/dav"), "{saved}");

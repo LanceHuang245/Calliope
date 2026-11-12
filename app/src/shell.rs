@@ -7,6 +7,8 @@
 //! - Phone (iOS, Android): one screen at a time, the files, a note or the
 //!   settings (the system tab bar and navigation stacks come later).
 
+use std::time::Duration;
+
 use nsh_base::{SheetEvent, sheet, theme};
 use nsh_core::{
     desktop::{TitleBarOptions, TitleBarStyle, WindowAttributes},
@@ -68,7 +70,6 @@ fn desktop() -> impl IntoElement {
             card()
                 .flex_1()
                 .overflow_hidden()
-                .child(notice())
                 .child(dynamic(move || {
                     let route = store::route();
                     let has_vault = store::vault().is_some();
@@ -78,7 +79,8 @@ fn desktop() -> impl IntoElement {
                         (_, true) => note_page().into_element(),
                         (_, false) => welcome_page().into_element(),
                     })
-                })),
+                }))
+                .child(notice()),
         )
         // The open note's backlinks, on the right.
         .child(dynamic(move || {
@@ -146,21 +148,22 @@ fn mobile() -> impl IntoElement {
             true
         }
     });
+    let page = dynamic(move || {
+        let route = store::route();
+        let has_vault = store::vault().is_some();
+        untracked(|| match route {
+            _ if !has_vault => welcome_page().into_element(),
+            Route::Home => home_page().into_element(),
+            Route::Note => note_page().into_element(),
+            Route::Graph => graph_page().into_element(),
+            Route::Settings => settings_page().into_element(),
+        })
+    });
+    // The notice inside the safe area, over the page.
     view()
         .flex_1()
         .p_safe_area()
-        .child(notice())
-        .child(dynamic(move || {
-            let route = store::route();
-            let has_vault = store::vault().is_some();
-            untracked(|| match route {
-                _ if !has_vault => welcome_page().into_element(),
-                Route::Home => home_page().into_element(),
-                Route::Note => note_page().into_element(),
-                Route::Graph => graph_page().into_element(),
-                Route::Settings => settings_page().into_element(),
-            })
-        }))
+        .child(view().flex_1().child(page).child(notice()))
         .child(menu())
 }
 
@@ -184,10 +187,34 @@ fn menu() -> impl IntoElement {
         )
 }
 
+/// How long a notice stays.
+const NOTICE_TIME: Duration = Duration::from_secs(3);
+
+/// The latest notice, over the top of the page: it drops in fading, stays
+/// three seconds (or until closed) and rises away fading. A new notice
+/// replaces it, and its time starts again.
 fn notice() -> impl IntoElement {
-    dynamic(move || {
-        store::notice().map(|message| {
-            banner(message).child(icon_button(icons::X, strings::CLOSE, store::dismiss_notice))
-        })
-    })
+    dynamic(move || store::notice().map(|message| untracked(|| toast(message))))
+}
+
+fn toast(message: String) -> impl IntoElement {
+    let motion = motion().entering(MotionPreset::FadeInDown);
+    // The tasks end with the toast, so an old one never hides a new notice.
+    let hide = move || {
+        spawn(async move {
+            motion.play(MotionPreset::FadeOutUp).await;
+            store::dismiss_notice();
+        });
+    };
+    spawn(async move {
+        timer(NOTICE_TIME).await;
+        hide();
+    });
+    view()
+        .absolute()
+        .top_0()
+        .left_0()
+        .right_0()
+        .bind_motion(&motion)
+        .child(banner(message).child(icon_button(icons::X, strings::CLOSE, hide)))
 }
