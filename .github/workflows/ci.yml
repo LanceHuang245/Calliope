@@ -38,7 +38,8 @@ jobs:
       - name: WebDAV and S3 servers
         run: |
           printf 'address: 0.0.0.0\nport: 6065\ndirectory: /data\npermissions: CRUD\nusers:\n  - username: calliope\n    password: calliope-secret\n' > "$RUNNER_TEMP/webdav.yml"
-          docker run -d -p 6065:6065 -v "$RUNNER_TEMP/webdav.yml:/config.yml" ghcr.io/hacdias/webdav:latest -c /config.yml
+          mkdir "$RUNNER_TEMP/dav"
+          docker run -d -p 6065:6065 -v "$RUNNER_TEMP/dav:/data" -v "$RUNNER_TEMP/webdav.yml:/config.yml" ghcr.io/hacdias/webdav:latest -c /config.yml
           docker run -d -p 7070:7070 -e ROOT_ACCESS_KEY=calliope -e ROOT_SECRET_KEY=calliope-secret ghcr.io/versity/versitygw:latest posix /tmp
           sleep 5
           curl -fsS --aws-sigv4 "aws:amz:us-east-1:s3" --user calliope:calliope-secret -X PUT http://127.0.0.1:7070/calliope
