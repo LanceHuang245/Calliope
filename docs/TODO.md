@@ -20,3 +20,10 @@
 - **问题**：图谱里单独滚动鼠标滚轮没有反应，触控板双指滑动也没有反应。现在只能拖动平移，用 `Ctrl` + 滚轮、触控板或手机的双指捏合缩放。
 - **原因**：nsh 只把滚轮和触控板滚动交给滚动视图（`scroll()` 的 `on_scroll`），其他元素收不到滚轮事件；`Ctrl` + 滚轮被当作捏合手势，交给 `pinch_value`（`nsh-platform-linux/src/input.rs`，锁定版本 `c5214aa`）。
 - **修复方向**：等 nsh 给元素开放滚轮事件后，滚轮缩放、双指滑动平移。
+
+## Android 的同步密码没有存进 Keystore
+
+- **位置**：`app/src/secrets.rs`。MVP 文档 8.6 要求 Android 的密码存进 Keystore。
+- **问题**：Android 上的同步密码现在存在应用私有目录里的 `secrets.json`（`<data_dir>/secrets.json`）。其他应用读不到这个文件，但它没有经过 Keystore 加密；手机被 root 或者被做了完整备份时能读出来。
+- **原因**：现成的 [android-native-keyring-store](https://crates.io/crates/android-native-keyring-store) 要求先用 JavaVM 和应用的 Context 初始化 `ndk-context`。nsh 0.4 在 `JNI_OnLoad` 里拿到了 JavaVM，但只在 `nsh-platform-android` 内部使用，没有开放给应用（锁定版本 `c5214aa`）；`JNI_GetCreatedJavaVMs` 要到 API 31 才是公开的 NDK 接口，而 nsh 的 minSdk 是 26；Context 也只能通过隐藏 API 拿到。
+- **修复方向**：等 nsh 开放 JavaVM 和 Context（或者初始化 `ndk-context`）后，在 `secrets.rs` 的 Android 分支改用 `android-native-keyring-store`，并把 `secrets.json` 里已有的密码迁移过去。同一个接口也能解决上面“Android 仓库路径写死”那一条。

@@ -5,10 +5,10 @@ English | [简体中文](README_CN.md)
 [![CI](https://github.com/LanceHuang245/Calliope/actions/workflows/ci.yml/badge.svg)](https://github.com/LanceHuang245/Calliope/actions/workflows/ci.yml)
 
 Calliope is a local-first, cross-platform Markdown knowledge base written in Rust. It renders with each platform's native UI through [Native Shell (nsh)](https://nsh.dev) and runs on Windows, macOS, Linux, Android and iOS.\
-Notes stay as plain Markdown files in a folder you own, connected through wiki links, backlinks and a graph of the whole vault. Synchronization will go directly to your own WebDAV or S3 storage, with no intermediary server.
+Notes stay as plain Markdown files in a folder you own, connected through wiki links, backlinks and a graph of the whole vault. Sync goes directly to your own WebDAV or S3 storage, with no intermediary server.
 > **Note**
 >
-> Calliope is in early development. Sync is not available yet, and things will change. Keep a backup of the notes you open with it.
+> Calliope is in early development, and things will change. Keep a backup of the notes you open with it, and of the ones you sync.
 ---
 ## Features
 - Plain files: any folder of Markdown notes is a vault; Calliope only adds a hidden `.calliope/` folder
@@ -20,13 +20,13 @@ Notes stay as plain Markdown files in a folder you own, connected through wiki l
 - Quick switcher: find a note by its title, or create one
 - Mermaid diagrams: flowcharts, sequence, class, state, Gantt and pie charts, drawn natively in Rust by [merman](https://crates.io/crates/merman) (no WebView)
 - Graph view: every note and link, with pan, zoom, hover highlighting, and optional orphans and not-yet-created notes
+- Sync with WebDAV and S3: a three-way comparison with the last sync, conflict copies instead of overwrites, a question before deleting many files, and deleted files in the vault's trash; passwords stay in the system's keyring (on Android, in the app's private storage for now)
 - Safe editing: autosave within a second, atomic writes, deleted files go to the trash, and changes made by other apps are picked up without overwriting yours
 - Themes: light, dark, or following the system
 - Native on five platforms: Windows, macOS, Linux, Android and iOS
 
 ## Roadmap
-Calliope is built in stages; links and the graph are done. Next:
-- Sync with WebDAV and S3: three-way comparison, conflict copies instead of overwrites, protection against mass deletes
+Calliope is built in stages; links, the graph and sync are done. Next:
 - Mobile: the system's tab bar and navigation, Material 3 on Android and Liquid Glass on iOS
 - End-to-end encryption of synced notes, file names and folder names
 - Polish: tabs, full-text search, a command palette, a local graph and an outline
@@ -36,6 +36,7 @@ Calliope is built in stages; links and the graph are done. Next:
 2. Create a note with `Ctrl+N`; its title is its file name. Folders, renaming and deleting are in the file tree's context menu
 3. Link notes with `[[Note]]`, then follow the links in Read mode and see them in the Backlinks panel
 4. Open the graph with `Ctrl+G` or the button under the file tree; drag to move it, `Ctrl` + scroll (or pinch) to zoom
+5. Set up sync in Settings → Sync (WebDAV or S3). It syncs on opening the vault, 30 seconds after you stop editing and every few minutes, or with the sync button
 
 | Shortcut | Action |
 |---|---|
