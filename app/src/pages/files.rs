@@ -62,22 +62,28 @@ pub(crate) fn files_page() -> impl IntoElement {
             }
         })))
         .child(
-            // The app's actions, in one row under the files.
+            // The app's actions, in one row under the files (a phone has
+            // search and the graph in its top bar).
             view()
                 .flex_row()
                 .gap_1()
                 .pt_1()
-                .child(icon_button(icons::SEARCH, strings::SEARCH, || {
-                    store::set_switching(true)
+                .child(is_desktop().then(|| {
+                    view()
+                        .flex_row()
+                        .gap_1()
+                        .child(icon_button(icons::SEARCH, strings::SEARCH, || {
+                            store::set_switching(true)
+                        }))
+                        .child(icon_button(icons::NETWORK, strings::GRAPH, || {
+                            store::set_route(Route::Graph)
+                        }))
+                        .child(icon_button(
+                            icons::LINK,
+                            strings::BACKLINKS,
+                            store::toggle_backlinks,
+                        ))
                 }))
-                .child(icon_button(icons::NETWORK, strings::GRAPH, || {
-                    store::set_route(Route::Graph)
-                }))
-                .child(
-                    is_desktop().then(|| {
-                        icon_button(icons::LINK, strings::BACKLINKS, store::toggle_backlinks)
-                    }),
-                )
                 .child(view().flex_1())
                 .child(icon_button(icons::SETTINGS, strings::SETTINGS, || {
                     store::set_route(Route::Settings)

@@ -91,6 +91,13 @@ fn phone_opens_reads_and_creates_notes() {
     app.set_environment("foreground", |e| e.lifecycle = Lifecycle::Active)
         .unwrap();
     app.wait_for("Changed elsewhere").unwrap();
+
+    // The top bars open the graph and the quick switcher.
+    app.press("label:Graph").unwrap();
+    app.wait_for("Orphans").unwrap();
+    app.back().unwrap();
+    app.press("label:Search").unwrap();
+    app.wait_for("label:Find or create a note").unwrap();
     let _ = fs::remove_dir_all(&root);
 }
 
