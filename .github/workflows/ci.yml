@@ -66,22 +66,11 @@ jobs:
             os: macos-latest
             artifact: dist/Calliope-macos.zip
           # Android: an APK per ABI (64-bit and 32-bit ARM phones) and a
-          # universal one, x86_64 included for emulators.
+          # universal one, x86_64 included for emulators, in one artifact.
           - target: android
-            name: android-arm64-v8a
-            abis: arm64-v8a
+            name: android
             os: ubuntu-24.04
-            artifact: dist/Calliope-arm64-v8a.apk
-          - target: android
-            name: android-armeabi-v7a
-            abis: armeabi-v7a
-            os: ubuntu-24.04
-            artifact: dist/Calliope-armeabi-v7a.apk
-          - target: android
-            name: android-universal
-            abis: arm64-v8a,armeabi-v7a,x86_64
-            os: ubuntu-24.04
-            artifact: dist/Calliope-universal.apk
+            artifact: dist/Calliope-*.apk
           - target: ios
             name: ios
             os: macos-latest
@@ -106,9 +95,11 @@ jobs:
           irm https://nsh.dev/install.ps1 | iex
           "$env:LOCALAPPDATA\nsh\bin" >> $env:GITHUB_PATH
 
-      - name: GTK 4 and GStreamer
+      # nsh's Linux runners (built for Android too) default to web views:
+      # WebKitGTK 6.0, as nsh's own release build installs it.
+      - name: GTK 4, GStreamer and WebKitGTK
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev clang
+        run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libwebkitgtk-6.0-dev clang
       - name: Android SDK and NDK
         if: matrix.target == 'android'
         run: |
@@ -125,13 +116,18 @@ jobs:
             echo "SIGNING=--keystore $RUNNER_TEMP/release.jks --key-alias calliope" >> "$GITHUB_ENV"
           fi
 
-      - run: nsh package app --target ${{ matrix.target }} ${{ matrix.abis && format('--abi {0}', matrix.abis) || '' }} ${{ env.SIGNING }} -o dist
+      - run: nsh package app --target ${{ matrix.target }} -o dist
+        if: matrix.target != 'android'
+      - name: APKs by ABI, and a universal one
+        if: matrix.target == 'android'
         env:
           NSH_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-
-      - name: Name the APK by its ABIs
-        if: matrix.target == 'android'
-        run: mv dist/Calliope.apk ${{ matrix.artifact }}
+        run: |
+          for abis in arm64-v8a armeabi-v7a arm64-v8a,armeabi-v7a,x86_64; do
+            nsh package app --target android --abi "$abis" $SIGNING -o dist
+            case "$abis" in *,*) name=universal ;; *) name=$abis ;; esac
+            mv dist/Calliope.apk "dist/Calliope-$name.apk"
+          done
 
       - name: Zip the macOS app
         if: matrix.target == 'macos'
