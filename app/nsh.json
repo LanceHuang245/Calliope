@@ -3,6 +3,7 @@
   "id": "io.github.lancehuang245.calliope",
   "version": "0.1.0",
   "build": 1,
+  "icon": "../images/Calliope_WhiteBg_HQ.png",
   "rust": ".",
   "root": "App",
   "theme": "theme.json",
