@@ -8,7 +8,7 @@ use merman::{
     OperationControl, RenderOutput, RenderRequest, Renderer, SvgEnvironment, SvgRequest,
     svg::SvgPipeline,
 };
-use merman_export::{NativeFontContext, NativeFontLimits, NativeFontOptions};
+use merman_export::{NativeFontContext, NativeFontLimits};
 use nsh_base::{MarkdownExtension, text_view::CustomNode, theme};
 use nsh_core::{element::ImageSrc, prelude::*};
 
@@ -108,17 +108,26 @@ fn fonts() -> Result<NativeFontContext, String> {
     static FONTS: OnceLock<Result<NativeFontContext, String>> = OnceLock::new();
     FONTS
         .get_or_init(|| {
+            let control = OperationControl::new();
+            // merman looks for fonts in the desktops' folders only: the phones
+            // draw with the one it bundles (no Chinese, Japanese or Korean).
+            #[cfg(any(target_os = "android", target_os = "ios"))]
+            let fonts = NativeFontContext::from_font_bytes(
+                merman_export::bundled_font_data(),
+                NativeFontLimits::default(),
+                &control,
+            );
             // A desktop with many fonts has more than merman reads by default.
-            let limits = NativeFontLimits {
-                max_bytes: 512 << 20,
-                max_system_cmap_bytes: 256 << 20,
-                ..Default::default()
-            };
-            NativeFontOptions::default()
+            #[cfg(not(any(target_os = "android", target_os = "ios")))]
+            let fonts = merman_export::NativeFontOptions::default()
                 .with_system_fonts(true)
-                .with_limits(limits)
-                .load(&OperationControl::new())
-                .map_err(|e| e.to_string())
+                .with_limits(NativeFontLimits {
+                    max_bytes: 512 << 20,
+                    max_system_cmap_bytes: 256 << 20,
+                    ..Default::default()
+                })
+                .load(&control);
+            fonts.map_err(|e| e.to_string())
         })
         .clone()
 }

@@ -25,6 +25,11 @@ nsh-platform-macos.workspace = true
 [target.'cfg(target_os = "windows")'.dependencies]
 nsh-platform-windows.workspace = true
 
+# merman finds no fonts on the phones: there, Mermaid labels use the font it
+# bundles (Cousine, OFL), which has no Chinese, Japanese or Korean.
+[target.'cfg(any(target_os = "android", target_os = "ios"))'.dependencies]
+merman-export = { workspace = true, features = ["bundled-fonts"] }
+
 [dev-dependencies]
 nsh-engine.workspace = true
 nsh-testing.workspace = true
