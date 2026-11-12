@@ -20,7 +20,7 @@ Notes stay as plain Markdown files in a folder you own, connected through wiki l
 - Quick switcher: find a note by its title, or create one
 - Mermaid diagrams: flowcharts, sequence, class, state, Gantt and pie charts, drawn natively in Rust by [merman](https://crates.io/crates/merman) (no WebView)
 - Graph view: every note and link, with pan, zoom, hover highlighting, and optional orphans and not-yet-created notes
-- Sync with WebDAV and S3: a three-way comparison with the last sync, conflict copies instead of overwrites, a question before deleting many files, and deleted files in the vault's trash; passwords stay in the system's keyring (on Android, in the app's private storage for now)
+- Sync with WebDAV and S3: a three-way comparison with the last sync, conflict copies instead of overwrites, a question before deleting many files, and deleted files in the vault's trash for 15 days; passwords stay in the system's keyring (on Android, in the app's private storage for now)
 - Safe editing: autosave within a second, atomic writes, deleted files go to the trash, and changes made by other apps are picked up without overwriting yours
 - Themes: light, dark, or following the system
 - Native on five platforms: Windows, macOS, Linux, Android and iOS
