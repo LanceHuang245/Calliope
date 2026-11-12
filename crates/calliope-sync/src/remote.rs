@@ -1,7 +1,7 @@
 //! The remote side: an OpenDAL operator for a [`Config`], and the files it
 //! holds with what identifies each one's version.
 
-use std::{collections::HashMap, sync::Arc, time::Duration, time::SystemTime, time::UNIX_EPOCH};
+use std::{collections::HashMap, time::Duration, time::SystemTime, time::UNIX_EPOCH};
 
 use opendal::{
     ErrorKind, HttpTransporter, Metadata, OperationContext, Operator,
@@ -77,28 +77,22 @@ pub(crate) fn operator(config: &Config, secret: &str) -> Result<Operator> {
             return Err(opendal::Error::new(ErrorKind::ConfigInvalid, "sync is off").into());
         }
     };
-    let http = HttpTransporter::new(ReqwestTransport::new(client()?));
+    let http = HttpTransporter::new(ReqwestTransport::new(client(config)?));
     Ok(op.with_context(OperationContext::new().with_http_transport(http)))
 }
 
-/// The HTTP client: rustls on ring with Mozilla's root certificates, the
-/// same on every platform, and timeouts so a dead network fails the run.
-fn client() -> Result<reqwest::Client> {
-    let provider = Arc::new(rustls::crypto::ring::default_provider());
-    let roots = rustls::RootCertStore {
-        roots: webpki_roots::TLS_SERVER_ROOTS.to_vec(),
-    };
-    let tls = rustls::ClientConfig::builder_with_provider(provider)
-        .with_safe_default_protocol_versions()
-        .map_err(|e| opendal::Error::new(ErrorKind::Unexpected, e.to_string()))?
-        .with_root_certificates(roots)
-        .with_no_client_auth();
+/// The HTTP client: TLS as [`crate::tls`] trusts, and timeouts so a dead
+/// network fails the run.
+fn client(config: &Config) -> Result<reqwest::Client> {
+    let unexpected =
+        |e: &dyn std::fmt::Display| opendal::Error::new(ErrorKind::Unexpected, e.to_string());
+    let tls = crate::tls::config(&config.certificate).map_err(|e| unexpected(&e))?;
     reqwest::Client::builder()
         .tls_backend_preconfigured(tls)
         .connect_timeout(Duration::from_secs(15))
         .read_timeout(Duration::from_secs(60))
         .build()
-        .map_err(|e| opendal::Error::new(ErrorKind::Unexpected, e.to_string()).into())
+        .map_err(|e| unexpected(&e).into())
 }
 
 /// Every remote file that syncs, by path; none while the vault's folder is

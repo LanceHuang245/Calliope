@@ -17,6 +17,11 @@ serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
 thiserror.workspace = true
+
+[target.'cfg(not(target_os = "android"))'.dependencies]
+rustls-platform-verifier.workspace = true
+
+[target.'cfg(target_os = "android")'.dependencies]
 webpki-roots.workspace = true
 
 [dev-dependencies]

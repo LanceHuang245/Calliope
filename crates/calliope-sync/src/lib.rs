@@ -18,6 +18,7 @@ mod remote;
 mod state;
 #[cfg(test)]
 mod tests;
+mod tls;
 
 pub use config::{Config, Provider};
 pub use engine::{Report, sync, test};
@@ -48,7 +49,8 @@ fn describe(e: &opendal::Error) -> String {
     }
     let cause = std::iter::successors(e.source(), |&c| c.source()).last();
     match cause {
-        Some(cause) => cause.to_string(),
+        // rustls says "unexpected error" of what it was told (`tls.rs`).
+        Some(cause) => (cause.to_string().trim_start_matches("unexpected error: ")).to_owned(),
         None if !e.message().trim().is_empty() => e.message().trim().to_owned(),
         None => e.kind().to_string(),
     }

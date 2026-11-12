@@ -32,6 +32,9 @@ pub struct Config {
     /// The S3 bucket goes in the path (`endpoint/bucket`), as most
     /// S3-compatible servers want, rather than in a subdomain (AWS).
     pub path_style: bool,
+    /// The SHA-256 fingerprint of the server's certificate, trusted whoever
+    /// signed it (a server with a certificate of its own); empty for none.
+    pub certificate: String,
     /// Syncs on its own: on opening the vault and coming back to the app,
     /// after editing, and on the desktops every `interval` minutes.
     pub auto: bool,
@@ -50,6 +53,7 @@ impl Default for Config {
             bucket: String::new(),
             region: String::new(),
             path_style: true,
+            certificate: String::new(),
             auto: true,
             interval: 5,
             device: String::new(),

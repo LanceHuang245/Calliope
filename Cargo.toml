@@ -52,8 +52,8 @@ usvg = { version = "0.47", default-features = false, features = ["text"] }
 
 # Sync (`crates/calliope-sync`): WebDAV and S3 through OpenDAL, over
 # reqwest with rustls on ring (the TLS nsh already builds on every target)
-# and Mozilla's roots: reqwest's own default needs aws-lc and, on Android,
-# a Java part for the system's certificates.
+# and the system's certificates (Mozilla's on Android, where the system's
+# need a Java part): reqwest's own default needs aws-lc.
 opendal = { version = "0.59.5", default-features = false, features = [
     "executors-tokio",
     "reqwest-rustls-no-provider-tls",
@@ -63,6 +63,7 @@ opendal = { version = "0.59.5", default-features = false, features = [
 opendal-http-transport-reqwest = { version = "0.59.5", default-features = false, features = ["rustls-no-provider"] }
 reqwest = { version = "0.13.5", default-features = false, features = ["rustls-no-provider"] }
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
+rustls-platform-verifier = "0.7"
 webpki-roots = "1"
 jiff = "0.2"
 serde = { version = "1", features = ["derive"] }
