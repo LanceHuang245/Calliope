@@ -116,6 +116,14 @@ fn fields(provider: Provider, draft: Signal<Config>, secret: Signal<String>) -> 
                 move |on| draft.update(|c| c.path_style = on),
             )
         }))
+        // A server with a certificate of its own (a NAS): trusted by the
+        // fingerprint a failed connection shows.
+        .child(
+            entry(strings::CERTIFICATE, &c.certificate, |c, t| {
+                c.certificate = t
+            })
+            .child(muted(strings::CERTIFICATE_HINT)),
+        )
         .child(entry(strings::DEVICE_NAME, &c.device, |c, t| c.device = t))
         .child(muted(strings::AUTO_SYNC))
         .child(segmented(

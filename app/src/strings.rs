@@ -90,6 +90,9 @@ pub(crate) const PATH_PREFIX: &str = "Path prefix";
 pub(crate) const PATH_STYLE: &str = "Path-style";
 pub(crate) const VIRTUAL_HOST: &str = "Virtual-hosted";
 pub(crate) const DEVICE_NAME: &str = "Device name";
+pub(crate) const CERTIFICATE: &str = "Trusted certificate (SHA-256 fingerprint)";
+pub(crate) const CERTIFICATE_HINT: &str = "Only for a server with a certificate of its own. \
+     A connection it refuses shows its fingerprint: check it is your server's before pasting it.";
 pub(crate) const AUTO_SYNC: &str = "Sync automatically";
 pub(crate) const SYNC_MINUTES: &str = "Every how many minutes";
 pub(crate) const SECRET_KEPT: &str = "Leave it empty to keep the saved one.";
