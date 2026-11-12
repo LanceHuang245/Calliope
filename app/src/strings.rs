@@ -56,6 +56,9 @@ pub(crate) const LICENSE: &str = "Calliope is licensed under the Apache License 
      (MIT, Apache-2.0, BSD); formulas use the KaTeX fonts (SIL Open Font License), \
      icons are Lucide's (ISC).";
 pub(crate) const EXPORT_LOGS: &str = "Export logs…";
+pub(crate) const ON: &str = "On";
+pub(crate) const OFF: &str = "Off";
+pub(crate) const SAVE: &str = "Save";
 pub(crate) const LOGS_COPIED: &str = "The logs were copied to the clipboard.";
 
 // Links.
@@ -69,6 +72,62 @@ pub(crate) const ORPHANS: &str = "Orphans";
 pub(crate) const UNCREATED: &str = "Uncreated notes";
 pub(crate) const SEARCH: &str = "Search";
 pub(crate) const FIND_NOTE: &str = "Find or create a note";
+
+// Sync.
+pub(crate) const SYNC: &str = "Sync";
+pub(crate) const WEBDAV: &str = "WebDAV";
+pub(crate) const S3: &str = "S3";
+pub(crate) const SERVER_ADDRESS: &str = "Server address";
+pub(crate) const USER_NAME: &str = "User name";
+pub(crate) const PASSWORD: &str = "Password";
+pub(crate) const REMOTE_FOLDER: &str = "Remote folder";
+pub(crate) const ENDPOINT: &str = "Endpoint";
+pub(crate) const REGION: &str = "Region";
+pub(crate) const BUCKET: &str = "Bucket";
+pub(crate) const ACCESS_KEY: &str = "Access key ID";
+pub(crate) const SECRET_KEY: &str = "Secret access key";
+pub(crate) const PATH_PREFIX: &str = "Path prefix";
+pub(crate) const PATH_STYLE: &str = "Path-style";
+pub(crate) const VIRTUAL_HOST: &str = "Virtual-hosted";
+pub(crate) const DEVICE_NAME: &str = "Device name";
+pub(crate) const AUTO_SYNC: &str = "Sync automatically";
+pub(crate) const SYNC_MINUTES: &str = "Every how many minutes";
+pub(crate) const SECRET_KEPT: &str = "Leave it empty to keep the saved one.";
+pub(crate) const TEST_CONNECTION: &str = "Test connection";
+pub(crate) const SYNC_NOW: &str = "Sync now";
+pub(crate) const SYNC_SAVED: &str = "The sync settings were saved.";
+pub(crate) const SYNC_WORKS: &str = "The connection works.";
+pub(crate) const NOT_SYNCED: &str = "Not synced yet.";
+pub(crate) const SECRET_IN_FILE: &str = "No keyring was found, so the password is kept in a \
+     file only Calliope reads. Install GNOME Keyring or KWallet, then save the password \
+     again to keep it in the keyring.";
+pub(crate) const DELETE_FILES: &str = "Delete these files?";
+
+pub(crate) fn deleting(count: usize) -> String {
+    format!(
+        "This sync would delete {count} files, here or on the server. Files deleted here go \
+         to the vault's trash."
+    )
+}
+
+pub(crate) fn syncing(done: usize, total: usize) -> String {
+    format!("Syncing… {done} of {total}")
+}
+
+pub(crate) fn synced_at(time: &str) -> String {
+    format!("Last synced at {time}.")
+}
+
+pub(crate) fn sync_failed(error: &dyn std::fmt::Display) -> String {
+    format!("Sync failed: {error}.")
+}
+
+pub(crate) fn sync_conflicts(copies: &[String]) -> String {
+    format!(
+        "Changed here and elsewhere, so both versions were kept: {}",
+        copies.join(", ")
+    )
+}
 
 pub(crate) fn create_note(name: &str) -> String {
     format!("Create the note “{name}”")

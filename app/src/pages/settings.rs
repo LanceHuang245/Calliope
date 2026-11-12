@@ -1,8 +1,9 @@
-//! Settings: the appearance, the vault, and about the app.
+//! Settings: the appearance, the vault, sync, and about the app.
 
 use nsh_base::theme;
 use nsh_core::prelude::*;
 
+use super::sync::sync_settings;
 use crate::{
     components::{action, icon_button, icons, section, segmented},
     store::{self, Route, Theme},
@@ -53,6 +54,7 @@ pub(crate) fn settings_page() -> impl IntoElement {
                     .child(action(strings::OPEN_FOLDER, || store::pick_vault(false)))
                     .child(action(strings::NEW_VAULT, || store::pick_vault(true)))
             }))
+            .child(sync_settings())
             .child(section(strings::ABOUT))
             .child(muted(strings::version()))
             .child(muted(strings::LICENSE))
@@ -60,7 +62,7 @@ pub(crate) fn settings_page() -> impl IntoElement {
     )
 }
 
-fn muted(content: impl IntoReactive<SharedString>) -> impl IntoElement {
+pub(super) fn muted(content: impl IntoReactive<SharedString>) -> impl IntoElement {
     text(content)
         .text_sm()
         .text_color(move || theme().muted_foreground)

@@ -20,6 +20,7 @@ pub(crate) const CHEVRON_UP: &str = r#"<path d="m18 15-6-6-6 6"/>"#;
 pub(crate) const CHEVRON_DOWN: &str = r#"<path d="m6 9 6 6 6-6"/>"#;
 pub(crate) const MENU: &str = r#"<path d="M4 12h16"/><path d="M4 18h16"/><path d="M4 6h16"/>"#;
 pub(crate) const X: &str = r#"<path d="M18 6 6 18"/><path d="m6 6 12 12"/>"#;
+pub(crate) const REFRESH: &str = r#"<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>"#;
 
 /// The icon of `paths` (one of the constants above), 16 points square.
 pub(crate) fn icon(paths: &'static str) -> Svg {

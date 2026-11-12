@@ -10,11 +10,13 @@
 //! - [`note`]: the open note, autosave and conflicts;
 //! - [`files`]: creating, renaming and deleting files and folders;
 //! - [`links`]: the link index, backlinks and following a link;
+//! - [`sync`]: syncing the vault with WebDAV or S3;
 //! - here: the view (mode, route, theme), notices and the start.
 
 mod files;
 mod links;
 mod note;
+mod sync;
 mod vault;
 
 use std::{collections::HashMap, fs, path::PathBuf};
@@ -35,6 +37,10 @@ pub(crate) use self::{
         conflict, edit, image_src, note_path, note_title, opened, preview, resolve_conflict,
         select, text,
     },
+    sync::{
+        SyncStatus, confirm_deletions, pending_deletions, save_sync, secret_in_file, sync_config,
+        sync_now, sync_status, test_sync,
+    },
     vault::{
         create_vault, has_files, kind_of, open_vault, pick_vault, refresh, tree_items, vault,
         vault_name, vault_path,
@@ -43,6 +49,7 @@ pub(crate) use self::{
 use self::{
     links::{reindex, reset_links},
     note::{load, save_or_copy, start_autosave},
+    sync::{edited, load_sync, start_sync_timers},
     vault::watch_other_apps,
 };
 use crate::{logging, paths, strings};
@@ -139,7 +146,7 @@ fn spawn_task(task: impl Future<Output = ()> + 'static) {
 }
 
 /// Restores the theme and the vault, and starts the timers: autosave, the
-/// preview and other apps' changes. Called once by the root.
+/// preview, other apps' changes and sync. Called once by the root.
 pub(crate) fn init() {
     set(Root(Some(Owner::current())));
     let theme = match Storage::get_item(THEME).as_deref() {
@@ -162,6 +169,7 @@ pub(crate) fn init() {
 
     start_autosave();
     watch_other_apps();
+    start_sync_timers();
 }
 
 pub(crate) fn notice() -> Option<String> {

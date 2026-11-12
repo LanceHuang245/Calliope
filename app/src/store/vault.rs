@@ -77,6 +77,7 @@ pub(crate) fn open_vault(root: PathBuf) {
             set(Route::Home);
             reset_links();
             refresh();
+            load_sync();
         }
         Err(e) => notify(format!("{}: {e}", root.display())),
     }

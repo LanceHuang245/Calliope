@@ -25,6 +25,7 @@ use crate::{
         note::note_page,
         settings::settings_page,
         switcher::quick_switcher,
+        sync::deletions_dialog,
         welcome::welcome_page,
     },
     store::{self, Route},
@@ -41,6 +42,9 @@ pub(crate) fn shell() -> impl IntoElement {
         .child(layout)
         .child(dynamic(move || store::renaming().map(rename_dialog)))
         .child(dynamic(move || store::switching().then(quick_switcher)))
+        .child(dynamic(move || {
+            store::pending_deletions().map(deletions_dialog)
+        }))
 }
 
 fn desktop() -> impl IntoElement {

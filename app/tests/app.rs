@@ -285,3 +285,26 @@ fn desktop_draws_the_graph_and_opens_a_node() {
     app.wait_for("The bee").unwrap();
     let _ = fs::remove_dir_all(&root);
 }
+
+/// Sync in the settings: the sync button opens them while sync is off;
+/// WebDAV's settings go to the vault's `.calliope/sync.json` (the password,
+/// left empty here, would go to the system's keyring).
+#[test]
+fn desktop_saves_the_sync_settings() {
+    let root = vault("sync");
+    let mut app = Headless::start(desktop(&root)).unwrap();
+    app.wait_for("Hello").unwrap();
+
+    app.press("label:Sync").unwrap();
+    app.wait_for("text:Test connection").unwrap();
+    app.press("text:WebDAV").unwrap();
+    app.type_text("label:Server address", "https://dav.example.com/dav")
+        .unwrap();
+    app.type_text("label:User name", "me").unwrap();
+    app.press("text:Save").unwrap();
+    app.wait_for("The sync settings were saved.").unwrap();
+    let saved = fs::read_to_string(root.join(".calliope/sync.json")).unwrap();
+    assert!(saved.contains(r#""provider": "webdav""#), "{saved}");
+    assert!(saved.contains("https://dav.example.com/dav"), "{saved}");
+    let _ = fs::remove_dir_all(&root);
+}

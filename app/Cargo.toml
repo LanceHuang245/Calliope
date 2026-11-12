@@ -7,23 +7,36 @@ publish.workspace = true
 
 [dependencies]
 calliope-core.workspace = true
+calliope-sync.workspace = true
+jiff.workspace = true
 log.workspace = true
 merman.workspace = true
 merman-export.workspace = true
 nsh-base.workspace = true
 nsh-core.workspace = true
+serde_json.workspace = true
 usvg.workspace = true
 
 # `cargo run` (src/main.rs) on this machine's desktop backend. `nsh run` and
-# `nsh package` build runners of their own for every target.
+# `nsh package` build runners of their own for every target. Each system's
+# secure storage keeps the sync passwords (src/secrets.rs; not Android).
 [target.'cfg(target_os = "linux")'.dependencies]
 nsh-platform-linux.workspace = true
+zbus-secret-service-keyring-store.workspace = true
 
 [target.'cfg(target_os = "macos")'.dependencies]
 nsh-platform-macos.workspace = true
+apple-native-keyring-store = { workspace = true, features = ["keychain"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 nsh-platform-windows.workspace = true
+windows-native-keyring-store.workspace = true
+
+[target.'cfg(not(target_os = "android"))'.dependencies]
+keyring-core.workspace = true
+
+[target.'cfg(target_os = "ios")'.dependencies]
+apple-native-keyring-store = { workspace = true, features = ["protected"] }
 
 # merman finds no fonts on the phones: there, Mermaid labels use the font it
 # bundles (Cousine, OFL), which has no Chinese, Japanese or Korean.

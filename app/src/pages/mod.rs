@@ -9,4 +9,5 @@ pub(crate) mod mermaid;
 pub(crate) mod note;
 pub(crate) mod settings;
 pub(crate) mod switcher;
+pub(crate) mod sync;
 pub(crate) mod welcome;

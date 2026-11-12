@@ -112,7 +112,7 @@ pub(super) fn start_autosave() {
 /// Writes the open note when it has unsaved changes (never while in
 /// conflict). A file another app changed since is not overwritten: the
 /// note is in conflict instead.
-fn save() {
+pub(super) fn save() {
     untracked(|| {
         let saved = get::<Saved>().0;
         if conflict() || *text() == *saved {
@@ -139,6 +139,7 @@ fn write_note() {
         Ok(()) => {
             set(Saved(text.to_string()));
             reindex();
+            edited();
         }
         Err(e) => notify(format!("{path}: {e}")),
     }

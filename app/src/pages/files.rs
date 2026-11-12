@@ -7,6 +7,7 @@ use calliope_core::vault::EntryKind;
 use nsh_base::{TreeEntry, context_menu, dialog, menu_separator, theme, tree};
 use nsh_core::prelude::*;
 
+use super::home::sync_button;
 use crate::{
     components::{
         action, card, field, icon_button,
@@ -63,7 +64,7 @@ pub(crate) fn files_page() -> impl IntoElement {
         })))
         .child(
             // The app's actions, in one row under the files (a phone has
-            // search and the graph in its top bar).
+            // sync, search and the graph in its top bar).
             view()
                 .flex_row()
                 .gap_1()
@@ -72,6 +73,7 @@ pub(crate) fn files_page() -> impl IntoElement {
                     view()
                         .flex_row()
                         .gap_1()
+                        .child(sync_button())
                         .child(icon_button(icons::SEARCH, strings::SEARCH, || {
                             store::set_switching(true)
                         }))
