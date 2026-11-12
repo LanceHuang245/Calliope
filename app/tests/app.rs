@@ -199,6 +199,14 @@ fn desktop_follows_links_and_lists_backlinks() {
     app.wait_for("Bee").unwrap();
     app.press("text:Bee").unwrap();
     app.wait_for("Backlinks").unwrap();
+    // The backlinks button is on while the panel shows.
+    assert!(app.screen().selected("label:Backlinks").unwrap());
+    app.press("label:Backlinks").unwrap();
+    app.wait_for_gone("text:Backlinks", Duration::from_secs(2))
+        .unwrap();
+    assert!(!app.screen().selected("label:Backlinks").unwrap());
+    app.press("label:Backlinks").unwrap();
+    app.wait_for("text:Backlinks").unwrap();
     let line = "see [[Bee|my bee]] and [[Journal/New idea]]";
     app.wait_for_within(line, Duration::from_secs(5)).unwrap();
     app.press(line).unwrap();

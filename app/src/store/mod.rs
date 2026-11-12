@@ -30,7 +30,7 @@ pub(crate) use self::{
         rename_note, renaming, selected, set_expanded, start_rename,
     },
     links::{
-        backlinks, backlinks_hidden, create_note, graph, link_exists, note_paths, open_link,
+        backlinks, backlinks_shown, create_note, graph, link_exists, note_paths, open_link,
         set_switching, switching, toggle_backlinks,
     },
     note::{

@@ -10,7 +10,7 @@ use nsh_core::prelude::*;
 use super::home::sync_button;
 use crate::{
     components::{
-        action, card, field, icon_button,
+        action, card, field, icon_button, icon_toggle,
         icons::{self, icon},
         menu_entry, menu_popup, overlay, primary,
     },
@@ -80,9 +80,10 @@ pub(crate) fn files_page() -> impl IntoElement {
                         .child(icon_button(icons::NETWORK, strings::GRAPH, || {
                             store::set_route(Route::Graph)
                         }))
-                        .child(icon_button(
+                        .child(icon_toggle(
                             icons::LINK,
                             strings::BACKLINKS,
+                            store::backlinks_shown,
                             store::toggle_backlinks,
                         ))
                 }))

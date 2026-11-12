@@ -52,15 +52,31 @@ pub(crate) fn icon_button(
     label: &'static str,
     on_press: impl Fn() + 'static,
 ) -> impl IntoElement {
+    icon_toggle(paths, label, || false, on_press)
+}
+
+/// An [`icon_button`] that turns something on and off: filled, its icon
+/// in the foreground, and selected to screen readers while `on`.
+pub(crate) fn icon_toggle(
+    paths: &'static str,
+    label: &'static str,
+    on: impl Fn() -> bool + Copy + 'static,
+    on_press: impl Fn() + 'static,
+) -> impl IntoElement {
     view().tooltip(tooltip(label)).child(
         button()
             .p(px(6.0))
             .rounded(move || theme().radius)
             .hover(|s| s.bg(theme().accent))
             .active(|s| s.bg(theme().accent))
+            .style_when(on, |s| s.bg(theme().accent))
+            .selected(on)
             .accessibility_label(label)
             .on_press(on_press)
-            .child(icon(paths).text_color(move || theme().muted_foreground)),
+            .child(icon(paths).text_color(move || match on() {
+                true => theme().foreground,
+                false => theme().muted_foreground,
+            })),
     )
 }
 

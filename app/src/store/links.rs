@@ -61,8 +61,12 @@ pub(crate) fn graph(orphans: bool, missing: bool) -> Graph {
     Graph::of(&get::<Links>().0, orphans, missing)
 }
 
-pub(crate) fn backlinks_hidden() -> bool {
-    get::<BacklinksHidden>().0
+/// Whether the backlinks panel shows: on, beside an open note (not the
+/// settings or the graph).
+pub(crate) fn backlinks_shown() -> bool {
+    !get::<BacklinksHidden>().0
+        && !matches!(route(), Route::Settings | Route::Graph)
+        && opened().is_some()
 }
 
 pub(crate) fn toggle_backlinks() {

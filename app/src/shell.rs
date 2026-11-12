@@ -84,10 +84,7 @@ fn desktop() -> impl IntoElement {
         )
         // The open note's backlinks, on the right.
         .child(dynamic(move || {
-            let shown = !store::backlinks_hidden()
-                && !matches!(store::route(), Route::Settings | Route::Graph)
-                && store::opened().is_some();
-            shown.then(|| card().w(px(260.0)).child(backlinks_panel()))
+            store::backlinks_shown().then(|| card().w(px(260.0)).child(backlinks_panel()))
         }));
     view().flex_1().child(app_title_bar()).child(body)
 }
