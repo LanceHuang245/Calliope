@@ -210,12 +210,12 @@ fn desktop_follows_links_and_lists_backlinks() {
     app.wait_for_within(line, Duration::from_secs(1)).unwrap();
     assert!(root.join("Journal").join("New idea.md").exists());
 
-    // The quick switcher opens the note found by its title, and creates
-    // the note of a name no note has.
+    // The quick switcher opens the note found by letters of its title, and
+    // creates the note of a name no note has.
     app.press_key("mod+o").unwrap();
-    app.type_text("label:Find or create a note", "bee").unwrap();
+    app.type_text("label:Find or create a note", "hlo").unwrap();
     app.press_key("enter").unwrap();
-    app.wait_for("The bee").unwrap();
+    app.wait_for("Hello world").unwrap();
     app.press("label:Search").unwrap();
     app.type_text("label:Find or create a note", "Plan")
         .unwrap();
