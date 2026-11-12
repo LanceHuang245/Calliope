@@ -1,5 +1,9 @@
 [English](README.md) | 简体中文
 
+<p align="center">
+  <img src="images/Calliope_Logo.png" alt="Calliope logo" width="200">
+</p>
+
 # Calliope
 
 [![CI](https://github.com/LanceHuang245/Calliope/actions/workflows/ci.yml/badge.svg)](https://github.com/LanceHuang245/Calliope/actions/workflows/ci.yml)
