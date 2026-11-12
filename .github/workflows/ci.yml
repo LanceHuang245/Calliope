@@ -26,6 +26,27 @@ jobs:
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace
 
+  # The sync tests again on a real WebDAV server and a real S3 one, in
+  # Docker (`crates/calliope-sync/src/tests.rs`). VersityGW stands in for
+  # MinIO, which no longer publishes its images.
+  sync:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - run: rustup show
+      - uses: Swatinem/rust-cache@v2
+      - name: WebDAV and S3 servers
+        run: |
+          printf 'address: 0.0.0.0\nport: 6065\ndirectory: /data\npermissions: CRUD\nusers:\n  - username: calliope\n    password: calliope-secret\n' > "$RUNNER_TEMP/webdav.yml"
+          docker run -d -p 6065:6065 -v "$RUNNER_TEMP/webdav.yml:/config.yml" ghcr.io/hacdias/webdav:latest -c /config.yml
+          docker run -d -p 7070:7070 -e ROOT_ACCESS_KEY=calliope -e ROOT_SECRET_KEY=calliope-secret ghcr.io/versity/versitygw:latest posix /tmp
+          sleep 5
+          curl -fsS --aws-sigv4 "aws:amz:us-east-1:s3" --user calliope:calliope-secret -X PUT http://127.0.0.1:7070/calliope
+      - run: cargo test -p calliope-sync
+        env:
+          CALLIOPE_TEST_WEBDAV: http://127.0.0.1:6065 calliope calliope-secret
+          CALLIOPE_TEST_S3: http://127.0.0.1:7070 calliope calliope calliope-secret
+
   package:
     needs: check
     strategy:
