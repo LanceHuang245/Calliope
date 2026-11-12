@@ -89,16 +89,24 @@ impl Vault {
         fs::read_to_string(self.abs(rel))
     }
 
-    /// Writes `text` to `rel` atomically: a hidden temporary file next to
-    /// it, flushed to disk, then renamed over it, so a crash leaves either
-    /// the old file or the new one.
+    /// Writes `text` to `rel`, as [`Self::write_bytes`] does.
     pub fn write(&self, rel: &str, text: &str) -> io::Result<()> {
+        self.write_bytes(rel, text.as_bytes())
+    }
+
+    /// Writes `data` to `rel` atomically, creating its folder: a hidden
+    /// temporary file next to it, flushed to disk, then renamed over it, so
+    /// a crash leaves either the old file or the new one.
+    pub fn write_bytes(&self, rel: &str, data: &[u8]) -> io::Result<()> {
         let path = self.abs(rel);
+        if let Some(dir) = path.parent() {
+            fs::create_dir_all(dir)?;
+        }
         let name = path.file_name().unwrap_or_default().to_string_lossy();
         let tmp = path.with_file_name(format!(".{name}.calliope-tmp"));
         {
             let mut file = fs::File::create(&tmp)?;
-            io::Write::write_all(&mut file, text.as_bytes())?;
+            io::Write::write_all(&mut file, data)?;
             file.sync_all()?;
         }
         fs::rename(&tmp, &path)
@@ -123,13 +131,16 @@ impl Vault {
         Ok(rel)
     }
 
-    /// Writes `text` as a new note next to `rel`, named after it with
-    /// ` (conflict)` (numbered when taken); its path.
-    pub fn save_copy(&self, rel: &str, text: &str) -> io::Result<String> {
+    /// Writes `data` as a new file next to `rel`, named after it with
+    /// ` (tag)` before its extension (numbered when taken); its path.
+    pub fn save_copy(&self, rel: &str, tag: &str, data: &[u8]) -> io::Result<String> {
         let (dir, name) = split(rel);
-        let stem = name.strip_suffix(".md").unwrap_or(name);
-        let copy = self.unique(dir, &format!("{stem} (conflict)"), ".md");
-        self.write(&copy, text)?;
+        let (stem, ext) = match name.rfind('.') {
+            Some(dot) if dot > 0 => name.split_at(dot),
+            _ => (name, ""),
+        };
+        let copy = self.unique(dir, &format!("{stem} ({tag})"), ext);
+        self.write_bytes(&copy, data)?;
         Ok(copy)
     }
 
@@ -278,8 +289,10 @@ mod tests {
         v.trash(&note).unwrap();
         assert!(v.scan().unwrap().is_empty());
         assert!(v.abs(".trash/Untitled.md").exists());
-        let copy = v.save_copy("Plan.md", "mine").unwrap();
+        let copy = v.save_copy("Plan.md", "conflict", b"mine").unwrap();
         assert_eq!(copy, "Plan (conflict).md");
         assert_eq!(v.read(&copy).unwrap(), "mine");
+        let copy = v.save_copy("a/b.png", "conflict Pad", b"").unwrap();
+        assert_eq!(copy, "a/b (conflict Pad).png");
     }
 }
