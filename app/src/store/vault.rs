@@ -9,6 +9,9 @@ use nsh_core::{file_dialog::OpenDialog, platform::Lifecycle};
 
 use super::*;
 
+/// How many days the vault's trash keeps what was deleted.
+const TRASH_DAYS: i64 = 15;
+
 pub(crate) fn vault() -> Option<Vault> {
     get::<OpenVault>().0
 }
@@ -69,6 +72,9 @@ pub(crate) fn open_vault(root: PathBuf) {
             };
             let _ = Storage::set_item(LAST_VAULT, last);
             watcher::watch(&vault);
+            if let Err(e) = vault.empty_trash(TRASH_DAYS) {
+                log::warn!("cannot empty the trash: {e}");
+            }
             log::info!("opened the vault {}", root.display());
             set(OpenVault(Some(vault)));
             set(NotePath(None));

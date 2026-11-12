@@ -528,6 +528,7 @@ dependencies = [
 name = "calliope-core"
 version = "0.1.0"
 dependencies = [
+ "jiff",
  "log",
  "notify",
  "thiserror 2.0.21",

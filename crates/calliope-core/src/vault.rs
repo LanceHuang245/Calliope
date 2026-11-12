@@ -167,12 +167,36 @@ impl Vault {
         Ok(new)
     }
 
-    /// Moves the file or folder at `rel` into the vault's `.trash/` (where
-    /// there is no system trash: the phones).
+    /// Moves the file or folder at `rel` into the vault's trash (where there
+    /// is no system trash: the phones, and sync), in a folder of the day
+    /// (`.trash/2026-11-12/`): moving keeps a file's modification time, so
+    /// the folder tells when it was deleted ([`Self::empty_trash`]).
     pub fn trash(&self, rel: &str) -> io::Result<()> {
-        fs::create_dir_all(self.root.join(".trash"))?;
-        let target = self.unique(".trash", split(rel).1, "");
+        let day = format!(".trash/{}", jiff::Zoned::now().date());
+        fs::create_dir_all(self.abs(&day))?;
+        let target = self.unique(&day, split(rel).1, "");
         fs::rename(self.abs(rel), self.abs(&target))
+    }
+
+    /// Deletes what went to the trash more than `days` days ago: the day
+    /// folders before then.
+    pub fn empty_trash(&self, days: i64) -> io::Result<()> {
+        let Ok(entries) = fs::read_dir(self.root.join(".trash")) else {
+            return Ok(());
+        };
+        let oldest = jiff::Zoned::now()
+            .date()
+            .saturating_sub(jiff::Span::new().days(days));
+        for entry in entries.flatten() {
+            let day = entry
+                .file_name()
+                .to_str()
+                .and_then(|n| n.parse::<jiff::civil::Date>().ok());
+            if day.is_some_and(|day| day < oldest) {
+                fs::remove_dir_all(entry.path())?;
+            }
+        }
+        Ok(())
     }
 
     /// `dir/stem ext`, or `dir/stem N ext` with the first N free.
@@ -288,7 +312,15 @@ mod tests {
         let note = v.create_note("").unwrap();
         v.trash(&note).unwrap();
         assert!(v.scan().unwrap().is_empty());
-        assert!(v.abs(".trash/Untitled.md").exists());
+        let today = jiff::Zoned::now().date();
+        assert!(v.abs(&format!(".trash/{today}/Untitled.md")).exists());
+        // Emptying it keeps the last 15 days; other files are left alone.
+        fs::create_dir_all(v.abs(".trash/2020-01-01")).unwrap();
+        fs::write(v.abs(".trash/Old.md"), "").unwrap();
+        v.empty_trash(15).unwrap();
+        assert!(!v.abs(".trash/2020-01-01").exists());
+        assert!(v.abs(&format!(".trash/{today}/Untitled.md")).exists());
+        assert!(v.abs(".trash/Old.md").exists());
         let copy = v.save_copy("Plan.md", "conflict", b"mine").unwrap();
         assert_eq!(copy, "Plan (conflict).md");
         assert_eq!(v.read(&copy).unwrap(), "mine");

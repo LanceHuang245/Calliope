@@ -105,7 +105,8 @@ async fn devices_follow_each_other() {
         assert_eq!((report.downloaded, report.deleted), (2, 1));
         assert_eq!(files(&a), files(&b));
         // Deleted by the other device: in the trash.
-        assert_eq!(a.read(".trash/Old.md").unwrap(), "old");
+        let today = jiff::Zoned::now().date();
+        assert_eq!(a.read(&format!(".trash/{today}/Old.md")).unwrap(), "old");
         // Nothing left to do.
         assert_eq!(sync(&a, &op).await.uploaded, 0);
     }
