@@ -61,6 +61,11 @@ pub(crate) fn select(path: &SharedString) {
 
 /// Opens the note at `path`, saving the one open before.
 fn open_note(path: String) {
+    // Already open: switch back to it without reloading from disk.
+    if untracked(note_path).as_deref() == Some(path.as_str()) {
+        set_route(Route::Note);
+        return;
+    }
     save_or_copy();
     let Some(vault) = untracked(vault) else {
         return;

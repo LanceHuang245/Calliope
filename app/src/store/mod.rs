@@ -231,6 +231,23 @@ pub(crate) fn set_route(route: Route) {
     set(route);
 }
 
+/// Returns to the open note, or the home screen on a phone without one.
+pub(crate) fn back_to_note() {
+    let target = match is_desktop() || untracked(note_path).is_some() {
+        true => Route::Note,
+        false => Route::Home,
+    };
+    set_route(target);
+}
+
+/// Opens the graph, or returns to the note when it is already shown.
+pub(crate) fn toggle_graph() {
+    match untracked(route) {
+        Route::Graph => back_to_note(),
+        _ => set_route(Route::Graph),
+    }
+}
+
 pub(crate) fn toggle_sidebar() {
     global::<SidebarHidden>().update(|h| h.0 = !h.0);
 }

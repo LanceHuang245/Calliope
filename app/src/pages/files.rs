@@ -77,9 +77,12 @@ pub(crate) fn files_page() -> impl IntoElement {
                         .child(icon_button(icons::SEARCH, strings::SEARCH, || {
                             store::set_switching(true)
                         }))
-                        .child(icon_button(icons::NETWORK, strings::GRAPH, || {
-                            store::set_route(Route::Graph)
-                        }))
+                        .child(icon_toggle(
+                            icons::NETWORK,
+                            strings::GRAPH,
+                            || store::route() == Route::Graph,
+                            store::toggle_graph,
+                        ))
                         .child(icon_toggle(
                             icons::LINK,
                             strings::BACKLINKS,
@@ -94,11 +97,18 @@ pub(crate) fn files_page() -> impl IntoElement {
         )
 }
 
+/// The item highlighted in the file tree: a note only while the note page is
+/// active, so clicking it again from Graph, Settings, or Home re-opens it.
+fn tree_selected() -> Option<SharedString> {
+    store::selected()
+        .filter(|id| store::route() == Route::Note || store::kind_of(id) != Some(EntryKind::Note))
+}
+
 fn files_tree() -> impl IntoElement {
     tree()
         .items(store::tree_items)
         .expanded(store::expanded)
-        .selected(store::selected)
+        .selected(tree_selected)
         .on_expanded_change(|expanded: &Vec<SharedString>| store::set_expanded(expanded))
         .on_selected_change(store::select)
         .accessibility_label(strings::FILES)
@@ -114,7 +124,7 @@ fn files_tree() -> impl IntoElement {
             };
             let selected = {
                 let id = id.clone();
-                move || store::selected().as_ref() == Some(&id)
+                move || tree_selected().as_ref() == Some(&id)
             };
             let row = view()
                 .flex_row()

@@ -19,7 +19,10 @@ use nsh_core::{
 };
 
 use super::home::menu_button;
-use crate::{store, strings};
+use crate::{
+    components::{icon_button, icons},
+    store, strings,
+};
 
 /// The room around the outermost nodes, for their labels.
 const MARGIN: f32 = 80.0;
@@ -56,6 +59,11 @@ pub(crate) fn graph_page() -> impl IntoElement {
                 .px_4()
                 .py_2()
                 .child((!is_desktop()).then(menu_button))
+                .child(icon_button(
+                    icons::CHEVRON_LEFT,
+                    strings::BACK,
+                    store::back_to_note,
+                ))
                 .child(
                     text(strings::GRAPH)
                         .flex_1()

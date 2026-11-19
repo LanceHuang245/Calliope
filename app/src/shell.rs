@@ -54,7 +54,7 @@ fn desktop() -> impl IntoElement {
     on_key("mod+n", |_| store::new_note());
     on_key("mod+e", |_| store::toggle_read());
     on_key("mod+o", |_| store::set_switching(true));
-    on_key("mod+g", |_| store::set_route(Route::Graph));
+    on_key("mod+g", |_| store::toggle_graph());
     on_key("mod+\\", |_| store::toggle_sidebar());
     hide_system_title_bar();
     // Three cards on the sidebar's color, as far from each other as from

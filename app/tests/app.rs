@@ -291,6 +291,24 @@ fn desktop_draws_the_graph_and_opens_a_node() {
     app.press("id:Bee.md").unwrap();
     app.press("Read").unwrap();
     app.wait_for("The bee").unwrap();
+
+    // Clicking the already-open note in the sidebar while on Graph returns to it.
+    app.press_key("mod+g").unwrap();
+    app.wait_for("id:Bee.md").unwrap();
+    assert!(app.screen().selected("label:Graph").unwrap());
+    app.press("text:Bee").unwrap();
+    app.wait_for("The bee").unwrap();
+    assert!(!app.screen().selected("label:Graph").unwrap());
+
+    // Graph's back button and toggle both return to the open note.
+    app.press("label:Graph").unwrap();
+    app.wait_for("label:Back").unwrap();
+    app.press("label:Back").unwrap();
+    app.wait_for("The bee").unwrap();
+    app.press_key("mod+g").unwrap();
+    app.wait_for("Orphans").unwrap();
+    app.press_key("mod+g").unwrap();
+    app.wait_for("The bee").unwrap();
     let _ = fs::remove_dir_all(&root);
 }
 
