@@ -51,7 +51,8 @@ impl Version {
 
 /// The operator for the storage `config` names, signed in with `secret`
 /// (the WebDAV password or the S3 secret key).
-pub(crate) fn operator(config: &Config, secret: &str) -> Result<Operator> {
+pub(crate) async fn operator(config: &Config, secret: &str) -> Result<Operator> {
+    let client = client(config)?;
     let op = match config.provider {
         Provider::WebDav => Operator::new(
             Webdav::default()
@@ -60,29 +61,69 @@ pub(crate) fn operator(config: &Config, secret: &str) -> Result<Operator> {
                 .password(secret)
                 .root(&config.root),
         )?,
-        Provider::S3 => {
-            // Only what is configured here: no credentials from the
-            // environment, the AWS profile or the EC2 metadata service.
-            let s3 = S3::default()
-                .endpoint(&config.endpoint)
-                .region(&config.region)
-                .bucket(&config.bucket)
-                .access_key_id(&config.user)
-                .secret_access_key(secret)
-                .root(&config.root)
-                .disable_config_load()
-                .disable_ec2_metadata();
-            Operator::new(match config.path_style {
-                true => s3,
-                false => s3.enable_virtual_host_style(),
-            })?
-        }
+        Provider::S3 => s3(config, secret, &client).await?,
         Provider::Off => {
             return Err(opendal::Error::new(ErrorKind::ConfigInvalid, "sync is off").into());
         }
     };
-    let http = HttpTransporter::new(ReqwestTransport::new(client(config)?));
+    let http = HttpTransporter::new(ReqwestTransport::new(client));
     Ok(op.with_context(OperationContext::new().with_http_transport(http)))
+}
+
+/// Alibaba Cloud's and Tencent Cloud's domains: their endpoints name the
+/// region (`oss-cn-hangzhou.aliyuncs.com`, `cos.ap-beijing.myqcloud.com`),
+/// and they take the bucket only in the host (`bucket.endpoint`).
+const CLOUDS: [&str; 2] = [".aliyuncs.com", ".myqcloud.com"];
+
+/// S3 on the bucket's region, found out rather than configured: from the
+/// endpoint on [`CLOUDS`], else as the service answers ([`asked_region`]).
+/// The bucket goes in the host on [`CLOUDS`], in the path elsewhere, as
+/// MinIO and most S3-compatible servers want (AWS takes either).
+async fn s3(config: &Config, secret: &str, client: &reqwest::Client) -> Result<Operator> {
+    // The endpoint as OpenDAL completes it: AWS's when empty, HTTPS
+    // without a scheme.
+    let endpoint = match config.endpoint.trim().trim_end_matches('/') {
+        "" => "https://s3.amazonaws.com".to_owned(),
+        e if e.starts_with("http") => e.to_owned(),
+        e => format!("https://{e}"),
+    };
+    let url = reqwest::Url::parse(&endpoint).ok();
+    let host = url.as_ref().and_then(|u| u.host_str()).unwrap_or_default();
+    let cloud = CLOUDS.iter().find_map(|domain| host.strip_suffix(domain));
+    let region = match cloud {
+        Some(name) => name.rsplit_once('.').map_or(name, |(_, r)| r).to_owned(),
+        None => asked_region(client, &endpoint, &config.bucket).await,
+    };
+    // Only what is configured here: no credentials from the environment,
+    // the AWS profile or the EC2 metadata service.
+    let s3 = S3::default()
+        .endpoint(&endpoint)
+        .region(&region)
+        .bucket(&config.bucket)
+        .access_key_id(&config.user)
+        .secret_access_key(secret)
+        .root(&config.root)
+        .disable_config_load()
+        .disable_ec2_metadata();
+    Ok(Operator::new(match cloud {
+        Some(_) => s3.enable_virtual_host_style(),
+        None => s3,
+    })?)
+}
+
+/// The bucket's region as the service answers a `HEAD` of it (AWS does,
+/// even refusing the request); `us-east-1` without an answer, which MinIO
+/// and Cloudflare R2 take.
+async fn asked_region(client: &reqwest::Client, endpoint: &str, bucket: &str) -> String {
+    let answer = client
+        .head(format!("{endpoint}/{bucket}"))
+        .send()
+        .await
+        .ok();
+    (answer.as_ref())
+        .and_then(|a| a.headers().get("x-amz-bucket-region")?.to_str().ok())
+        .unwrap_or("us-east-1")
+        .to_owned()
 }
 
 /// The HTTP client: TLS as [`crate::tls`] trusts, and timeouts so a dead

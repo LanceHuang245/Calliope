@@ -5,7 +5,7 @@ use nsh_base::theme;
 use nsh_core::prelude::*;
 
 use crate::{
-    components::{icon_button, icons, primary},
+    components::{ButtonVariant, button, icon_button, icons},
     store::{self, Route, SyncStatus},
     strings,
 };
@@ -28,7 +28,11 @@ pub(crate) fn home_page() -> impl IntoElement {
                 .justify_center()
                 .gap_4()
                 .child(text(strings::NO_NOTE).text_color(move || theme().muted_foreground))
-                .child(primary(strings::NEW_NOTE, store::new_note)),
+                .child(button(
+                    ButtonVariant::Primary,
+                    strings::NEW_NOTE,
+                    store::new_note,
+                )),
         )
 }
 

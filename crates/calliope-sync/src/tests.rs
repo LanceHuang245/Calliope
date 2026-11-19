@@ -44,7 +44,7 @@ async fn remotes(test: &str) -> Vec<Operator> {
             root: root.clone(),
             ..Config::default()
         };
-        ops.push(remote::operator(&config, secret).unwrap());
+        ops.push(remote::operator(&config, secret).await.unwrap());
     }
     if let Some(env) = env("CALLIOPE_TEST_S3") {
         let [endpoint, bucket, user, secret] = env.split(' ').collect::<Vec<_>>()[..] else {
@@ -54,12 +54,11 @@ async fn remotes(test: &str) -> Vec<Operator> {
             provider: Provider::S3,
             endpoint: endpoint.into(),
             bucket: bucket.into(),
-            region: "us-east-1".into(),
             user: user.into(),
             root: root.clone(),
             ..Config::default()
         };
-        ops.push(remote::operator(&config, secret).unwrap());
+        ops.push(remote::operator(&config, secret).await.unwrap());
     }
     for op in &ops {
         op.delete_with("").recursive(true).await.unwrap();

@@ -5,7 +5,7 @@ use nsh_core::prelude::*;
 
 use super::sync::sync_settings;
 use crate::{
-    components::{action, icon_button, icons, section, segmented},
+    components::{action, icon_button, icons, muted, section, segmented},
     store::{self, Route, Theme},
     strings,
 };
@@ -60,10 +60,4 @@ pub(crate) fn settings_page() -> impl IntoElement {
             .child(muted(strings::LICENSE))
             .child(action(strings::EXPORT_LOGS, store::export_logs)),
     )
-}
-
-pub(super) fn muted(content: impl IntoReactive<SharedString>) -> impl IntoElement {
-    text(content)
-        .text_sm()
-        .text_color(move || theme().muted_foreground)
 }

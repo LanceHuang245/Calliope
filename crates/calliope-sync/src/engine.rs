@@ -32,7 +32,7 @@ pub struct Report {
 
 /// Checks that the remote `config` names can be listed with `secret`.
 pub async fn test(config: &Config, secret: &str) -> Result<()> {
-    remote::list(&remote::operator(config, secret)?)
+    remote::list(&remote::operator(config, secret).await?)
         .await
         .map(drop)
 }
@@ -48,7 +48,7 @@ pub async fn sync(
     confirmed: bool,
     progress: impl Fn(usize, usize) + Sync,
 ) -> Result<Report> {
-    let op = remote::operator(config, secret)?;
+    let op = remote::operator(config, secret).await?;
     run(
         vault,
         &op,

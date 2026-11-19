@@ -315,7 +315,8 @@ fn desktop_draws_the_graph_and_opens_a_node() {
 /// Sync in the settings: the sync button opens them while sync is off;
 /// WebDAV's settings go to the vault's `.calliope/sync.json` (the password,
 /// left empty here, would go to the system's keyring). The notice saying so
-/// goes after three seconds; a problem stays until closed.
+/// goes after three seconds; a problem stays until closed. A device name
+/// left empty is the computer's again.
 #[test]
 fn desktop_saves_the_sync_settings() {
     let root = vault("sync");
@@ -334,6 +335,12 @@ fn desktop_saves_the_sync_settings() {
     app.type_text("label:Server address", "https://dav.example.com/dav")
         .unwrap();
     app.type_text("label:User name", "me").unwrap();
+    // The device name is the computer's at first; left empty, it stays.
+    let device = (app.screen().input_text("label:Device name").unwrap())
+        .unwrap()
+        .to_owned();
+    assert!(!device.is_empty());
+    app.clear("label:Device name").unwrap();
     // Not on its own: saved, it would sync with the made-up server at once.
     app.press("text:Off >> nth=1").unwrap();
     app.press("text:Save").unwrap();
@@ -351,5 +358,11 @@ fn desktop_saves_the_sync_settings() {
     assert!(saved.contains(r#""provider": "webdav""#), "{saved}");
     assert!(saved.contains("https://dav.example.com/dav"), "{saved}");
     assert!(saved.contains(r#""auto": false"#), "{saved}");
+    // Opened again, the settings show the computer's name.
+    app.press("Hello").unwrap();
+    app.press("label:Settings").unwrap();
+    app.wait_for("label:Device name").unwrap();
+    let shown = app.screen().input_text("label:Device name").unwrap();
+    assert_eq!(shown, Some(device.as_str()));
     let _ = fs::remove_dir_all(&root);
 }

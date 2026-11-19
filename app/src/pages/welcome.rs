@@ -5,7 +5,7 @@ use nsh_base::theme;
 use nsh_core::prelude::*;
 
 use crate::{
-    components::{action, field, primary},
+    components::{ButtonVariant, action, button, field},
     store, strings,
 };
 
@@ -32,7 +32,7 @@ pub(crate) fn welcome_page() -> impl IntoElement {
                         .on_change(move |text: &str| name.set(text.to_owned()))
                         .on_submit(|text: &str| store::create_vault(text)),
                 )
-                .child(primary(strings::CREATE, move || {
+                .child(button(ButtonVariant::Primary, strings::CREATE, move || {
                     store::create_vault(&name.get())
                 }));
             (strings::NAME_VAULT, form.into_element())

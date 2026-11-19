@@ -6,9 +6,8 @@ use calliope_sync::{Config, Provider};
 use nsh_base::{dialog, theme};
 use nsh_core::prelude::*;
 
-use super::settings::muted;
 use crate::{
-    components::{action, card, field, overlay, primary, section, segmented},
+    components::{ButtonVariant, button, card, field, labeled, muted, overlay, section, segmented},
     store::{self, SyncStatus},
     strings,
 };
@@ -50,7 +49,7 @@ pub(crate) fn sync_settings() -> impl IntoElement {
                 .items_center()
                 .gap_2()
                 .pt_2()
-                .child(primary(strings::SAVE, move || {
+                .child(button(ButtonVariant::Primary, strings::SAVE, move || {
                     store::save_sync(edited(), &secret.get())
                 }))
                 .child(dynamic(move || {
@@ -60,10 +59,16 @@ pub(crate) fn sync_settings() -> impl IntoElement {
                             .flex_wrap()
                             .items_center()
                             .gap_2()
-                            .child(action(strings::TEST_CONNECTION, move || {
-                                store::test_sync(edited(), secret.get())
-                            }))
-                            .child(action(strings::SYNC_NOW, store::sync_now))
+                            .child(button(
+                                ButtonVariant::Secondary,
+                                strings::TEST_CONNECTION,
+                                move || store::test_sync(edited(), secret.get()),
+                            ))
+                            .child(button(
+                                ButtonVariant::Secondary,
+                                strings::SYNC_NOW,
+                                store::sync_now,
+                            ))
                     })
                 })),
         )
@@ -88,9 +93,10 @@ pub(crate) fn sync_settings() -> impl IntoElement {
 fn fields(provider: Provider, draft: Signal<Config>, secret: Signal<String>) -> impl IntoElement {
     let c = draft.get();
     let s3 = provider == Provider::S3;
-    let entry = move |label, value: &str, set: fn(&mut Config, String)| {
+    let entry = move |label, required, value: &str, set: fn(&mut Config, String)| {
         labeled(
             label,
+            required,
             input(label, value, move |typed| draft.update(|c| set(c, typed))),
         )
     };
@@ -107,45 +113,46 @@ fn fields(provider: Provider, draft: Signal<Config>, secret: Signal<String>) -> 
         .pt_2()
         .gap_3()
         .items_start()
+        // Required: the server, the bucket, who signs in, and the password
+        // or secret key until one is saved. S3's region and where its bucket
+        // goes (path or host) are found out from the endpoint (calliope-sync).
         .child(match s3 {
-            true => entry(strings::ENDPOINT, &c.endpoint, |c, t| c.endpoint = t),
-            false => entry(strings::SERVER_ADDRESS, &c.endpoint, |c, t| c.endpoint = t),
+            true => entry(strings::ENDPOINT, true, &c.endpoint, |c, t| c.endpoint = t),
+            false => entry(strings::SERVER_ADDRESS, true, &c.endpoint, |c, t| {
+                c.endpoint = t
+            }),
         })
-        .child(s3.then(|| entry(strings::REGION, &c.region, |c, t| c.region = t)))
-        .child(s3.then(|| entry(strings::BUCKET, &c.bucket, |c, t| c.bucket = t)))
+        .child(s3.then(|| entry(strings::BUCKET, true, &c.bucket, |c, t| c.bucket = t)))
         .child(match s3 {
-            true => entry(strings::ACCESS_KEY, &c.user, |c, t| c.user = t),
-            false => entry(strings::USER_NAME, &c.user, |c, t| c.user = t),
+            true => entry(strings::ACCESS_KEY, true, &c.user, |c, t| c.user = t),
+            false => entry(strings::USER_NAME, true, &c.user, |c, t| c.user = t),
         })
         .child(
             labeled(
                 secret_label,
+                !kept,
                 input(secret_label, "", move |typed| secret.set(typed)).masked(true),
             )
             .child(kept.then(|| muted(strings::SECRET_KEPT))),
         )
         .child(match s3 {
-            true => entry(strings::PATH_PREFIX, &c.root, |c, t| c.root = t),
-            false => entry(strings::REMOTE_FOLDER, &c.root, |c, t| c.root = t),
+            true => entry(strings::PATH_PREFIX, false, &c.root, |c, t| c.root = t),
+            false => entry(strings::REMOTE_FOLDER, false, &c.root, |c, t| c.root = t),
         })
-        .child(s3.then(|| {
-            segmented(
-                vec![(true, strings::PATH_STYLE), (false, strings::VIRTUAL_HOST)],
-                move || draft.get().path_style,
-                move |on| draft.update(|c| c.path_style = on),
-            )
-        }))
         // A server with a certificate of its own (a NAS): trusted by the
         // fingerprint a failed connection shows.
         .child(
-            entry(strings::CERTIFICATE, &c.certificate, |c, t| {
+            entry(strings::CERTIFICATE, false, &c.certificate, |c, t| {
                 c.certificate = t
             })
             .child(muted(strings::CERTIFICATE_HINT)),
         )
-        .child(entry(strings::DEVICE_NAME, &c.device, |c, t| c.device = t))
+        .child(entry(strings::DEVICE_NAME, false, &c.device, |c, t| {
+            c.device = t
+        }))
         .child(labeled(
             strings::AUTO_SYNC,
+            false,
             segmented(
                 vec![(true, strings::ON), (false, strings::OFF)],
                 move || draft.get().auto,
@@ -166,7 +173,7 @@ fn fields(provider: Provider, draft: Signal<Config>, secret: Signal<String>) -> 
                             draft.update(|c| c.interval = minutes);
                         }
                     });
-                    labeled(strings::SYNC_MINUTES, minutes)
+                    labeled(strings::SYNC_MINUTES, false, minutes)
                 })
             })
         }))
@@ -178,16 +185,6 @@ fn input(label: &'static str, value: &str, typed: impl Fn(String) + 'static) -> 
         .label(label)
         .default_value(value.to_owned())
         .on_change(move |text: &str| typed(text.to_owned()))
-}
-
-/// `input` with its `label` over it.
-fn labeled(label: &'static str, input: impl IntoElement) -> View {
-    view()
-        .w_full()
-        .max_w(px(420.0))
-        .gap_1()
-        .child(muted(label))
-        .child(input)
 }
 
 /// Asks before a run deletes `count` files: Delete runs it, Cancel, Escape
@@ -218,8 +215,10 @@ pub(crate) fn deletions_dialog(count: usize) -> impl IntoElement {
                         .flex_row()
                         .justify_end()
                         .gap_2()
-                        .child(action(strings::CANCEL, cancel))
-                        .child(primary(strings::DELETE, || store::confirm_deletions(true))),
+                        .child(button(ButtonVariant::Secondary, strings::CANCEL, cancel))
+                        .child(button(ButtonVariant::Primary, strings::DELETE, || {
+                            store::confirm_deletions(true)
+                        })),
                 ),
         )
 }

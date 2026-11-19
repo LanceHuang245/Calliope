@@ -10,9 +10,9 @@ use nsh_core::prelude::*;
 use super::home::sync_button;
 use crate::{
     components::{
-        action, card, field, icon_button, icon_toggle,
+        ButtonVariant, button, card, field, icon_button, icon_toggle,
         icons::{self, icon},
-        menu_entry, menu_popup, overlay, primary,
+        menu_entry, menu_popup, overlay,
     },
     store::{self, Route},
     strings,
@@ -234,8 +234,12 @@ pub(crate) fn rename_dialog(path: String) -> impl IntoElement {
                         .flex_row()
                         .justify_end()
                         .gap_2()
-                        .child(action(strings::CANCEL, store::cancel_rename))
-                        .child(primary(strings::RENAME, move || {
+                        .child(button(
+                            ButtonVariant::Secondary,
+                            strings::CANCEL,
+                            store::cancel_rename,
+                        ))
+                        .child(button(ButtonVariant::Primary, strings::RENAME, move || {
                             store::rename(&typed.get())
                         })),
                 ),

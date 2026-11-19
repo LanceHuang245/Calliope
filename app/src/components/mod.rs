@@ -5,7 +5,7 @@
 
 pub(crate) mod icons;
 
-use nsh_base::{button, input, menu_item, tab, tabs, theme};
+use nsh_base::{input, menu_item, tab, tabs, theme};
 use nsh_core::{element::StyleRefinement, prelude::*};
 
 use self::icons::icon;
@@ -15,7 +15,7 @@ pub(crate) fn action(
     label: impl Into<SharedString>,
     on_press: impl Fn() + 'static,
 ) -> impl IntoElement {
-    button()
+    nsh_base::button()
         .px_2()
         .py_1()
         .rounded(move || theme().radius)
@@ -29,20 +29,39 @@ pub(crate) fn action(
         )
 }
 
-/// The main action of a page or a dialog, in the theme's `primary`.
-pub(crate) fn primary(label: &'static str, on_press: impl Fn() + 'static) -> impl IntoElement {
-    button()
+/// How a [`button`] stands out.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ButtonVariant {
+    /// The main action of a page or a dialog, in the theme's `primary`.
+    Primary,
+    /// An action beside the main one (Cancel, Test connection), on the
+    /// theme's `muted`.
+    Secondary,
+}
+
+/// A button showing `label`; every variant is the same size, so a row of
+/// them lines up.
+pub(crate) fn button(
+    variant: ButtonVariant,
+    label: &'static str,
+    on_press: impl Fn() + 'static,
+) -> impl IntoElement {
+    let fill = move || match variant {
+        ButtonVariant::Primary => theme().primary,
+        ButtonVariant::Secondary => theme().muted,
+    };
+    let ink = move || match variant {
+        ButtonVariant::Primary => theme().primary_foreground,
+        ButtonVariant::Secondary => theme().foreground,
+    };
+    nsh_base::button()
         .px_4()
         .py_2()
         .rounded(move || theme().radius)
-        .bg(move || theme().primary)
+        .bg(fill)
         .active(|s| s.opacity(0.8))
         .on_press(on_press)
-        .child(
-            text(label)
-                .text_sm()
-                .text_color(move || theme().primary_foreground),
-        )
+        .child(text(label).text_sm().text_color(ink))
 }
 
 /// A quiet icon button, named by `label` for screen readers and in a
@@ -64,7 +83,7 @@ pub(crate) fn icon_toggle(
     on_press: impl Fn() + 'static,
 ) -> impl IntoElement {
     view().tooltip(tooltip(label)).child(
-        button()
+        nsh_base::button()
             .p(px(6.0))
             .rounded(move || theme().radius)
             .hover(|s| s.bg(theme().accent))
@@ -140,8 +159,9 @@ pub(crate) fn segmented<T: Copy + PartialEq + 'static>(
     choose: impl Fn(T) + Copy + 'static,
 ) -> impl IntoElement {
     // The selected option's highlight is the tab list's indicator, which
-    // slides to the next option natively (a spring).
-    tabs()
+    // slides to the next option natively (a spring). In a row of its own,
+    // so it is as wide as its options, not the column it is in.
+    let tabs = tabs()
         .flex_row()
         .p(px(2.0))
         .gap(px(2.0))
@@ -165,7 +185,8 @@ pub(crate) fn segmented<T: Copy + PartialEq + 'static>(
                     true => theme().foreground,
                     false => theme().muted_foreground,
                 }))
-        }))
+        }));
+    view().flex_row().child(tabs)
 }
 
 pub(crate) fn field(placeholder: &'static str) -> nsh_base::Input {
@@ -214,6 +235,31 @@ pub(crate) fn overlay() -> AdaptiveColor {
     theme
         .color("overlay")
         .unwrap_or_else(|| theme.foreground.opacity(0.4))
+}
+
+/// Quiet text: a hint, a state, a field's label.
+pub(crate) fn muted(content: impl IntoReactive<SharedString>) -> impl IntoElement {
+    text(content)
+        .text_sm()
+        .text_color(move || theme().muted_foreground)
+}
+
+/// A form's field: `content` (an input, a switch) under its `label`, which
+/// a red `*` comes before when the field is `required`.
+pub(crate) fn labeled(label: &'static str, required: bool, content: impl IntoElement) -> View {
+    let star = text("*").text_sm().text_color(move || theme().destructive);
+    view()
+        .w_full()
+        .max_w(px(420.0))
+        .gap_1()
+        .child(
+            view()
+                .flex_row()
+                .gap_1()
+                .child(required.then_some(star))
+                .child(muted(label)),
+        )
+        .child(content)
 }
 
 pub(crate) fn section(title: &'static str) -> impl IntoElement {

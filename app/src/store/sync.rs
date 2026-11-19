@@ -101,7 +101,7 @@ fn show_secret_in_file(vault: &Vault) {
 
 /// Keeps `config` for the open vault, and `secret` (the password or secret
 /// key) unless it is empty, which keeps the one before.
-pub(crate) fn save_sync(config: Config, secret: &str) {
+pub(crate) fn save_sync(mut config: Config, secret: &str) {
     let Some(vault) = untracked(vault) else {
         return;
     };
@@ -113,6 +113,11 @@ pub(crate) fn save_sync(config: Config, secret: &str) {
             notify(e);
         }
         show_secret_in_file(&vault);
+    }
+    // Left empty, the device name is this device's own, as on opening the
+    // vault: conflict copies are named after it (the file keeps it empty).
+    if config.device.is_empty() {
+        config.device = device_name();
     }
     set(SyncConfig(config));
     inform(strings::SYNC_SAVED);
