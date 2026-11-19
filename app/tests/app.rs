@@ -1,48 +1,17 @@
 //! The app, started headless on the real engine (`cargo test`), each test
 //! on a vault of its own.
 
+mod common;
+
 use std::{
     fs,
-    path::{Path, PathBuf},
     time::{Duration, SystemTime},
 };
 
-use nsh_core::{
-    file_dialog::FileRequest,
-    platform::{Idiom, Lifecycle, Os},
-    prelude::{px, size},
-    time::Clock,
-};
+use common::{desktop, vault};
+use nsh_core::{file_dialog::FileRequest, platform::Lifecycle, prelude::px, time::Clock};
 use nsh_engine::{EngineConfig, Root};
-use nsh_testing::{DialogAnswer, Headless, MemoryStorage};
-
-/// A vault in a fresh temporary folder: a folder and a note with front
-/// matter.
-fn vault(name: &str) -> PathBuf {
-    let root = std::env::temp_dir().join(format!("calliope-{name}-{}", std::process::id()));
-    let _ = fs::remove_dir_all(&root);
-    fs::create_dir_all(root.join("Journal")).unwrap();
-    fs::write(
-        root.join("Hello.md"),
-        "---\ntags: [a]\n---\n# Hello world\n\nSome **bold** text.\n",
-    )
-    .unwrap();
-    root
-}
-
-/// The desktop layout, in a 1200 × 800 window, on the vault at `root` as
-/// the last one opened.
-fn desktop(root: &Path) -> EngineConfig {
-    let mut config = EngineConfig::new(Root::of::<calliope::App>());
-    config.environment.idiom = Idiom::Desktop;
-    config.environment.os = Os::Linux;
-    config.viewport = size(px(1200.0), px(800.0));
-    config.storage = Some(MemoryStorage::new([(
-        "vault".to_owned(),
-        root.display().to_string(),
-    )]));
-    config
-}
+use nsh_testing::Headless;
 
 /// The phone layout `EngineConfig::new` gives: creating the vault, the home
 /// page, the files in the menu, then a note.
@@ -172,10 +141,13 @@ fn desktop_autosaves_and_keeps_both_sides_of_a_conflict() {
     app.wait(Duration::from_millis(500)).unwrap();
     assert!(root.join("Diary").join("Untitled.md").exists());
 
-    // A note's context menu deletes it, once confirmed.
-    app.on_dialog(|_| DialogAnswer::Press("Delete".into()));
+    // A note's context menu deletes it, once confirmed in Calliope's dialog.
     app.right_click("text:Greeting").unwrap();
     app.press("text:Delete").unwrap();
+    // To the system's trash, as the dialog says.
+    app.wait_for("text:/^It will be moved to the (Recycle Bin|system's Trash)\\.$/")
+        .unwrap();
+    app.press("role:dialog >> text:Delete").unwrap();
     // Headless records the request to the system's trash, and moves nothing.
     let trash = FileRequest::MoveToTrash(root.join("Greeting.md"));
     assert!(app.screen().file_requests().contains(&trash));
@@ -220,8 +192,8 @@ fn desktop_follows_links_and_lists_backlinks() {
     // A link to no note creates it, once confirmed, and the new note
     // has the link's note as a backlink within a second.
     app.press(line).unwrap();
-    app.on_dialog(|_| DialogAnswer::Press("Create".into()));
     app.press("text:Journal/New idea").unwrap();
+    app.press("role:dialog >> text:Create").unwrap();
     app.wait_for_within(line, Duration::from_secs(1)).unwrap();
     assert!(root.join("Journal").join("New idea.md").exists());
 

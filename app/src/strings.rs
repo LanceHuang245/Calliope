@@ -14,6 +14,11 @@ pub(crate) const FILES: &str = "Files";
 pub(crate) const NO_FILES: &str = "No notes yet.";
 pub(crate) const DELETE_TITLE: &str = "Delete this item?";
 pub(crate) const DELETE_DESCRIPTION: &str = "It will be moved to the trash.";
+/// The desktops move what the user deletes to the system's trash.
+#[cfg(target_os = "windows")]
+pub(crate) const DELETE_TO_SYSTEM: &str = "It will be moved to the Recycle Bin.";
+#[cfg(not(target_os = "windows"))]
+pub(crate) const DELETE_TO_SYSTEM: &str = "It will be moved to the system's Trash.";
 pub(crate) const CANCEL: &str = "Cancel";
 
 // Vault.
@@ -60,6 +65,33 @@ pub(crate) const ON: &str = "On";
 pub(crate) const OFF: &str = "Off";
 pub(crate) const SAVE: &str = "Save";
 pub(crate) const LOGS_COPIED: &str = "The logs were copied to the clipboard.";
+
+// Trash.
+pub(crate) const TRASH: &str = "Trash";
+pub(crate) const TRASH_KEEPS: &str = "What you delete, and what sync deletes, stays here \
+     for 15 days.";
+/// On the desktops only what sync deletes: the user's own go to the
+/// system's trash.
+#[cfg(target_os = "windows")]
+pub(crate) const TRASH_KEEPS_DESKTOP: &str = "What sync deletes stays here for 15 days. \
+     Notes you delete go to the Recycle Bin.";
+#[cfg(not(target_os = "windows"))]
+pub(crate) const TRASH_KEEPS_DESKTOP: &str = "What sync deletes stays here for 15 days. \
+     Notes you delete go to the system's Trash.";
+pub(crate) const TRASH_IS_EMPTY: &str = "The trash is empty.";
+pub(crate) const RESTORE: &str = "Restore";
+pub(crate) const EMPTY_TRASH: &str = "Empty trash";
+pub(crate) const DELETE_FOREVER_TITLE: &str = "Delete this file for good?";
+pub(crate) const EMPTY_TRASH_TITLE: &str = "Empty the trash?";
+pub(crate) const CANNOT_UNDO: &str = "This cannot be undone.";
+
+pub(crate) fn deleted_from(origin: &str, day: &str) -> String {
+    format!("From {origin}, deleted {day}")
+}
+
+pub(crate) fn restored(path: &str) -> String {
+    format!("Restored to {path}.")
+}
 
 // Links.
 pub(crate) const BACKLINKS: &str = "Backlinks";

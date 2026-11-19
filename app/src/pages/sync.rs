@@ -3,11 +3,12 @@
 //! dialog asking before a run deletes many files.
 
 use calliope_sync::{Config, Provider};
-use nsh_base::{dialog, theme};
 use nsh_core::prelude::*;
 
 use crate::{
-    components::{ButtonVariant, button, card, field, labeled, muted, overlay, section, segmented},
+    components::{
+        ButtonVariant, button, confirm_dialog, field, labeled, muted, section, segmented,
+    },
     store::{self, SyncStatus},
     strings,
 };
@@ -190,35 +191,10 @@ fn input(label: &'static str, value: &str, typed: impl Fn(String) + 'static) -> 
 /// Asks before a run deletes `count` files: Delete runs it, Cancel, Escape
 /// or the backdrop do not.
 pub(crate) fn deletions_dialog(count: usize) -> impl IntoElement {
-    let cancel = || store::confirm_deletions(false);
-    dialog()
-        .animation(ModalAnimation::Fade)
-        .on_cancel(cancel)
-        .flex_1()
-        .child(view().absolute().inset_0().bg(overlay).on_press(cancel))
-        .child(
-            card()
-                .m(auto())
-                .w_80()
-                .gap_3()
-                .p_5()
-                .shadow_lg()
-                .child(
-                    text(strings::DELETE_FILES)
-                        .text_lg()
-                        .font_weight(FontWeight::SEMIBOLD)
-                        .text_color(move || theme().foreground),
-                )
-                .child(muted(strings::deleting(count)))
-                .child(
-                    view()
-                        .flex_row()
-                        .justify_end()
-                        .gap_2()
-                        .child(button(ButtonVariant::Secondary, strings::CANCEL, cancel))
-                        .child(button(ButtonVariant::Primary, strings::DELETE, || {
-                            store::confirm_deletions(true)
-                        })),
-                ),
-        )
+    confirm_dialog(
+        strings::DELETE_FILES,
+        Some(strings::deleting(count).into()),
+        strings::DELETE,
+        store::confirm_deletions,
+    )
 }

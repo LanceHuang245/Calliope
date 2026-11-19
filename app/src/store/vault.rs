@@ -136,6 +136,10 @@ pub(crate) fn refresh() {
         Err(e) => notify(e),
     }
     reindex();
+    // The trash page shows at once what sync, or a phone, just moved there.
+    if untracked(route) == Route::Trash {
+        load_trash();
+    }
     let Some(path) = untracked(note_path) else {
         return;
     };

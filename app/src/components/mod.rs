@@ -5,10 +5,11 @@
 
 pub(crate) mod icons;
 
-use nsh_base::{input, menu_item, tab, tabs, theme};
+use nsh_base::{dialog, input, menu_item, tab, tabs, theme};
 use nsh_core::{element::StyleRefinement, prelude::*};
 
 use self::icons::icon;
+use crate::strings;
 
 /// A quiet text button: no surface until hovered or pressed.
 pub(crate) fn action(
@@ -228,6 +229,46 @@ pub(crate) fn card() -> View {
         .shadow_sm()
 }
 
+/// A dialog asking before something is done, as the Rename dialog looks:
+/// `title`, what it means (`description`, if any), Cancel and `action`.
+/// `answer` hears whether the user goes on; Escape and the backdrop cancel.
+pub(crate) fn confirm_dialog(
+    title: impl Into<SharedString>,
+    description: Option<SharedString>,
+    action: &'static str,
+    answer: impl Fn(bool) + Copy + 'static,
+) -> impl IntoElement {
+    let cancel = move || answer(false);
+    dialog()
+        .animation(ModalAnimation::Fade)
+        .on_cancel(cancel)
+        .flex_1()
+        .child(view().absolute().inset_0().bg(overlay).on_press(cancel))
+        .child(
+            card()
+                .m(auto())
+                .w_80()
+                .gap_3()
+                .p_5()
+                .shadow_lg()
+                .child(
+                    text(title.into())
+                        .text_lg()
+                        .font_weight(FontWeight::SEMIBOLD)
+                        .text_color(move || theme().foreground),
+                )
+                .child(description.map(muted))
+                .child(
+                    view()
+                        .flex_row()
+                        .justify_end()
+                        .gap_2()
+                        .child(button(ButtonVariant::Secondary, strings::CANCEL, cancel))
+                        .child(button(ButtonVariant::Primary, action, move || answer(true))),
+                ),
+        )
+}
+
 /// The dimming behind dialogs and menu sheets: the theme's `overlay`
 /// (`theme.json`), the foreground faded where a theme has none.
 pub(crate) fn overlay() -> AdaptiveColor {
@@ -260,6 +301,25 @@ pub(crate) fn labeled(label: &'static str, required: bool, content: impl IntoEle
                 .child(muted(label)),
         )
         .child(content)
+}
+
+/// A page's top bar, as the note's: the button that goes `back`, then the
+/// `title` taking the room left; a page adds its own buttons after it.
+pub(crate) fn page_bar(title: &'static str, back: impl Fn() + 'static) -> View {
+    view()
+        .flex_row()
+        .items_center()
+        .gap_2()
+        .px_4()
+        .py_2()
+        .child(icon_button(icons::CHEVRON_LEFT, strings::BACK, back))
+        .child(
+            text(title)
+                .flex_1()
+                .text_lg()
+                .font_weight(FontWeight::SEMIBOLD)
+                .text_color(move || theme().foreground),
+        )
 }
 
 pub(crate) fn section(title: &'static str) -> impl IntoElement {

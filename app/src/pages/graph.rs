@@ -18,11 +18,7 @@ use nsh_core::{
     prelude::*,
 };
 
-use super::home::menu_button;
-use crate::{
-    components::{icon_button, icons},
-    store, strings,
-};
+use crate::{components::page_bar, store, strings};
 
 /// The room around the outermost nodes, for their labels.
 const MARGIN: f32 = 80.0;
@@ -52,25 +48,7 @@ pub(crate) fn graph_page() -> impl IntoElement {
     view()
         .flex_1()
         .child(
-            view()
-                .flex_row()
-                .items_center()
-                .gap_2()
-                .px_4()
-                .py_2()
-                .child((!is_desktop()).then(menu_button))
-                .child(icon_button(
-                    icons::CHEVRON_LEFT,
-                    strings::BACK,
-                    store::back_to_note,
-                ))
-                .child(
-                    text(strings::GRAPH)
-                        .flex_1()
-                        .text_lg()
-                        .font_weight(FontWeight::SEMIBOLD)
-                        .text_color(move || theme().foreground),
-                )
+            page_bar(strings::GRAPH, store::back_to_note)
                 .child(option(strings::ORPHANS, orphans))
                 .child(option(strings::UNCREATED, missing)),
         )

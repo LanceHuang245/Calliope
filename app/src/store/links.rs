@@ -3,13 +3,11 @@
 
 use std::sync::Arc;
 
+use super::*;
 use calliope_core::{
     graph::Graph,
     index::{Backlink, Index},
 };
-use nsh_base::alert_dialog;
-
-use super::*;
 
 #[derive(Clone, Default)]
 struct Links(Arc<Index>);
@@ -66,10 +64,10 @@ pub(crate) fn graph(orphans: bool, missing: bool) -> Graph {
 }
 
 /// Whether the backlinks panel shows: on, beside an open note (not the
-/// settings or the graph).
+/// settings, the trash or the graph).
 pub(crate) fn backlinks_shown() -> bool {
     !get::<BacklinksHidden>().0
-        && !matches!(route(), Route::Settings | Route::Graph)
+        && !matches!(route(), Route::Settings | Route::Trash | Route::Graph)
         && opened().is_some()
 }
 
@@ -97,17 +95,13 @@ pub(crate) fn open_link(target: String) {
     if let Some(path) = found {
         return select(&path.into());
     }
-    spawn_task(async move {
-        let choice = alert_dialog()
-            .title(strings::create_note(&target))
-            .cancel("cancel", strings::CANCEL)
-            .action("create", strings::CREATE)
-            .show()
-            .await;
-        if matches!(choice, Ok(r) if r.action.as_deref() == Some("create")) {
-            create_note(&target);
-        }
-    });
+    let ask = Ask {
+        title: strings::create_note(&target),
+        description: None,
+        action: strings::CREATE,
+        destructive: false,
+    };
+    confirm(ask, move || create_note(&target));
 }
 
 /// Creates the note a link to `target` would name, and opens it.

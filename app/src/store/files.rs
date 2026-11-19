@@ -1,8 +1,6 @@
 //! Files and folders: the tree's expansion and selection, and creating,
 //! renaming and deleting items.
 
-use nsh_base::alert_dialog;
-
 use super::*;
 
 pub(crate) fn expanded() -> Vec<SharedString> {
@@ -137,39 +135,41 @@ fn rename_item(old: String, name: &str) {
     }
 }
 
-/// Asks, then moves the item at `path` to the trash: the system's on the
-/// desktops, the vault's `.trash/` on the phones.
+/// Asks, then moves the item at `path` to the trash.
 pub(crate) fn delete(path: String) {
-    spawn_task(async move {
-        let choice = alert_dialog()
-            .title(strings::DELETE_TITLE)
-            .description(strings::DELETE_DESCRIPTION)
-            .cancel("cancel", strings::CANCEL)
-            .destructive("delete", strings::DELETE)
-            .show()
-            .await;
-        if !matches!(choice, Ok(r) if r.action.as_deref() == Some("delete")) {
-            return;
+    let ask = Ask {
+        title: strings::DELETE_TITLE.to_owned(),
+        description: Some(match is_desktop() {
+            true => strings::DELETE_TO_SYSTEM,
+            false => strings::DELETE_DESCRIPTION,
+        }),
+        action: strings::DELETE,
+        destructive: true,
+    };
+    confirm(ask, move || spawn_task(trash(path.clone())));
+}
+
+/// Moves the item at `path` to the trash: the system's on the desktops,
+/// the vault's `.trash/` on the phones.
+async fn trash(path: String) {
+    let Some(vault) = untracked(vault) else {
+        return;
+    };
+    // Close the note first, so that autosave cannot write it back.
+    let inside = |p: &String| *p == path || p.starts_with(&format!("{path}/"));
+    if untracked(note_path).is_some_and(|p| inside(&p)) {
+        set(NotePath(None));
+        set(Conflict(false));
+    }
+    let trashed = match is_desktop() {
+        true => move_to_trash(vault.abs(&path)).await.map(|_| ()),
+        false => vault.trash(&path).map_err(|e| e.to_string()),
+    };
+    match trashed {
+        Ok(()) => {
+            set(Selected(None));
+            refresh();
         }
-        let Some(vault) = untracked(vault) else {
-            return;
-        };
-        // Close the note first, so that autosave cannot write it back.
-        let inside = |p: &String| *p == path || p.starts_with(&format!("{path}/"));
-        if untracked(note_path).is_some_and(|p| inside(&p)) {
-            set(NotePath(None));
-            set(Conflict(false));
-        }
-        let trashed = match is_desktop() {
-            true => move_to_trash(vault.abs(&path)).await.map(|_| ()),
-            false => vault.trash(&path).map_err(|e| e.to_string()),
-        };
-        match trashed {
-            Ok(()) => {
-                set(Selected(None));
-                refresh();
-            }
-            Err(e) => notify(e),
-        }
-    });
+        Err(e) => notify(e),
+    }
 }

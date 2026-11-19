@@ -89,6 +89,12 @@ pub(crate) fn files_page() -> impl IntoElement {
                             store::backlinks_shown,
                             store::toggle_backlinks,
                         ))
+                        .child(icon_toggle(
+                            icons::TRASH,
+                            strings::TRASH,
+                            || store::route() == Route::Trash,
+                            store::toggle_trash,
+                        ))
                 }))
                 .child(view().flex_1())
                 .child(icon_button(icons::SETTINGS, strings::SETTINGS, || {

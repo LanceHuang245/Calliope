@@ -135,10 +135,7 @@ impl Vault {
     /// ` (tag)` before its extension (numbered when taken); its path.
     pub fn save_copy(&self, rel: &str, tag: &str, data: &[u8]) -> io::Result<String> {
         let (dir, name) = split(rel);
-        let (stem, ext) = match name.rfind('.') {
-            Some(dot) if dot > 0 => name.split_at(dot),
-            _ => (name, ""),
-        };
+        let (stem, ext) = stem_ext(name);
         let copy = self.unique(dir, &format!("{stem} ({tag})"), ext);
         self.write_bytes(&copy, data)?;
         Ok(copy)
@@ -167,36 +164,12 @@ impl Vault {
         Ok(new)
     }
 
-    /// Moves the file or folder at `rel` into the vault's trash (where there
-    /// is no system trash: the phones, and sync), in a folder of the day
-    /// (`.trash/2026-11-12/`): moving keeps a file's modification time, so
-    /// the folder tells when it was deleted ([`Self::empty_trash`]).
-    pub fn trash(&self, rel: &str) -> io::Result<()> {
-        let day = format!(".trash/{}", jiff::Zoned::now().date());
-        fs::create_dir_all(self.abs(&day))?;
-        let target = self.unique(&day, split(rel).1, "");
-        fs::rename(self.abs(rel), self.abs(&target))
-    }
-
-    /// Deletes what went to the trash more than `days` days ago: the day
-    /// folders before then.
-    pub fn empty_trash(&self, days: i64) -> io::Result<()> {
-        let Ok(entries) = fs::read_dir(self.root.join(".trash")) else {
-            return Ok(());
-        };
-        let oldest = jiff::Zoned::now()
-            .date()
-            .saturating_sub(jiff::Span::new().days(days));
-        for entry in entries.flatten() {
-            let day = entry
-                .file_name()
-                .to_str()
-                .and_then(|n| n.parse::<jiff::civil::Date>().ok());
-            if day.is_some_and(|day| day < oldest) {
-                fs::remove_dir_all(entry.path())?;
-            }
-        }
-        Ok(())
+    /// `rel` when nothing is there, else `stem N.ext` beside it with the
+    /// first N free.
+    pub(crate) fn free(&self, rel: &str) -> String {
+        let (dir, name) = split(rel);
+        let (stem, ext) = stem_ext(name);
+        self.unique(dir, stem, ext)
     }
 
     /// `dir/stem ext`, or `dir/stem N ext` with the first N free.
@@ -211,7 +184,7 @@ impl Vault {
     }
 }
 
-fn join(dir: &str, name: &str) -> String {
+pub(crate) fn join(dir: &str, name: &str) -> String {
     if dir.is_empty() {
         name.to_owned()
     } else {
@@ -219,8 +192,17 @@ fn join(dir: &str, name: &str) -> String {
     }
 }
 
-fn split(rel: &str) -> (&str, &str) {
+pub(crate) fn split(rel: &str) -> (&str, &str) {
     rel.rsplit_once('/').unwrap_or(("", rel))
+}
+
+/// A file name's stem and extension (with its dot); a name starting with
+/// its only dot has no extension.
+fn stem_ext(name: &str) -> (&str, &str) {
+    match name.rfind('.') {
+        Some(dot) if dot > 0 => name.split_at(dot),
+        _ => (name, ""),
+    }
 }
 
 fn scan_dir(dir: &Path, rel: &str) -> io::Result<Vec<Entry>> {
@@ -307,20 +289,8 @@ mod tests {
     }
 
     #[test]
-    fn trashes_into_the_vault_and_copies_conflicts() {
-        let v = vault("trash");
-        let note = v.create_note("").unwrap();
-        v.trash(&note).unwrap();
-        assert!(v.scan().unwrap().is_empty());
-        let today = jiff::Zoned::now().date();
-        assert!(v.abs(&format!(".trash/{today}/Untitled.md")).exists());
-        // Emptying it keeps the last 15 days; other files are left alone.
-        fs::create_dir_all(v.abs(".trash/2020-01-01")).unwrap();
-        fs::write(v.abs(".trash/Old.md"), "").unwrap();
-        v.empty_trash(15).unwrap();
-        assert!(!v.abs(".trash/2020-01-01").exists());
-        assert!(v.abs(&format!(".trash/{today}/Untitled.md")).exists());
-        assert!(v.abs(".trash/Old.md").exists());
+    fn copies_beside_the_file() {
+        let v = vault("copy");
         let copy = v.save_copy("Plan.md", "conflict", b"mine").unwrap();
         assert_eq!(copy, "Plan (conflict).md");
         assert_eq!(v.read(&copy).unwrap(), "mine");

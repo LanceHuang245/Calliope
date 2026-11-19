@@ -18,7 +18,7 @@ use nsh_core::{
 };
 
 use crate::{
-    components::{card, icon_button, icons},
+    components::{card, confirm_dialog, icon_button, icons},
     pages::{
         files::{files_page, rename_dialog},
         graph::graph_page,
@@ -29,6 +29,7 @@ use crate::{
         status::status_bar,
         switcher::quick_switcher,
         sync::deletions_dialog,
+        trash::trash_page,
         welcome::welcome_page,
     },
     store::{self, Notice, Route},
@@ -47,6 +48,13 @@ pub(crate) fn shell() -> impl IntoElement {
         .child(dynamic(move || store::switching().then(quick_switcher)))
         .child(dynamic(move || {
             store::pending_deletions().map(deletions_dialog)
+        }))
+        // What the desktops ask before deleting or creating.
+        .child(dynamic(move || {
+            store::asking().map(|ask| {
+                let description = ask.description.map(SharedString::from);
+                confirm_dialog(ask.title, description, ask.action, store::answer)
+            })
         }))
 }
 
@@ -76,6 +84,7 @@ fn desktop() -> impl IntoElement {
                     let has_vault = store::vault().is_some();
                     untracked(|| match (route, has_vault) {
                         (Route::Settings, _) => settings_page().into_element(),
+                        (Route::Trash, true) => trash_page().into_element(),
                         (Route::Graph, true) => graph_page().into_element(),
                         (_, true) => note_page().into_element(),
                         (_, false) => welcome_page().into_element(),
@@ -142,9 +151,14 @@ fn sidebar() -> impl IntoElement {
 }
 
 fn mobile() -> impl IntoElement {
-    // The system's back (Android) goes back to the home page.
+    // The system's back (Android) goes back to the home page, from the
+    // trash to the settings it opens from.
     on_back_press(|| match untracked(store::route) {
         Route::Home => false,
+        Route::Trash => {
+            store::set_route(Route::Settings);
+            true
+        }
         _ => {
             store::set_route(Route::Home);
             true
@@ -159,6 +173,7 @@ fn mobile() -> impl IntoElement {
             Route::Note => note_page().into_element(),
             Route::Graph => graph_page().into_element(),
             Route::Settings => settings_page().into_element(),
+            Route::Trash => trash_page().into_element(),
         })
     });
     // The notice inside the safe area, over the page.

@@ -11,12 +11,16 @@
 //! - [`files`]: creating, renaming and deleting files and folders;
 //! - [`links`]: the link index, backlinks and following a link;
 //! - [`sync`]: syncing the vault with WebDAV or S3;
+//! - [`trash`]: the vault's trash, restoring and deleting for good;
+//! - [`confirm`]: asking before deleting or creating;
 //! - here: the view (mode, route, theme), notices and the start.
 
+mod confirm;
 mod files;
 mod links;
 mod note;
 mod sync;
+mod trash;
 mod vault;
 
 use std::{collections::HashMap, fs, path::PathBuf};
@@ -24,7 +28,15 @@ use std::{collections::HashMap, fs, path::PathBuf};
 use calliope_core::vault::{Entry, EntryKind, Vault};
 use nsh_core::{file_dialog::SaveDialog, prelude::*, storage::Storage};
 
+use self::{
+    confirm::{Ask, confirm},
+    links::{reindex, reset_links},
+    note::{load, save_or_copy, start_autosave},
+    sync::{edited, load_sync, start_sync_timers},
+    vault::watch_other_apps,
+};
 pub(crate) use self::{
+    confirm::{answer, asking},
     files::{
         cancel_rename, delete, expanded, new_folder, new_folder_in, new_note, new_note_in, rename,
         rename_note, renaming, selected, set_expanded, start_rename,
@@ -41,16 +53,11 @@ pub(crate) use self::{
         SyncStatus, confirm_deletions, pending_deletions, save_sync, secret_in_file, sync_config,
         sync_now, sync_status, test_sync,
     },
+    trash::{clear_trash, delete_forever, load_trash, restore, toggle_trash, trashed},
     vault::{
         create_vault, has_files, kind_of, open_vault, pick_vault, refresh, tree_items, vault,
         vault_name, vault_path,
     },
-};
-use self::{
-    links::{reindex, reset_links},
-    note::{load, save_or_copy, start_autosave},
-    sync::{edited, load_sync, start_sync_timers},
-    vault::watch_other_apps,
 };
 use crate::{logging, paths, strings};
 
@@ -77,6 +84,8 @@ pub(crate) enum Route {
     Note,
     Graph,
     Settings,
+    /// The vault's trash, opened from the settings.
+    Trash,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Default)]
