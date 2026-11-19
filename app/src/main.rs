@@ -10,6 +10,10 @@ use nsh_platform_macos as platform;
 #[cfg(target_os = "windows")]
 use nsh_platform_windows as platform;
 
+/// The app's id (`nsh.json` `"id"`): it names the app's data directory,
+/// as in the builds `nsh package` makes.
+const APP_ID: &str = "io.github.lancehuang245.calliope";
+
 #[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
 fn main() -> impl std::process::Termination {
     let mut window = nsh_core::desktop::MainWindowOptions::default();
@@ -17,11 +21,15 @@ fn main() -> impl std::process::Termination {
     // Reopen where the user left the window; centered only on the first run.
     window.restore_bounds = true;
     platform::run_app(
-        platform::AppSource::Rust(platform::Root::of::<calliope::App>().main_window(window)),
+        platform::AppSource::Rust(
+            platform::Root::of::<calliope::App>()
+                .app_id(APP_ID)
+                .main_window(window),
+        ),
         platform::AppOptions {
             title: "Calliope".to_owned(),
             #[cfg(any(target_os = "linux", target_os = "windows"))]
-            app_id: "io.github.lancehuang245.calliope".to_owned(),
+            app_id: APP_ID.to_owned(),
             size: (1200, 800),
             ..Default::default()
         },

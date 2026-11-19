@@ -1,12 +1,5 @@
 # TODO
 
-## Android 仓库路径写死为 `/data/data/<应用 id>/files`
-
-- **位置**：`app/src/paths.rs` 的 `data_dir()`。手机仓库在 `<data_dir>/<仓库名>`，日志在 `<data_dir>/calliope.log`。
-- **问题**：Android 工作资料（work profile）或多用户环境下，应用的实际目录是 `/data/user/<用户编号>/<应用 id>/files`。`/data/data/...` 只指向主用户，在这些环境里会无法读写。
-- **原因**：nsh 0.4 的 Android 层通过 Java 的 `getFilesDir()` 拿到应用目录，但只传给了 nsh 引擎（`EngineConfig::data_dir`），没有开放给应用的 Rust 代码。
-- **修复方向**：等 nsh 开放应用目录后改用它；或者用 nsh 的原生模块从 Java 侧读取 `getFilesDir()`。
-
 ## nsh `Editor`：键入已存在的右括号后，光标画错位置
 
 - **位置**：nsh 的 `nsh-base/src/editor/controller.rs` 的 `after_typing`（锁定版本 `c5214aa`；截至 2026-11-11，上游 `main` 新 136 个提交仍未修复）。在 Linux 上复现，其他平台未验证。
@@ -26,4 +19,4 @@
 - **位置**：`app/src/secrets.rs`。MVP 文档 8.6 要求 Android 的密码存进 Keystore。
 - **问题**：Android 上的同步密码现在存在应用私有目录里的 `secrets.json`（`<data_dir>/secrets.json`）。其他应用读不到这个文件，但它没有经过 Keystore 加密；手机被 root 或者被做了完整备份时能读出来。
 - **原因**：现成的 [android-native-keyring-store](https://crates.io/crates/android-native-keyring-store) 要求先用 JavaVM 和应用的 Context 初始化 `ndk-context`。nsh 0.4 在 `JNI_OnLoad` 里拿到了 JavaVM，但只在 `nsh-platform-android` 内部使用，没有开放给应用（锁定版本 `c5214aa`）；`JNI_GetCreatedJavaVMs` 要到 API 31 才是公开的 NDK 接口，而 nsh 的 minSdk 是 26；Context 也只能通过隐藏 API 拿到。
-- **修复方向**：等 nsh 开放 JavaVM 和 Context（或者初始化 `ndk-context`）后，在 `secrets.rs` 的 Android 分支改用 `android-native-keyring-store`，并把 `secrets.json` 里已有的密码迁移过去。同一个接口也能解决上面“Android 仓库路径写死”那一条。
+- **修复方向**：等 nsh 开放 JavaVM 和 Context（或者初始化 `ndk-context`）后，在 `secrets.rs` 的 Android 分支改用 `android-native-keyring-store`，并把 `secrets.json` 里已有的密码迁移过去。

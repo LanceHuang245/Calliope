@@ -31,6 +31,7 @@ fn native(registry: &mut Registry) {
 
 #[component]
 pub fn App() -> impl IntoElement {
+    paths::init();
     logging::init();
     store::init();
     view()
