@@ -49,7 +49,15 @@ pub async fn sync(
     progress: impl Fn(usize, usize) + Sync,
 ) -> Result<Report> {
     let op = remote::operator(config, secret)?;
-    run(vault, &op, &config.remote_id(), &config.device, confirmed, progress).await
+    run(
+        vault,
+        &op,
+        &config.remote_id(),
+        &config.device,
+        confirmed,
+        progress,
+    )
+    .await
 }
 
 pub(crate) async fn run(

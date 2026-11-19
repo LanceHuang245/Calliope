@@ -70,7 +70,9 @@ async fn remotes(test: &str) -> Vec<Operator> {
 /// A run, its deletions confirmed (`asks_before_deleting_many` tests
 /// asking).
 async fn sync(vault: &Vault, op: &Operator) -> Report {
-    run(vault, op, &id(op), "Test", true, |_, _| {}).await.unwrap()
+    run(vault, op, &id(op), "Test", true, |_, _| {})
+        .await
+        .unwrap()
 }
 
 /// The remote `op` stands for, as [`Config::remote_id`] names one.
@@ -216,7 +218,9 @@ async fn asks_before_deleting_many() {
         let refused = run(&a, &op, &id(&op), "Test", false, |_, _| {}).await;
         assert!(matches!(refused, Err(Error::TooManyDeletions(25))));
         assert_eq!(files(&b).len(), 30);
-        run(&a, &op, &id(&op), "Test", true, |_, _| {}).await.unwrap();
+        run(&a, &op, &id(&op), "Test", true, |_, _| {})
+            .await
+            .unwrap();
         sync(&b, &op).await;
         assert_eq!(files(&b).len(), 5);
     }
