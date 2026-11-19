@@ -10,7 +10,7 @@ use std::{
 };
 
 use calliope_sync::{Config, Error, Provider};
-use nsh_core::platform::Lifecycle;
+use nsh_core::{notifications::Notification, platform::Lifecycle};
 
 use super::{note::save, *};
 use crate::secrets;
@@ -183,9 +183,11 @@ pub(super) fn start_sync_timers() {
         let config = untracked(sync_config);
         let interval = Duration::from_secs(u64::from(config.interval) * 60);
         let edits = EDITED.get().is_some_and(|t| t.elapsed() >= AFTER_EDITS);
+        // Never synced yet (sync just turned on): due at once, then counted
+        // from that run.
         let due = is_desktop()
             && config.interval > 0
-            && LAST_RUN.get().is_some_and(|t| t.elapsed() >= interval);
+            && LAST_RUN.get().is_none_or(|t| t.elapsed() >= interval);
         if config.auto && (edits || due) {
             start(false);
         }
@@ -234,6 +236,7 @@ fn start(confirmed: bool) {
                 set(SyncStatus::Done(time, report.conflicts.len()));
                 if !report.conflicts.is_empty() {
                     notify(strings::sync_conflicts(&report.conflicts));
+                    spawn_task(notify_system(report.conflicts));
                 }
             }
             Ok(Err(Error::TooManyDeletions(n))) => {
@@ -250,6 +253,16 @@ fn start(confirmed: bool) {
         // What it downloaded or deleted shows.
         refresh();
     });
+}
+
+/// Tells of the conflict `copies` a run made in a system notification too
+/// (MVP 8.4), asking to show notifications the first time. Refused, the
+/// notice in the app is left.
+async fn notify_system(copies: Vec<String>) {
+    request_notification_permission().await;
+    let body = strings::sync_conflicts(&copies);
+    let notification = Notification::new("sync-conflicts", strings::SYNC_CONFLICTS, body);
+    show_notification(notification).await;
 }
 
 /// This device's name in conflict copies: the computer's name on the

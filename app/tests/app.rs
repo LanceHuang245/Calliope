@@ -325,15 +325,17 @@ fn desktop_saves_the_sync_settings() {
     app.press("label:Sync").unwrap();
     app.wait_for("text:Save").unwrap();
     // While sync is off, only Save is shown.
-    assert!(!app.shows("text:Test connection") && !app.shows("text:Sync now"));
+    assert!(!app.shows("Test connection") && !app.shows("Sync now"));
     app.press("text:WebDAV").unwrap();
     app.wait_for("text:Test connection").unwrap();
     // A problem stays until closed, under the notices that come after it.
     app.press("text:Test connection").unwrap();
-    app.wait_for("Sync failed:").unwrap();
+    app.wait_for("text:/^Sync failed:/").unwrap();
     app.type_text("label:Server address", "https://dav.example.com/dav")
         .unwrap();
     app.type_text("label:User name", "me").unwrap();
+    // Not on its own: saved, it would sync with the made-up server at once.
+    app.press("text:Off >> nth=1").unwrap();
     app.press("text:Save").unwrap();
     app.wait_for("The sync settings were saved.").unwrap();
     // The notice stays three seconds, then goes on its own.
@@ -341,12 +343,13 @@ fn desktop_saves_the_sync_settings() {
     assert!(app.shows("The sync settings were saved."));
     app.wait_for_gone("The sync settings were saved.", Duration::from_secs(5))
         .unwrap();
-    assert!(app.shows("Sync failed:"));
+    assert!(app.shows("Sync failed: endpoint is empty."));
     app.press("label:Close").unwrap();
-    app.wait_for_gone("Sync failed:", Duration::from_secs(2))
+    app.wait_for_gone("text:/^Sync failed:/", Duration::from_secs(2))
         .unwrap();
     let saved = fs::read_to_string(root.join(".calliope/sync.json")).unwrap();
     assert!(saved.contains(r#""provider": "webdav""#), "{saved}");
     assert!(saved.contains("https://dav.example.com/dav"), "{saved}");
+    assert!(saved.contains(r#""auto": false"#), "{saved}");
     let _ = fs::remove_dir_all(&root);
 }

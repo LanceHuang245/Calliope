@@ -102,6 +102,7 @@ pub(crate) const SYNC_SAVED: &str = "The sync settings were saved.";
 pub(crate) const SYNC_WORKS: &str = "The connection works.";
 pub(crate) const NOT_SYNCED: &str = "Not synced yet";
 pub(crate) const SYNC_FAILED: &str = "Sync failed";
+pub(crate) const SYNC_CONFLICTS: &str = "Sync conflicts";
 pub(crate) const SECRET_IN_FILE: &str = "No keyring was found, so the password is kept in a \
      file only Calliope reads. Install GNOME Keyring or KWallet, then save the password \
      again to keep it in the keyring.";
