@@ -69,6 +69,20 @@ impl Config {
             .unwrap_or_default()
     }
 
+    /// Which remote folder or bucket this names (and as whom): the sync
+    /// records are of one, and a vault pointed at another merges with it.
+    pub(crate) fn remote_id(&self) -> String {
+        let Self {
+            provider,
+            endpoint,
+            user,
+            bucket,
+            root,
+            ..
+        } = self;
+        format!("{provider:?} {endpoint} {user} {bucket} {root}")
+    }
+
     pub fn save(&self, vault: &Vault) -> std::io::Result<()> {
         let json = serde_json::to_string_pretty(self).map_err(std::io::Error::other)?;
         vault.write(PATH, &json)

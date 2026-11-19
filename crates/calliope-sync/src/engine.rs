@@ -49,19 +49,20 @@ pub async fn sync(
     progress: impl Fn(usize, usize) + Sync,
 ) -> Result<Report> {
     let op = remote::operator(config, secret)?;
-    run(vault, &op, &config.device, confirmed, progress).await
+    run(vault, &op, &config.remote_id(), &config.device, confirmed, progress).await
 }
 
 pub(crate) async fn run(
     vault: &Vault,
     op: &Operator,
+    remote_id: &str,
     device: &str,
     confirmed: bool,
     progress: impl Fn(usize, usize) + Sync,
 ) -> Result<Report> {
     let remote = remote::list(op).await?;
     let local = local::list(vault)?;
-    let mut state = state::load(vault);
+    let mut state = state::load(vault, remote_id);
     // One side empty and the other not (a new device, a remote folder
     // emptied or replaced): merged as a first sync, so the empty side
     // deletes nothing on the other (as Remotely Save does).
@@ -103,10 +104,10 @@ pub(crate) async fn run(
             break;
         }
         if done % 20 == 19 {
-            state::save(vault, &run.state)?;
+            state::save(vault, remote_id, &run.state)?;
         }
     }
-    state::save(vault, &run.state)?;
+    state::save(vault, remote_id, &run.state)?;
     result.map(|()| run.report)
 }
 

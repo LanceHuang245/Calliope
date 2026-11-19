@@ -70,7 +70,12 @@ async fn remotes(test: &str) -> Vec<Operator> {
 /// A run, its deletions confirmed (`asks_before_deleting_many` tests
 /// asking).
 async fn sync(vault: &Vault, op: &Operator) -> Report {
-    run(vault, op, "Test", true, |_, _| {}).await.unwrap()
+    run(vault, op, &id(op), "Test", true, |_, _| {}).await.unwrap()
+}
+
+/// The remote `op` stands for, as [`Config::remote_id`] names one.
+fn id(op: &Operator) -> String {
+    format!("{} {}", op.info().scheme(), op.info().root())
 }
 
 /// The content of every file of `vault` that syncs, by path.
@@ -160,6 +165,30 @@ async fn a_first_sync_merges_both_sides() {
     }
 }
 
+/// A vault pointed at another remote, one with files of its own, merges
+/// with it as on a first sync: the records of the old remote overwrite and
+/// delete nothing (MVP 8.5).
+#[tokio::test]
+async fn a_new_remote_is_merged() {
+    let fs_remote = |name| {
+        let root = folder("switch", name).to_string_lossy().into_owned();
+        Operator::new(Fs::default().root(&root)).unwrap()
+    };
+    let (old, new) = (fs_remote("old"), fs_remote("new"));
+    let (a, b) = (device("switch", "a"), device("switch", "b"));
+    write(&a, "Note.md", "mine");
+    write(&a, "Only here.md", "here");
+    sync(&a, &old).await;
+    write(&b, "Note.md", "theirs");
+    sync(&b, &new).await;
+
+    let report = sync(&a, &new).await;
+    assert_eq!(report.conflicts.len(), 1);
+    assert_eq!(a.read("Note.md").unwrap(), "mine");
+    assert_eq!(a.read(&report.conflicts[0]).unwrap(), "theirs");
+    assert_eq!(a.read("Only here.md").unwrap(), "here");
+}
+
 #[tokio::test]
 async fn an_emptied_remote_deletes_nothing() {
     for op in remotes("emptied").await {
@@ -184,10 +213,10 @@ async fn asks_before_deleting_many() {
         for i in 0..25 {
             fs::remove_file(a.abs(&format!("{i}.md"))).unwrap();
         }
-        let refused = run(&a, &op, "Test", false, |_, _| {}).await;
+        let refused = run(&a, &op, &id(&op), "Test", false, |_, _| {}).await;
         assert!(matches!(refused, Err(Error::TooManyDeletions(25))));
         assert_eq!(files(&b).len(), 30);
-        run(&a, &op, "Test", true, |_, _| {}).await.unwrap();
+        run(&a, &op, &id(&op), "Test", true, |_, _| {}).await.unwrap();
         sync(&b, &op).await;
         assert_eq!(files(&b).len(), 5);
     }
