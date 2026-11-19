@@ -90,6 +90,41 @@ fn write(vault: &Vault, path: &str, text: &str) {
     vault.write(path, text).unwrap();
 }
 
+/// Writes `text` (as many bytes as before) to the file at `path`, which
+/// keeps its modification time: a second write in the same tick of the
+/// clock (on Windows, 926 of 1000 quick rewrites).
+fn rewrite_in_the_same_tick(path: &std::path::Path, text: &str) {
+    let modified = fs::metadata(path).unwrap().modified().unwrap();
+    fs::write(path, text).unwrap();
+    let file = fs::File::options().write(true).open(path).unwrap();
+    file.set_modified(modified).unwrap();
+}
+
+#[tokio::test]
+async fn edits_in_the_same_tick_are_seen() {
+    // A remote of its own in a folder, to rewrite its files the same way.
+    let folder = folder("tick", "remote");
+    fs::create_dir_all(&folder).unwrap();
+    let op = Operator::new(Fs::default().root(&folder.to_string_lossy())).unwrap();
+    let (a, b) = (device("tick", "a"), device("tick", "b"));
+    write(&a, "Note.md", "hello");
+    sync(&a, &op).await;
+    // A local edit with the stamp the record has: uploaded.
+    rewrite_in_the_same_tick(&a.abs("Note.md"), "HELLO");
+    assert_eq!(sync(&a, &op).await.uploaded, 1);
+    sync(&b, &op).await;
+    // A remote edit with the version the record has: downloaded.
+    rewrite_in_the_same_tick(&folder.join("Note.md"), "howdy");
+    assert_eq!(sync(&b, &op).await.downloaded, 1);
+    assert_eq!(b.read("Note.md").unwrap(), "howdy");
+    // An edit between the listing and the download it would undo: kept
+    // (`progress` hears of each file just before it is synced).
+    rewrite_in_the_same_tick(&folder.join("Note.md"), "later");
+    let edit = |_, _| rewrite_in_the_same_tick(&b.abs("Note.md"), "mine!");
+    run(&b, &op, &id(&op), "Test", true, edit).await.unwrap();
+    assert_eq!(b.read("Note.md").unwrap(), "mine!");
+}
+
 #[tokio::test]
 async fn devices_follow_each_other() {
     for op in remotes("follow").await {

@@ -1,7 +1,12 @@
 //! The local side: the vault's files with their modification times and
 //! sizes, and the hash that tells whether a file's content changed.
 
-use std::{collections::HashMap, fs, io, path::Path, time::UNIX_EPOCH};
+use std::{
+    collections::HashMap,
+    fs, io,
+    path::Path,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use calliope_core::vault::Vault;
 use serde::{Deserialize, Serialize};
@@ -28,6 +33,19 @@ impl Stamp {
             size: meta.len(),
         }
     }
+}
+
+/// How long after a write a file can be written again and keep its
+/// modification time: 2 seconds on FAT, 1 on HFS+ and in WebDAV's dates,
+/// a tick of the clock (about 15 ms) on Windows. In nanoseconds.
+const TICK: i64 = 2_000_000_000;
+
+/// Whether `modified` (nanoseconds since the epoch) is too recent to vouch
+/// for a file's content: written again now with as many bytes, the file
+/// could keep that time, so a record with it would miss the change.
+pub(crate) fn racy(modified: i64) -> bool {
+    let now = SystemTime::now().duration_since(UNIX_EPOCH);
+    now.map_or(0, |d| d.as_nanos() as i64) - modified < TICK
 }
 
 /// The stamp of the file at `path`, `None` when it is not there.

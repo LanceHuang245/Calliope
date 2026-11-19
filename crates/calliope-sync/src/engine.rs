@@ -83,9 +83,20 @@ pub(crate) async fn run(
     let mut planned = Vec::new();
     for path in &paths {
         let mine = local_side(vault, path, local.get(path), state.get_mut(path))?;
-        let theirs = match (remote.get(path), state.get(path)) {
+        let theirs = match (remote.get(path), state.get_mut(path)) {
             (None, _) => Side::Gone,
             (Some(v), Some(r)) if v.same(&r.remote) => Side::Same,
+            // Recorded too soon after it was written: its content tells.
+            (Some(v), Some(r)) if r.unsure() => {
+                let data = remote::retry(|| op.read(path)).await?.to_vec();
+                match local::hash(&data) == r.hash {
+                    true => {
+                        r.remote = state::kept_version(v.clone());
+                        Side::Same
+                    }
+                    false => Side::Changed,
+                }
+            }
             _ => Side::Changed,
         };
         if let Some(action) = plan::action(mine, theirs) {
@@ -121,7 +132,8 @@ pub(crate) async fn run(
 
 /// How the local file at `path` (`stamp`, `None` when not there) differs
 /// from its `record`. A file touched but holding the same content is the
-/// same, and its record takes the new stamp.
+/// same, and its record takes the new stamp (unless still too recent to
+/// vouch for it: [`state::kept`]).
 fn local_side(
     vault: &Vault,
     path: &str,
@@ -134,7 +146,7 @@ fn local_side(
         (Some(s), Some(r)) if *s == r.local => Side::Same,
         (Some(s), Some(r)) => match local::hash(&fs::read(vault.abs(path))?) == r.hash {
             true => {
-                r.local = *s;
+                r.local = state::kept(*s);
                 Side::Same
             }
             false => Side::Changed,
@@ -189,9 +201,20 @@ impl Run<'_> {
         Ok(())
     }
 
-    /// Whether the local file at `path` changed since the listing.
+    /// Whether the local file at `path` changed since the listing: its
+    /// stamp did, or the stamp is too recent to vouch for it and the content
+    /// is no longer the recorded one (unreadable: taken as changed).
     fn touched(&self, path: &str) -> bool {
-        local::stamp(self.vault, path) != self.local.get(path).copied()
+        let stamp = local::stamp(self.vault, path);
+        if stamp != self.local.get(path).copied() {
+            return true;
+        }
+        match (stamp, self.state.get(path)) {
+            (Some(s), Some(r)) if local::racy(s.modified) => {
+                (fs::read(self.vault.abs(path))).map_or(true, |data| local::hash(&data) != r.hash)
+            }
+            _ => false,
+        }
     }
 
     async fn upload(&mut self, path: &str) -> Result<()> {
@@ -203,11 +226,7 @@ impl Run<'_> {
         let hash = local::hash(&data);
         remote::retry(|| self.op.write(path, data.clone())).await?;
         let remote = Version::of(&remote::retry(|| self.op.stat(path)).await?);
-        let record = Record {
-            hash,
-            local: stamp,
-            remote,
-        };
+        let record = Record::new(hash, stamp, remote);
         self.state.insert(path.to_owned(), record);
         self.report.uploaded += 1;
         Ok(())
@@ -237,15 +256,8 @@ impl Run<'_> {
     /// Records the local file at `path`, holding `data`, as `remote`.
     fn record(&mut self, path: &str, data: &[u8], remote: Version) {
         if let Some(local) = local::stamp(self.vault, path) {
-            let hash = local::hash(data);
-            (self.state).insert(
-                path.to_owned(),
-                Record {
-                    hash,
-                    local,
-                    remote,
-                },
-            );
+            let record = Record::new(local::hash(data), local, remote);
+            self.state.insert(path.to_owned(), record);
         }
     }
 }
