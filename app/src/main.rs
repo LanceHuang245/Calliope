@@ -12,8 +12,12 @@ use nsh_platform_windows as platform;
 
 #[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
 fn main() -> impl std::process::Termination {
+    let mut window = nsh_core::desktop::MainWindowOptions::default();
+    window.default_position = Some(nsh_core::desktop::WindowPosition::Center);
+    // Reopen where the user left the window; centered only on the first run.
+    window.restore_bounds = true;
     platform::run_app(
-        platform::AppSource::Rust(platform::Root::of::<calliope::App>()),
+        platform::AppSource::Rust(platform::Root::of::<calliope::App>().main_window(window)),
         platform::AppOptions {
             title: "Calliope".to_owned(),
             #[cfg(any(target_os = "linux", target_os = "windows"))]
