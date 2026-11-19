@@ -37,8 +37,8 @@ pub(crate) enum SyncStatus {
     Idle,
     /// Files done, of how many.
     Running(usize, usize),
-    /// When the last run ended (`15:30`).
-    Done(String),
+    /// When the last run ended (`15:30`), and how many conflict copies it made.
+    Done(String, usize),
     Failed(String),
 }
 
@@ -231,7 +231,7 @@ fn start(confirmed: bool) {
         match result {
             Ok(Ok(report)) => {
                 let time = jiff::Zoned::now().strftime("%H:%M").to_string();
-                set(SyncStatus::Done(time));
+                set(SyncStatus::Done(time, report.conflicts.len()));
                 if !report.conflicts.is_empty() {
                     notify(strings::sync_conflicts(&report.conflicts));
                 }

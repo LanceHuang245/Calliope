@@ -59,7 +59,8 @@ pub(crate) fn sync_settings() -> impl IntoElement {
         .child(muted(move || match store::sync_status() {
             SyncStatus::Idle => strings::NOT_SYNCED.to_owned(),
             SyncStatus::Running(done, total) => strings::syncing(done, total),
-            SyncStatus::Done(time) => strings::synced_at(&time),
+            SyncStatus::Done(time, 0) => strings::synced_at(&time),
+            SyncStatus::Done(time, n) => strings::synced_conflicts(&time, n),
             SyncStatus::Failed(error) => strings::sync_failed(&error),
         }))
         .child(dynamic(|| {

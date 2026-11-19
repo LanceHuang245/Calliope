@@ -77,16 +77,16 @@ impl Graph {
             .collect();
         // Fewer rounds for a large graph: each one costs more.
         let rounds = (150_000 / n.max(1)).clamp(60, 300);
+        // Reuse the quadtree and force buffers across rounds to avoid per-round allocations.
+        let mut tree = Tree(Vec::with_capacity(n * 2));
+        let mut push = vec![(0.0_f32, 0.0_f32); n];
         for round in 0..rounds {
-            let tree = Tree::new(&at);
-            let mut push: Vec<(f32, f32)> = at
-                .iter()
-                .map(|&(x, y)| {
-                    let (fx, fy) = tree.repulsion(0, x, y);
-                    // A light pull to the middle keeps separate groups near.
-                    (fx - x * GRAVITY, fy - y * GRAVITY)
-                })
-                .collect();
+            tree.rebuild(&at);
+            for (slot, &(x, y)) in push.iter_mut().zip(&at) {
+                let (fx, fy) = tree.repulsion(0, x, y);
+                // A light pull to the middle keeps separate groups near.
+                *slot = (fx - x * GRAVITY, fy - y * GRAVITY);
+            }
             for &(a, b) in &self.edges {
                 let (dx, dy) = (at[b].0 - at[a].0, at[b].1 - at[a].1);
                 let pull = (dx * dx + dy * dy).sqrt() / SPACING;
@@ -97,7 +97,7 @@ impl Graph {
             }
             // Each round moves the nodes less far.
             let step = SPACING * 2.0 * (1.0 - round as f32 / rounds as f32);
-            for (p, (fx, fy)) in at.iter_mut().zip(push) {
+            for (p, &(fx, fy)) in at.iter_mut().zip(&push) {
                 let force = (fx * fx + fy * fy).sqrt().max(f32::EPSILON);
                 let moved = force.min(step) / force;
                 *p = (p.0 + fx * moved, p.1 + fy * moved);
@@ -140,15 +140,16 @@ struct Cell {
 struct Tree(Vec<Cell>);
 
 impl Tree {
-    fn new(at: &[(f32, f32)]) -> Self {
+    /// Rebuilds the quadtree in place, reusing its existing allocation.
+    fn rebuild(&mut self, at: &[(f32, f32)]) {
+        self.0.clear();
         let half = at
             .iter()
             .fold(1.0_f32, |m, &(x, y)| m.max(x.abs()).max(y.abs()));
-        let mut tree = Tree(vec![cell(0.0, 0.0, half)]);
+        self.0.push(cell(0.0, 0.0, half));
         for &(x, y) in at {
-            tree.insert(0, x, y, 1.0);
+            self.insert(0, x, y, 1.0);
         }
-        tree
     }
 
     fn insert(&mut self, i: usize, x: f32, y: f32, mass: f32) {

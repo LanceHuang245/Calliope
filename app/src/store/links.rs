@@ -34,9 +34,13 @@ pub(super) fn reindex() {
     };
     global::<Reindexing>().update(|r| r.0 += 1);
     let run = untracked(|| get::<Reindexing>().0);
-    let mut index = untracked(|| Index::clone(&get::<Links>().0));
+    // Only bump the Arc refcount on the UI thread; clone the index on the worker thread.
+    let prev = untracked(|| Arc::clone(&get::<Links>().0));
     spawn_task(async move {
-        let done = blocking(move || index.sync(&vault).map(|changed| (changed, index)));
+        let done = blocking(move || {
+            let mut index = Index::clone(&prev);
+            index.sync(&vault).map(|changed| (changed, index))
+        });
         match done.await {
             // A run started since replaces this one.
             _ if untracked(|| get::<Reindexing>().0) != run => {}

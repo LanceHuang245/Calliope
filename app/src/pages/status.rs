@@ -44,10 +44,14 @@ fn bar() -> impl IntoElement {
             text(move || match store::sync_status() {
                 SyncStatus::Idle => strings::NOT_SYNCED.to_owned(),
                 SyncStatus::Running(done, total) => strings::syncing(done, total),
-                SyncStatus::Done(time) => strings::synced_at(&time),
+                SyncStatus::Done(time, 0) => strings::synced_at(&time),
+                SyncStatus::Done(time, n) => strings::synced_conflicts(&time, n),
                 SyncStatus::Failed(_) => strings::SYNC_FAILED.to_owned(),
             })
             .text_xs()
-            .text_color(move || theme().muted_foreground),
+            .text_color(move || match store::sync_status() {
+                SyncStatus::Done(_, 1..) | SyncStatus::Failed(_) => theme().destructive,
+                _ => theme().muted_foreground,
+            }),
         )
 }

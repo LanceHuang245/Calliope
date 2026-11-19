@@ -83,8 +83,7 @@ pub(crate) async fn run(
             planned.push((path, action));
         }
     }
-    let actions: Vec<Action> = planned.iter().map(|(_, a)| *a).collect();
-    plan::check_deletions(&actions, paths.len(), confirmed)?;
+    plan::check_deletions(planned.iter().map(|(_, a)| *a), paths.len(), confirmed)?;
 
     let mut run = Run {
         vault,
@@ -154,7 +153,7 @@ impl Run<'_> {
             // which sees it changed: never overwritten or deleted unseen.
             Action::Download | Action::DeleteLocal if self.touched(path) => {}
             Action::Download => {
-                let data = self.op.read(path).await?.to_vec();
+                let data = remote::retry(|| self.op.read(path)).await?.to_vec();
                 self.vault.write_bytes(path, &data)?;
                 self.record(path, &data, self.remote[path].clone());
                 self.report.downloaded += 1;
@@ -167,10 +166,10 @@ impl Run<'_> {
             Action::DeleteRemote => {
                 // Likewise a remote file changed since the listing: the next
                 // run downloads it.
-                match self.op.stat(path).await {
+                match remote::retry(|| self.op.stat(path)).await {
                     Ok(meta) if !Version::of(&meta).same(&self.remote[path]) => return Ok(()),
                     Err(e) if e.kind() != ErrorKind::NotFound => return Err(e.into()),
-                    _ => self.op.delete(path).await?,
+                    _ => remote::retry(|| self.op.delete(path)).await?,
                 }
                 self.state.remove(path);
                 self.report.deleted += 1;
@@ -193,8 +192,8 @@ impl Run<'_> {
         };
         let data = fs::read(self.vault.abs(path))?;
         let hash = local::hash(&data);
-        self.op.write(path, data).await?;
-        let remote = Version::of(&self.op.stat(path).await?);
+        remote::retry(|| self.op.write(path, data.clone())).await?;
+        let remote = Version::of(&remote::retry(|| self.op.stat(path)).await?);
         let record = Record {
             hash,
             local: stamp,
@@ -210,7 +209,7 @@ impl Run<'_> {
     /// with the time and this device (`Note (conflict 2026-11-06 1530
     /// Pixel 9).md`), and the local one takes its place on the remote.
     async fn conflict(&mut self, path: &str) -> Result<()> {
-        let theirs = self.op.read(path).await?.to_vec();
+        let theirs = remote::retry(|| self.op.read(path)).await?.to_vec();
         let mine = fs::read(self.vault.abs(path))?;
         let mut remote = self.remote[path].clone();
         if theirs != mine {
@@ -218,8 +217,8 @@ impl Run<'_> {
             let tag = format!("conflict {now} {}", self.device);
             let copy = self.vault.save_copy(path, tag.trim(), &theirs)?;
             self.upload(&copy).await?;
-            self.op.write(path, mine.clone()).await?;
-            remote = Version::of(&self.op.stat(path).await?);
+            remote::retry(|| self.op.write(path, mine.clone())).await?;
+            remote = Version::of(&remote::retry(|| self.op.stat(path)).await?);
             self.report.conflicts.push(copy);
         }
         self.record(path, &mine, remote);

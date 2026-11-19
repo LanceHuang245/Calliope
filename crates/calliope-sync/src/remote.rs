@@ -1,7 +1,11 @@
 //! The remote side: an OpenDAL operator for a [`Config`], and the files it
 //! holds with what identifies each one's version.
 
-use std::{collections::HashMap, time::Duration, time::SystemTime, time::UNIX_EPOCH};
+use std::{
+    collections::HashMap,
+    future::IntoFuture,
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
 
 use opendal::{
     ErrorKind, HttpTransporter, Metadata, OperationContext, Operator,
@@ -95,10 +99,36 @@ fn client(config: &Config) -> Result<reqwest::Client> {
         .map_err(|e| unexpected(&e).into())
 }
 
+/// Retries rate-limited (HTTP 429) or temporary remote errors with exponential
+/// backoff (1s, 2s, 4s), so WebDAV providers like Jianguoyun do not abort a run.
+pub(crate) async fn retry<T, F, Fut>(mut op: F) -> opendal::Result<T>
+where
+    F: FnMut() -> Fut,
+    Fut: IntoFuture<Output = opendal::Result<T>>,
+{
+    let mut delay = Duration::from_secs(1);
+    for attempt in 0..4 {
+        match op().await {
+            Ok(value) => return Ok(value),
+            Err(e) if attempt < 3 && is_retryable(&e) => {
+                log::warn!("sync: transient remote error, retrying in {delay:?}: {e}");
+                tokio::time::sleep(delay).await;
+                delay *= 2;
+            }
+            Err(e) => return Err(e),
+        }
+    }
+    unreachable!()
+}
+
+fn is_retryable(e: &opendal::Error) -> bool {
+    e.kind() == ErrorKind::RateLimited || e.is_temporary() || e.to_string().contains("status: 429")
+}
+
 /// Every remote file that syncs, by path; none while the vault's folder is
 /// not there yet.
 pub(crate) async fn list(op: &Operator) -> Result<HashMap<String, Version>> {
-    let entries = match op.list_with("").recursive(true).await {
+    let entries = match retry(|| op.list_with("").recursive(true)).await {
         Err(e) if e.kind() == ErrorKind::NotFound => return Ok(HashMap::new()),
         entries => entries?,
     };
@@ -106,4 +136,24 @@ pub(crate) async fn list(op: &Operator) -> Result<HashMap<String, Version>> {
         .filter(|e| e.metadata().is_file() && !excluded(e.path()))
         .map(|e| (e.path().to_owned(), Version::of(e.metadata())))
         .collect())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn retries_rate_limits_and_temporary_errors_only() {
+        let rate_limited = opendal::Error::new(ErrorKind::RateLimited, "too many requests");
+        let temp = opendal::Error::new(ErrorKind::Unexpected, "timeout").set_temporary();
+        let http_429 = opendal::Error::new(ErrorKind::Unexpected, "status: 429");
+        let not_found = opendal::Error::new(ErrorKind::NotFound, "missing");
+        let denied = opendal::Error::new(ErrorKind::PermissionDenied, "status: 403");
+
+        assert!(is_retryable(&rate_limited));
+        assert!(is_retryable(&temp));
+        assert!(is_retryable(&http_429));
+        assert!(!is_retryable(&not_found));
+        assert!(!is_retryable(&denied));
+    }
 }

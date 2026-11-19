@@ -4,6 +4,7 @@
 use std::{
     collections::{BTreeMap, HashMap},
     fs, io,
+    sync::Arc,
     time::SystemTime,
 };
 
@@ -29,10 +30,12 @@ pub struct Backlink {
 
 #[derive(Debug, Clone, Default)]
 pub struct Index {
-    /// The notes by path.
-    notes: BTreeMap<String, Note>,
+    /// The notes by path (`Arc`-wrapped so cloning the index is cheap).
+    notes: BTreeMap<String, Arc<Note>>,
     /// The paths of the notes of each title.
     titles: HashMap<String, Vec<String>>,
+    /// Precomputed backlinks keyed by target note path for O(1) lookup.
+    backlinks: HashMap<String, Vec<Backlink>>,
 }
 
 impl Index {
@@ -54,7 +57,7 @@ impl Index {
                 _ => {
                     changed = true;
                     let links = link::links(&vault.read(&path).unwrap_or_default());
-                    Note { stamp, links }
+                    Arc::new(Note { stamp, links })
                 }
             };
             self.notes.insert(path, note);
@@ -67,6 +70,24 @@ impl Index {
                 let title = note::title(path).to_owned();
                 self.titles.entry(title).or_default().push(path.clone());
             }
+            // Rebuild the reverse index once per change so backlinks lookup is O(1).
+            let mut backlinks: HashMap<String, Vec<Backlink>> = HashMap::new();
+            for (source, from) in &self.notes {
+                for link in &from.links {
+                    if let Some(target) = self.resolve(&link.target)
+                        && target != source
+                    {
+                        backlinks
+                            .entry(target.to_owned())
+                            .or_default()
+                            .push(Backlink {
+                                source: source.clone(),
+                                context: link.context.clone(),
+                            });
+                    }
+                }
+            }
+            self.backlinks = backlinks;
         }
         Ok(changed)
     }
@@ -100,18 +121,7 @@ impl Index {
 
     /// The links to `note` from the other notes.
     pub fn backlinks(&self, note: &str) -> Vec<Backlink> {
-        let mut found = Vec::new();
-        for (source, from) in self.notes.iter().filter(|(path, _)| *path != note) {
-            for link in &from.links {
-                if self.resolve(&link.target) == Some(note) {
-                    found.push(Backlink {
-                        source: source.clone(),
-                        context: link.context.clone(),
-                    });
-                }
-            }
-        }
-        found
+        self.backlinks.get(note).cloned().unwrap_or_default()
     }
 }
 

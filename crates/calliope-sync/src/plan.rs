@@ -42,8 +42,13 @@ pub(crate) fn action(local: Side, remote: Side) -> Option<Action> {
 
 /// Stops a run that would delete more than 20 files, or more than half of
 /// all `files`, unless the user `confirmed` it (MVP 8.5).
-pub(crate) fn check_deletions(actions: &[Action], files: usize, confirmed: bool) -> Result<()> {
-    let deletions = (actions.iter())
+pub(crate) fn check_deletions(
+    actions: impl IntoIterator<Item = Action>,
+    files: usize,
+    confirmed: bool,
+) -> Result<()> {
+    let deletions = actions
+        .into_iter()
         .filter(|a| matches!(a, Action::DeleteRemote | Action::DeleteLocal))
         .count();
     match !confirmed && (deletions > 20 || deletions * 2 > files) {
@@ -78,10 +83,10 @@ mod tests {
 
     #[test]
     fn asks_before_deleting_many() {
-        assert!(check_deletions(&[DeleteLocal; 1], 5, false).is_ok());
-        assert!(check_deletions(&[DeleteLocal; 15], 30, false).is_ok());
-        assert!(check_deletions(&[DeleteLocal; 16], 30, false).is_err());
-        assert!(check_deletions(&[DeleteRemote; 21], 1000, false).is_err());
-        assert!(check_deletions(&[DeleteRemote; 21], 1000, true).is_ok());
+        assert!(check_deletions([DeleteLocal; 1], 5, false).is_ok());
+        assert!(check_deletions([DeleteLocal; 15], 30, false).is_ok());
+        assert!(check_deletions([DeleteLocal; 16], 30, false).is_err());
+        assert!(check_deletions([DeleteRemote; 21], 1000, false).is_err());
+        assert!(check_deletions([DeleteRemote; 21], 1000, true).is_ok());
     }
 }

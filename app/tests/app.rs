@@ -296,7 +296,7 @@ fn desktop_draws_the_graph_and_opens_a_node() {
     app.press_key("mod+g").unwrap();
     app.wait_for("id:Bee.md").unwrap();
     assert!(app.screen().selected("label:Graph").unwrap());
-    app.press("text:Bee").unwrap();
+    app.press("label:Files >> text:Bee").unwrap();
     app.wait_for("The bee").unwrap();
     assert!(!app.screen().selected("label:Graph").unwrap());
 

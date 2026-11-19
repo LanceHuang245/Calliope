@@ -122,6 +122,11 @@ pub(crate) fn synced_at(time: &str) -> String {
     format!("Synced at {time}")
 }
 
+pub(crate) fn synced_conflicts(time: &str, count: usize) -> String {
+    let noun = if count == 1 { "conflict" } else { "conflicts" };
+    format!("Synced at {time} ({count} {noun})")
+}
+
 pub(crate) fn sync_failed(error: &dyn std::fmt::Display) -> String {
     format!("Sync failed: {error}.")
 }
