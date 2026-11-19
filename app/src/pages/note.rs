@@ -15,12 +15,12 @@ use nsh_base::{
 use nsh_core::{keymap::When, prelude::*};
 
 use super::{
-    home::{home_page, menu_button, phone_actions},
-    links::{WikiLinks, backlinks_panel, wiki_links},
+    home::{home_page, menu_button, phone_toolbar},
+    links::{WikiLinks, backlinks_sheet, wiki_links},
     mermaid::{mermaid, mermaid_blocks, warm_up},
 };
 use crate::{
-    components::{action, banner, field, icon_button, icons, segmented},
+    components::{TOOLBAR_ROOM, action, banner, field, icon_button, icons, segmented},
     store::{self, Mode},
     strings,
 };
@@ -87,17 +87,9 @@ fn note_view() -> impl IntoElement {
                     .into_element(),
             })
         }))
-        // A phone shows the backlinks under the note.
-        .child((!is_desktop()).then(|| {
-            dynamic(|| {
-                (!store::backlinks().is_empty()).then(|| {
-                    view()
-                        .h(px(180.0))
-                        .bg(move || theme().sidebar)
-                        .child(backlinks_panel())
-                })
-            })
-        }))
+        // A phone shows the backlinks in a sheet when asked.
+        .child((!is_desktop()).then(backlinks_sheet))
+        .child((!is_desktop()).then(phone_toolbar))
 }
 
 fn header() -> impl IntoElement {
@@ -118,7 +110,6 @@ fn header() -> impl IntoElement {
         .child((!is_desktop()).then(menu_button))
         .child(title())
         .child(segmented(modes, store::mode, store::set_mode))
-        .child((!is_desktop()).then(phone_actions))
 }
 
 /// The note's title, edited in place: Return or leaving it renames the
@@ -148,9 +139,14 @@ fn title() -> impl IntoElement {
 fn source(editor: ComponentRef<Editor>, query: Signal<String>) -> impl IntoElement {
     // Room around the text: the gutter (its fold markers) already makes the
     // left side's; its rows move down with the text's.
+    // A phone's last lines scroll clear of the floating toolbar.
+    let bottom = match is_desktop() {
+        true => "pb-4".to_owned(),
+        false => format!("pb-[{TOOLBAR_ROOM}px]"),
+    };
     let mut classes = EditorClasses::default();
-    classes.gutter = Some("py-4 pl-1 pr-0".into());
-    classes.content = Some("py-4 pl-0 pr-4".into());
+    classes.gutter = Some(format!("pt-4 {bottom} pl-1 pr-0").into());
+    classes.content = Some(format!("pt-4 {bottom} pl-0 pr-4").into());
     nsh_base::editor()
         .value(move || Some(store::text()))
         .on_change(store::edit)
@@ -258,9 +254,15 @@ fn preview() -> impl IntoElement {
         )
     });
     provide_context(MarkdownPlugins::new().with(WikiLinks));
+    // A phone's last lines scroll clear of the floating toolbar.
+    let bottom = match is_desktop() {
+        true => px(24.0),
+        false => px(TOOLBAR_ROOM),
+    };
     scroll().flex_1().child(
         view()
             .p_6()
+            .pb(bottom)
             .gap_2()
             .child(dynamic(move || parts.get().0.map(front_matter)))
             .child(

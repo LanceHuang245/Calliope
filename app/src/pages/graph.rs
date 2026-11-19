@@ -18,7 +18,7 @@ use nsh_core::{
     prelude::*,
 };
 
-use crate::{components::page_bar, store, strings};
+use crate::{components::page, store, strings};
 
 /// The room around the outermost nodes, for their labels.
 const MARGIN: f32 = 80.0;
@@ -45,16 +45,18 @@ pub(crate) fn graph_page() -> impl IntoElement {
             }
         });
     });
-    view()
-        .flex_1()
-        .child(
-            page_bar(strings::GRAPH, store::back_to_note)
-                .child(option(strings::ORPHANS, orphans))
-                .child(option(strings::UNCREATED, missing)),
-        )
-        .child(dynamic(move || {
-            laid.get().map(|laid| untracked(|| diagram(laid)))
-        }))
+    let options = view()
+        .flex_row()
+        .gap_2()
+        .child(option(strings::ORPHANS, orphans))
+        .child(option(strings::UNCREATED, missing));
+    let diagram = dynamic(move || laid.get().map(|laid| untracked(|| diagram(laid))));
+    page(
+        strings::GRAPH,
+        store::back_to_note,
+        Some(options.into_element()),
+        diagram,
+    )
 }
 
 /// An option of the graph: a button, filled while it is on.

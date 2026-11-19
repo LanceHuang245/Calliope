@@ -16,6 +16,7 @@ pub(crate) const NETWORK: &str = r#"<rect x="16" y="16" width="6" height="6" rx=
 pub(crate) const PENCIL: &str = r#"<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/>"#;
 pub(crate) const TRASH: &str = r#"<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/>"#;
 pub(crate) const CHEVRON_LEFT: &str = r#"<path d="m15 18-6-6 6-6"/>"#;
+pub(crate) const CHEVRON_RIGHT: &str = r#"<path d="m9 18 6-6-6-6"/>"#;
 pub(crate) const CHEVRON_UP: &str = r#"<path d="m18 15-6-6-6 6"/>"#;
 pub(crate) const CHEVRON_DOWN: &str = r#"<path d="m6 9 6 6 6-6"/>"#;
 pub(crate) const MENU: &str = r#"<path d="M4 12h16"/><path d="M4 18h16"/><path d="M4 6h16"/>"#;

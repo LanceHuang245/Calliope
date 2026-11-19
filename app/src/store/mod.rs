@@ -43,7 +43,7 @@ pub(crate) use self::{
     },
     links::{
         backlinks, backlinks_shown, create_note, graph, link_exists, note_paths, open_link,
-        set_switching, switching, toggle_backlinks,
+        set_backlinks_shown, set_switching, switching, toggle_backlinks,
     },
     note::{
         conflict, edit, image_src, note_path, note_title, opened, preview, resolve_conflict,

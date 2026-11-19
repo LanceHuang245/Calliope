@@ -7,35 +7,32 @@ use nsh_base::theme;
 use nsh_core::prelude::*;
 
 use crate::{
-    components::{ButtonVariant, action, button, muted, page_bar},
-    store::{self, Route},
-    strings,
+    components::{ButtonVariant, action, button, muted, page},
+    store, strings,
 };
 
 pub(crate) fn trash_page() -> impl IntoElement {
     store::load_trash();
-    // The desktops open it from the sidebar, as the graph; the phones from
-    // the settings.
-    let (back, keeps): (fn(), _) = match is_desktop() {
-        true => (store::back_to_note, strings::TRASH_KEEPS_DESKTOP),
-        false => (|| store::set_route(Route::Settings), strings::TRASH_KEEPS),
+    // On the desktops only what sync deleted: the user's own go to the
+    // system's trash.
+    let keeps = match is_desktop() {
+        true => strings::TRASH_KEEPS_DESKTOP,
+        false => strings::TRASH_KEEPS,
     };
-    view().flex_1().child(page_bar(strings::TRASH, back)).child(
-        scroll().flex_1().child(
-            view()
-                .p_6()
-                .gap_2()
-                .items_start()
-                .child(muted(keeps))
-                .child(dynamic(|| {
-                    let items = store::trashed();
-                    untracked(|| match items.is_empty() {
-                        true => muted(strings::TRASH_IS_EMPTY).into_element(),
-                        false => list(items).into_element(),
-                    })
-                })),
-        ),
-    )
+    let content = view()
+        .p_6()
+        .gap_2()
+        .items_start()
+        .child(muted(keeps))
+        .child(dynamic(|| {
+            let items = store::trashed();
+            untracked(|| match items.is_empty() {
+                true => muted(strings::TRASH_IS_EMPTY).into_element(),
+                false => list(items).into_element(),
+            })
+        }));
+    let content = scroll().flex_1().child(content);
+    page(strings::TRASH, store::back_to_note, None, content)
 }
 
 fn list(items: Vec<Trashed>) -> impl IntoElement {

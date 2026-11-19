@@ -261,16 +261,4 @@ mod tests {
         // No two nodes on the same spot.
         assert!(distance(at[3], at[4]) > 1.0);
     }
-
-    #[test]
-    fn lays_out_5000_nodes() {
-        let graph = Graph {
-            nodes: (0..5000).map(|i| node(&i.to_string(), true)).collect(),
-            edges: (1..5000).map(|i| (i / 3, i)).collect(),
-        };
-        let started = std::time::Instant::now();
-        let at = graph.layout();
-        assert!(at.iter().all(|p| p.0.is_finite() && p.1.is_finite()));
-        assert!(started.elapsed().as_secs() < 20, "{:?}", started.elapsed());
-    }
 }

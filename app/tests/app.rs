@@ -14,7 +14,8 @@ use nsh_engine::{EngineConfig, Root};
 use nsh_testing::Headless;
 
 /// The phone layout `EngineConfig::new` gives: creating the vault, the home
-/// page, the files in the menu, then a note.
+/// page, the files in the menu, a note, then the pages the floating toolbar
+/// and the menu push.
 #[test]
 fn phone_opens_reads_and_creates_notes() {
     let root = vault("phone");
@@ -46,6 +47,14 @@ fn phone_opens_reads_and_creates_notes() {
     app.press("Read").unwrap();
     app.wait_for("Hello world").unwrap();
     app.wait_for("Properties").unwrap();
+    // The backlinks show only when asked, saying so when there are none.
+    assert!(!app.shows("No other note links here."));
+    app.press("label:Backlinks").unwrap();
+    app.wait_for("No other note links here.").unwrap();
+    // The system's back closes their sheet.
+    app.back().unwrap();
+    app.wait_for_gone("No other note links here.", Duration::from_secs(2))
+        .unwrap();
 
     // Back to the home page (the system's back), a new note is made on disk.
     app.back().unwrap();
@@ -61,12 +70,29 @@ fn phone_opens_reads_and_creates_notes() {
         .unwrap();
     app.wait_for("Changed elsewhere").unwrap();
 
-    // The top bars open the graph and the quick switcher.
+    // The floating toolbar pushes the graph and the trash over the note,
+    // the system's back returning to it; and opens the quick switcher.
     app.press("label:Graph").unwrap();
     app.wait_for("Orphans").unwrap();
     app.back().unwrap();
+    app.wait_for_gone("Orphans", Duration::from_secs(2))
+        .unwrap();
+    app.press("label:Trash").unwrap();
+    app.wait_for("The trash is empty.").unwrap();
+    app.back().unwrap();
+    app.wait_for_gone("The trash is empty.", Duration::from_secs(2))
+        .unwrap();
     app.press("label:Search").unwrap();
     app.wait_for("label:Find or create a note").unwrap();
+    app.back().unwrap();
+
+    // The menu's settings button pushes the settings.
+    app.press("label:Menu").unwrap();
+    app.press("label:Settings").unwrap();
+    app.wait_for("Appearance").unwrap();
+    app.back().unwrap();
+    app.wait_for_gone("Appearance", Duration::from_secs(2))
+        .unwrap();
     let _ = fs::remove_dir_all(&root);
 }
 

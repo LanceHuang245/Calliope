@@ -14,8 +14,16 @@ struct Links(Arc<Index>);
 /// Counts the indexing runs: only the last one's result is kept.
 #[derive(Clone, Default)]
 struct Reindexing(u64);
-#[derive(Clone, Default)]
+#[derive(Clone)]
 struct BacklinksHidden(bool);
+
+/// The desktops show the backlinks at first; the phones only when asked,
+/// as they take the note's room.
+impl Default for BacklinksHidden {
+    fn default() -> Self {
+        Self(!is_desktop())
+    }
+}
 /// The quick switcher is open.
 #[derive(Clone, Default)]
 struct Switching(bool);
@@ -73,6 +81,11 @@ pub(crate) fn backlinks_shown() -> bool {
 
 pub(crate) fn toggle_backlinks() {
     global::<BacklinksHidden>().update(|h| h.0 = !h.0);
+}
+
+/// Shows the backlinks or not (the phones' sheet, closed by a swipe).
+pub(crate) fn set_backlinks_shown(shown: bool) {
+    set(BacklinksHidden(!shown));
 }
 
 pub(crate) fn switching() -> bool {

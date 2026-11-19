@@ -4,11 +4,16 @@
 //! `nsh-base` themselves.
 
 pub(crate) mod icons;
+mod page;
 
-use nsh_base::{dialog, input, menu_item, tab, tabs, theme};
-use nsh_core::{element::StyleRefinement, prelude::*};
+use nsh_base::{ButtonElement, dialog, input, menu_item, tab, tabs, theme};
+use nsh_core::{
+    element::{AnyElement, StyleRefinement},
+    prelude::*,
+};
 
 use self::icons::icon;
+pub(crate) use self::page::{TOOLBAR_ROOM, floating_toolbar, page};
 use crate::strings;
 
 /// A quiet text button: no surface until hovered or pressed.
@@ -84,20 +89,50 @@ pub(crate) fn icon_toggle(
     on_press: impl Fn() + 'static,
 ) -> impl IntoElement {
     view().tooltip(tooltip(label)).child(
-        nsh_base::button()
+        toggle(paths, label, on, on_press, 16.0)
             .p(px(6.0))
-            .rounded(move || theme().radius)
-            .hover(|s| s.bg(theme().accent))
-            .active(|s| s.bg(theme().accent))
-            .style_when(on, |s| s.bg(theme().accent))
-            .selected(on)
-            .accessibility_label(label)
-            .on_press(on_press)
-            .child(icon(paths).text_color(move || match on() {
-                true => theme().foreground,
-                false => theme().muted_foreground,
-            })),
+            .rounded(move || theme().radius),
     )
+}
+
+/// A button of a [`floating_toolbar`]: an [`icon_toggle`] a finger hits
+/// (44 points, the least both systems ask for), round.
+pub(crate) fn toolbar_toggle(
+    paths: &'static str,
+    label: &'static str,
+    on: impl Fn() -> bool + Copy + 'static,
+    on_press: impl Fn() + 'static,
+) -> impl IntoElement {
+    toggle(paths, label, on, on_press, 20.0)
+        .p(px(12.0))
+        .rounded_full()
+}
+
+/// The icon toggles' button: its icon `size` points square, filled while
+/// `on`.
+fn toggle(
+    paths: &'static str,
+    label: &'static str,
+    on: impl Fn() -> bool + Copy + 'static,
+    on_press: impl Fn() + 'static,
+    size: f32,
+) -> ButtonElement {
+    nsh_base::button()
+        .hover(|s| s.bg(theme().accent))
+        .active(|s| s.bg(theme().accent))
+        .style_when(on, |s| s.bg(theme().accent))
+        .selected(on)
+        .accessibility_label(label)
+        .on_press(on_press)
+        .child(
+            icon(paths)
+                .w(px(size))
+                .h(px(size))
+                .text_color(move || match on() {
+                    true => theme().foreground,
+                    false => theme().muted_foreground,
+                }),
+        )
 }
 
 fn tooltip(label: &'static str) -> AnyElement {
@@ -301,25 +336,6 @@ pub(crate) fn labeled(label: &'static str, required: bool, content: impl IntoEle
                 .child(muted(label)),
         )
         .child(content)
-}
-
-/// A page's top bar, as the note's: the button that goes `back`, then the
-/// `title` taking the room left; a page adds its own buttons after it.
-pub(crate) fn page_bar(title: &'static str, back: impl Fn() + 'static) -> View {
-    view()
-        .flex_row()
-        .items_center()
-        .gap_2()
-        .px_4()
-        .py_2()
-        .child(icon_button(icons::CHEVRON_LEFT, strings::BACK, back))
-        .child(
-            text(title)
-                .flex_1()
-                .text_lg()
-                .font_weight(FontWeight::SEMIBOLD)
-                .text_color(move || theme().foreground),
-        )
 }
 
 pub(crate) fn section(title: &'static str) -> impl IntoElement {

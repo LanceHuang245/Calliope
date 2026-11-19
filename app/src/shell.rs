@@ -9,7 +9,7 @@
 
 use std::time::Duration;
 
-use nsh_base::{SheetEvent, sheet, theme};
+use nsh_base::{SheetEvent, nav_page, nav_stack, sheet, theme};
 use nsh_core::{
     desktop::{TitleBarOptions, TitleBarStyle, WindowAttributes},
     element::desktop::{current_window, title_bar},
@@ -151,37 +151,63 @@ fn sidebar() -> impl IntoElement {
 }
 
 fn mobile() -> impl IntoElement {
-    // The system's back (Android) goes back to the home page, from the
-    // trash to the settings it opens from.
-    on_back_press(|| match untracked(store::route) {
-        Route::Home => false,
-        Route::Trash => {
-            store::set_route(Route::Settings);
-            true
-        }
-        _ => {
+    // The system's back (Android): from the note to the home page, from the
+    // home page out of the app; the pages pushed over them pop themselves.
+    on_back_press(|| {
+        let note = untracked(store::route) == Route::Note;
+        if note {
             store::set_route(Route::Home);
-            true
         }
+        note
     });
-    let page = dynamic(move || {
-        let route = store::route();
+    let layout = dynamic(move || {
         let has_vault = store::vault().is_some();
-        untracked(|| match route {
-            _ if !has_vault => welcome_page().into_element(),
-            Route::Home => home_page().into_element(),
-            Route::Note => note_page().into_element(),
-            Route::Graph => graph_page().into_element(),
-            Route::Settings => settings_page().into_element(),
-            Route::Trash => trash_page().into_element(),
+        untracked(|| match has_vault {
+            true => stack().into_element(),
+            false => view()
+                .flex_1()
+                .p_safe_area()
+                .child(welcome_page())
+                .into_element(),
         })
     });
-    // The notice inside the safe area, over the page.
+    // The notices over every page, below the status bar.
     view()
         .flex_1()
-        .p_safe_area()
-        .child(view().flex_1().child(page).child(notices()))
+        .child(layout)
+        .child(
+            view()
+                .absolute()
+                .top_0()
+                .left_0()
+                .right_0()
+                .mt_safe_area()
+                .child(notices()),
+        )
         .child(menu())
+}
+
+/// The phone's navigation stack: the note (the home page without one)
+/// under the graph, the settings or the trash, each pushed with the
+/// system's header and back.
+fn stack() -> impl IntoElement {
+    // The note stays open under the pages pushed over it.
+    let note = computed(|| store::route() != Route::Home);
+    let main = dynamic(move || match note.get() {
+        true => untracked(note_page).into_element(),
+        false => untracked(home_page).into_element(),
+    });
+    let shown = |route| move || store::route() == route;
+    nav_stack()
+        .flex_1()
+        .child(
+            nav_page()
+                .header_visible(false)
+                .child(view().flex_1().p_safe_area().child(main)),
+        )
+        .child(when(shown(Route::Graph), graph_page))
+        .child(when(shown(Route::Settings), settings_page))
+        .child(when(shown(Route::Trash), trash_page))
 }
 
 /// The phone's menu: the files, slid in from the left over the whole page.

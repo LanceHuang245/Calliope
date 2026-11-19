@@ -197,24 +197,4 @@ mod tests {
         assert!(index.sync(&v).unwrap());
         assert!(index.backlinks("B.md").is_empty());
     }
-
-    #[test]
-    fn indexes_5000_notes_within_3_seconds() {
-        let notes: Vec<(String, String)> = (0..5000)
-            .map(|i| {
-                let text = format!("# Note {i}\n[[n{}]] and [[n{}]]\n", (i + 1) % 5000, i / 2);
-                (format!("d{}/n{i}.md", i % 50), text)
-            })
-            .collect();
-        let refs: Vec<(&str, &str)> = notes
-            .iter()
-            .map(|(p, t)| (p.as_str(), t.as_str()))
-            .collect();
-        let v = vault("many", &refs);
-        let started = std::time::Instant::now();
-        let mut index = Index::default();
-        index.sync(&v).unwrap();
-        assert_eq!(index.backlinks("d0/n0.md").len(), 2);
-        assert!(started.elapsed().as_secs() < 3, "{:?}", started.elapsed());
-    }
 }

@@ -1,11 +1,11 @@
 //! The home page, where no note is open: a new note in its middle and, on a
-//! phone, a top bar with the menu, sync, the quick switcher and the graph.
+//! phone, the menu at the top and the floating toolbar at the bottom.
 
 use nsh_base::theme;
 use nsh_core::prelude::*;
 
 use crate::{
-    components::{ButtonVariant, button, icon_button, icons},
+    components::{ButtonVariant, button, floating_toolbar, icon_button, icons, toolbar_toggle},
     store::{self, Route, SyncStatus},
     strings,
 };
@@ -13,14 +13,7 @@ use crate::{
 pub(crate) fn home_page() -> impl IntoElement {
     view()
         .flex_1()
-        .child((!is_desktop()).then(|| {
-            view()
-                .flex_row()
-                .p_2()
-                .child(menu_button())
-                .child(view().flex_1())
-                .child(phone_actions())
-        }))
+        .child((!is_desktop()).then(|| view().flex_row().p_2().child(menu_button())))
         .child(
             view()
                 .flex_1()
@@ -34,6 +27,7 @@ pub(crate) fn home_page() -> impl IntoElement {
                     store::new_note,
                 )),
         )
+        .child((!is_desktop()).then(phone_toolbar))
 }
 
 /// Syncs the vault; dimmed while it syncs.
@@ -49,16 +43,56 @@ pub(crate) fn menu_button() -> impl IntoElement {
     icon_button(icons::MENU, strings::MENU, || store::set_menu_open(true))
 }
 
-/// The phone's top bar buttons: sync, the quick switcher and the graph
-/// (the desktops have them under the files).
-pub(crate) fn phone_actions() -> impl IntoElement {
-    view()
-        .flex_row()
-        .child(sync_button())
-        .child(icon_button(icons::SEARCH, strings::SEARCH, || {
-            store::set_switching(true)
-        }))
-        .child(icon_button(icons::NETWORK, strings::GRAPH, || {
-            store::set_route(Route::Graph)
-        }))
+/// The phones' floating toolbar, over the home page and the note (the
+/// desktops have these under the files): sync (filled while it runs), the
+/// quick switcher, the graph, the note's backlinks (with a note open) and
+/// the trash. Gone while the keyboard is up, the text taking the room.
+pub(crate) fn phone_toolbar() -> impl IntoElement {
+    let syncing = || matches!(store::sync_status(), SyncStatus::Running(..));
+    let graph = || store::route() == Route::Graph;
+    let trash = || store::route() == Route::Trash;
+    when(
+        || keyboard_height() <= px(0.0),
+        move || {
+            let buttons = view()
+                .flex_row()
+                .gap_1()
+                .child(toolbar_toggle(
+                    icons::REFRESH,
+                    strings::SYNC,
+                    syncing,
+                    store::sync_now,
+                ))
+                .child(toolbar_toggle(
+                    icons::SEARCH,
+                    strings::SEARCH,
+                    store::switching,
+                    || store::set_switching(true),
+                ))
+                .child(toolbar_toggle(
+                    icons::NETWORK,
+                    strings::GRAPH,
+                    graph,
+                    store::toggle_graph,
+                ))
+                .child(when(
+                    || store::opened().is_some(),
+                    || {
+                        toolbar_toggle(
+                            icons::LINK,
+                            strings::BACKLINKS,
+                            store::backlinks_shown,
+                            store::toggle_backlinks,
+                        )
+                    },
+                ))
+                .child(toolbar_toggle(
+                    icons::TRASH,
+                    strings::TRASH,
+                    trash,
+                    store::toggle_trash,
+                ));
+            floating_toolbar(buttons)
+        },
+    )
 }
