@@ -149,8 +149,8 @@ fn source(editor: ComponentRef<Editor>, query: Signal<String>) -> impl IntoEleme
     // Room around the text: the gutter (its fold markers) already makes the
     // left side's; its rows move down with the text's.
     let mut classes = EditorClasses::default();
-    classes.gutter = Some("py-4".into());
-    classes.content = Some("py-4 pr-10".into());
+    classes.gutter = Some("py-4 pl-1 pr-0".into());
+    classes.content = Some("py-4 pl-0 pr-4".into());
     nsh_base::editor()
         .value(move || Some(store::text()))
         .on_change(store::edit)

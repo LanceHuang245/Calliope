@@ -42,26 +42,41 @@ pub(crate) fn sync_settings() -> impl IntoElement {
             let on = provider.get() != Provider::Off;
             untracked(|| on.then(|| fields(provider.get(), draft, secret)))
         }))
+        // Only show Save when sync is off; Test connection and Sync now apply to active providers.
         .child(
             view()
                 .flex_row()
                 .flex_wrap()
                 .items_center()
                 .gap_2()
+                .pt_2()
                 .child(primary(strings::SAVE, move || {
                     store::save_sync(edited(), &secret.get())
                 }))
-                .child(action(strings::TEST_CONNECTION, move || {
-                    store::test_sync(edited(), secret.get())
-                }))
-                .child(action(strings::SYNC_NOW, store::sync_now)),
+                .child(dynamic(move || {
+                    (provider.get() != Provider::Off).then(|| {
+                        view()
+                            .flex_row()
+                            .flex_wrap()
+                            .items_center()
+                            .gap_2()
+                            .child(action(strings::TEST_CONNECTION, move || {
+                                store::test_sync(edited(), secret.get())
+                            }))
+                            .child(action(strings::SYNC_NOW, store::sync_now))
+                    })
+                })),
         )
-        .child(muted(move || match store::sync_status() {
-            SyncStatus::Idle => strings::NOT_SYNCED.to_owned(),
-            SyncStatus::Running(done, total) => strings::syncing(done, total),
-            SyncStatus::Done(time, 0) => strings::synced_at(&time),
-            SyncStatus::Done(time, n) => strings::synced_conflicts(&time, n),
-            SyncStatus::Failed(error) => strings::sync_failed(&error),
+        .child(dynamic(move || {
+            (provider.get() != Provider::Off).then(|| {
+                muted(move || match store::sync_status() {
+                    SyncStatus::Idle => strings::NOT_SYNCED.to_owned(),
+                    SyncStatus::Running(done, total) => strings::syncing(done, total),
+                    SyncStatus::Done(time, 0) => strings::synced_at(&time),
+                    SyncStatus::Done(time, n) => strings::synced_conflicts(&time, n),
+                    SyncStatus::Failed(error) => strings::sync_failed(&error),
+                })
+            })
         }))
         .child(dynamic(|| {
             store::secret_in_file().then(|| muted(strings::SECRET_IN_FILE))
@@ -85,9 +100,12 @@ fn fields(provider: Provider, draft: Signal<Config>, secret: Signal<String>) -> 
     };
     // A saved password stays while its field is left empty.
     let kept = untracked(store::sync_config).provider != Provider::Off;
+    // Memoize so typing in any field does not rebuild the interval input.
+    let show_interval = computed(move || is_desktop() && draft.get().auto);
     view()
         .w_full()
-        .gap_2()
+        .pt_2()
+        .gap_3()
         .items_start()
         .child(match s3 {
             true => entry(strings::ENDPOINT, &c.endpoint, |c, t| c.endpoint = t),
@@ -126,20 +144,31 @@ fn fields(provider: Provider, draft: Signal<Config>, secret: Signal<String>) -> 
             .child(muted(strings::CERTIFICATE_HINT)),
         )
         .child(entry(strings::DEVICE_NAME, &c.device, |c, t| c.device = t))
-        .child(muted(strings::AUTO_SYNC))
-        .child(segmented(
-            vec![(true, strings::ON), (false, strings::OFF)],
-            move || draft.get().auto,
-            move |on| draft.update(|c| c.auto = on),
+        .child(labeled(
+            strings::AUTO_SYNC,
+            segmented(
+                vec![(true, strings::ON), (false, strings::OFF)],
+                move || draft.get().auto,
+                move |on| draft.update(|c| c.auto = on),
+            ),
         ))
-        // The desktops also sync every few minutes; 0 never.
-        .child(is_desktop().then(|| {
-            let minutes = input(strings::SYNC_MINUTES, &c.interval.to_string(), move |t| {
-                if let Ok(minutes) = t.trim().parse() {
-                    draft.update(|c| c.interval = minutes);
-                }
-            });
-            labeled(strings::SYNC_MINUTES, minutes)
+        // The desktops also sync every few minutes while auto-sync is on; 0 never.
+        .child(dynamic(move || {
+            let show = show_interval.get();
+            untracked(|| {
+                show.then(|| {
+                    let current = draft.get().interval.to_string();
+                    let minutes = input(strings::SYNC_MINUTES, &current, move |t| {
+                        let trimmed = t.trim();
+                        if trimmed.is_empty() {
+                            draft.update(|c| c.interval = 0);
+                        } else if let Ok(minutes) = trimmed.parse() {
+                            draft.update(|c| c.interval = minutes);
+                        }
+                    });
+                    labeled(strings::SYNC_MINUTES, minutes)
+                })
+            })
         }))
 }
 
