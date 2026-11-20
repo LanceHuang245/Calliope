@@ -20,7 +20,7 @@ mod store;
 mod strings;
 
 use nsh_base::theme;
-use nsh_core::prelude::*;
+use nsh_core::{element::desktop::window as app_window, prelude::*};
 
 /// The app's UI set (`nsh.json` `"rust"`): what a TSX module may import from
 /// `calliope/native`.
@@ -29,14 +29,20 @@ fn native(registry: &mut Registry) {
     registry.register::<App>();
 }
 
+/// The app's root. On the desktops it shows in the window it declares
+/// (nsh makes none for a Rust root); off them `window()` shows its content
+/// in the app's one surface.
 #[component]
 pub fn App() -> impl IntoElement {
     paths::init();
     logging::init();
     store::init();
-    view()
-        .flex_1()
-        .bg(move || theme().background)
-        .text_color(move || theme().foreground)
-        .child(shell::shell())
+    let content = || {
+        view()
+            .flex_1()
+            .bg(move || theme().background)
+            .text_color(move || theme().foreground)
+            .child(shell::shell())
+    };
+    app_window().id("main").content(content)
 }

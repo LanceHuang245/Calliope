@@ -15,7 +15,7 @@ use nsh_testing::Headless;
 fn desktop_restores_and_empties_the_trash() {
     let root = vault("trash");
     // What sync deleted today, at the paths the files had.
-    let day = root.join(format!(".trash/{}", jiff::Zoned::now().date()));
+    let day = root.join(format!(".trash/{}", jiff::ZonedDateTime::now().date()));
     for (path, text) in [
         ("Journal/Day.md", "day"),
         ("Old.md", "old"),

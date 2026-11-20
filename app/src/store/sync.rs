@@ -237,7 +237,7 @@ fn start(confirmed: bool) {
         LAST_RUN.set(Some(Instant::now()));
         match result {
             Ok(Ok(report)) => {
-                let time = jiff::Zoned::now().strftime("%H:%M").to_string();
+                let time = jiff::ZonedDateTime::now().strftime("%H:%M").to_string();
                 set(SyncStatus::Done(time, report.conflicts.len()));
                 if !report.conflicts.is_empty() {
                     notify(strings::sync_conflicts(&report.conflicts));

@@ -29,7 +29,7 @@ impl Vault {
     /// at the path it had; a file the trash already has there is numbered
     /// (`Day 1.md`).
     pub fn trash(&self, rel: &str) -> io::Result<()> {
-        let day = format!("{TRASH}/{}", jiff::Zoned::now().date());
+        let day = format!("{TRASH}/{}", jiff::ZonedDateTime::now().date());
         let path = self.abs(rel);
         if !path.is_dir() {
             return self.move_to(rel, &self.free(&join(&day, rel)));
@@ -77,7 +77,7 @@ impl Vault {
     /// Deletes what went to the trash more than `days` days ago: the day
     /// folders before then.
     pub fn empty_trash(&self, days: i64) -> io::Result<()> {
-        let oldest = jiff::Zoned::now()
+        let oldest = jiff::ZonedDateTime::now()
             .date()
             .saturating_sub(jiff::Span::new().days(days));
         for (day, dir) in self.trash_days() {
@@ -158,7 +158,7 @@ mod tests {
         v.write("Hello.md", "again").unwrap();
         v.trash("Hello.md").unwrap();
         assert!(v.scan().unwrap().iter().all(|e| e.name == "Journal"));
-        let today = jiff::Zoned::now().date();
+        let today = jiff::ZonedDateTime::now().date();
         let origins: Vec<_> = (v.trashed().unwrap().into_iter())
             .map(|t| (t.origin, t.deleted))
             .collect();

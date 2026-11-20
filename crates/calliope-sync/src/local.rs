@@ -81,5 +81,8 @@ pub(crate) fn list(vault: &Vault) -> io::Result<HashMap<String, Stamp>> {
 }
 
 pub(crate) fn hash(data: &[u8]) -> String {
-    format!("{:x}", Sha256::digest(data))
+    // Lowercase hex, as the records before kept it.
+    (Sha256::digest(data).iter())
+        .map(|b| format!("{b:02x}"))
+        .collect()
 }

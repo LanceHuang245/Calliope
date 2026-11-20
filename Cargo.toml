@@ -24,20 +24,20 @@ calliope-sync = { path = "crates/calliope-sync" }
 # nightly: the `nsh` CLI builds the app's runners from this checkout.
 # `nsh-base`: `highlight` colors code blocks, `math` typesets formulas.
 # `svg`: the icons (`app/src/components/icons.rs`).
-nsh-core = { git = "https://github.com/longbridge/nsh", rev = "4aeefa80ab5a517d6c184eb95863bb646389d102", features = ["svg"] }
-nsh-base = { git = "https://github.com/longbridge/nsh", rev = "4aeefa80ab5a517d6c184eb95863bb646389d102", features = ["highlight", "math"] }
-nsh-engine = { git = "https://github.com/longbridge/nsh", rev = "4aeefa80ab5a517d6c184eb95863bb646389d102", default-features = false }
-nsh-testing = { git = "https://github.com/longbridge/nsh", rev = "4aeefa80ab5a517d6c184eb95863bb646389d102" }
+nsh-core = { git = "https://github.com/longbridge/nsh", rev = "72bb4387e3a2708790e1e1f4feed1fa4747ef59f", features = ["svg"] }
+nsh-base = { git = "https://github.com/longbridge/nsh", rev = "72bb4387e3a2708790e1e1f4feed1fa4747ef59f", features = ["highlight", "math"] }
+nsh-engine = { git = "https://github.com/longbridge/nsh", rev = "72bb4387e3a2708790e1e1f4feed1fa4747ef59f", default-features = false }
+nsh-testing = { git = "https://github.com/longbridge/nsh", rev = "72bb4387e3a2708790e1e1f4feed1fa4747ef59f" }
 # The desktop backends `cargo run` uses (`app/src/main.rs`). Without `js`, a
 # Rust app links no QuickJS.
-nsh-platform-linux = { git = "https://github.com/longbridge/nsh", rev = "4aeefa80ab5a517d6c184eb95863bb646389d102", default-features = false }
-nsh-platform-macos = { git = "https://github.com/longbridge/nsh", rev = "4aeefa80ab5a517d6c184eb95863bb646389d102", default-features = false }
-nsh-platform-windows = { git = "https://github.com/longbridge/nsh", rev = "4aeefa80ab5a517d6c184eb95863bb646389d102", default-features = false }
+nsh-platform-linux = { git = "https://github.com/longbridge/nsh", rev = "72bb4387e3a2708790e1e1f4feed1fa4747ef59f", default-features = false }
+nsh-platform-macos = { git = "https://github.com/longbridge/nsh", rev = "72bb4387e3a2708790e1e1f4feed1fa4747ef59f", default-features = false }
+nsh-platform-windows = { git = "https://github.com/longbridge/nsh", rev = "72bb4387e3a2708790e1e1f4feed1fa4747ef59f", default-features = false }
 
 # Mermaid diagrams (`app/src/pages/mermaid.rs`): only the diagrams Calliope
 # shows, as SVG laid out with the system's fonts; no ELK layout (EPL-2.0).
 # `usvg` (the version `merman-export` uses) turns the labels into paths.
-merman = { version = "0.9.3", default-features = false, features = [
+merman = { version = "0.10.0", default-features = false, features = [
     "svg",
     "system-fonts",
     "diagram-flowchart",
@@ -47,7 +47,7 @@ merman = { version = "0.9.3", default-features = false, features = [
     "diagram-gantt",
     "diagram-pie",
 ] }
-merman-export = { version = "0.9.3", features = ["system-fonts"] }
+merman-export = { version = "0.10.0", features = ["system-fonts"] }
 usvg = { version = "0.47", default-features = false, features = ["text"] }
 
 # Sync (`crates/calliope-sync`): WebDAV and S3 through OpenDAL, over
@@ -65,10 +65,10 @@ reqwest = { version = "0.13.5", default-features = false, features = ["rustls-no
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
 rustls-platform-verifier = "0.7"
 webpki-roots = "1"
-jiff = "0.2"
+jiff = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-sha2 = "0.10"
+sha2 = "0.11"
 tokio = "1"
 
 # Sync passwords in the system's secure storage (`app/src/secrets.rs`).

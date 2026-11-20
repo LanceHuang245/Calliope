@@ -241,7 +241,7 @@ impl Run<'_> {
         let mine = fs::read(self.vault.abs(path))?;
         let mut remote = self.remote[path].clone();
         if theirs != mine {
-            let now = jiff::Zoned::now().strftime("%Y-%m-%d %H%M");
+            let now = jiff::ZonedDateTime::now().strftime("%Y-%m-%d %H%M");
             let tag = format!("conflict {now} {}", self.device);
             let copy = self.vault.save_copy(path, tag.trim(), &theirs)?;
             self.upload(&copy).await?;
