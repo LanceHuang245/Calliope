@@ -64,10 +64,11 @@ Calliope 分阶段开发，双链、图谱和同步已经完成。接下来：
 - 移动端构建与打包：[nsh CLI](https://nsh.dev/docs/installation)；Android 需要 SDK 和 NDK，iOS 需要 Xcode
 
 ```sh
-cargo run -p calliope            # 在本机桌面上运行
+make run                         # 在本机桌面上运行（cargo run -p calliope）
 cargo test --workspace           # 运行全部测试，包括无头 UI 测试
 nsh run app --target android     # 在 Android 模拟器或设备上运行
 nsh package app --target windows # 构建安装包
+make update                      # 把 nsh（命令行和 crate）更新到最新 nightly，并更新其他依赖
 ```
 
 UI 位于 `app/`；仓库、链接、索引和图谱位于 `crates/calliope-core`，同步位于 `crates/calliope-sync`。这两个 crate 都不依赖 UI，可以单独测试。

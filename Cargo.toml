@@ -21,7 +21,8 @@ calliope-sync = { path = "crates/calliope-sync" }
 # Native Shell (https://nsh.dev), the nightly build of `main`: every nsh
 # crate comes from Git at the commit of the nightly CLI CI installs
 # (`NSH_VERSION: nightly`, see its `nsh --version`). Move `rev` with the
-# nightly: the `nsh` CLI builds the app's runners from this checkout.
+# nightly (`make update`): the `nsh` CLI builds the app's runners from
+# this checkout.
 # `nsh-base`: `highlight` colors code blocks, `math` typesets formulas.
 # `svg`: the icons (`app/src/components/icons.rs`).
 nsh-core = { git = "https://github.com/longbridge/nsh", rev = "72bb4387e3a2708790e1e1f4feed1fa4747ef59f", features = ["svg"] }

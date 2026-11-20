@@ -64,10 +64,11 @@ You need:
 - Mobile builds and packages: the [nsh CLI](https://nsh.dev/docs/installation); Android needs its SDK and NDK, iOS needs Xcode
 
 ```sh
-cargo run -p calliope            # run on this desktop
+make run                         # run on this desktop (cargo run -p calliope)
 cargo test --workspace           # every test, the headless UI tests included
 nsh run app --target android     # run on an Android emulator or device
 nsh package app --target windows # build an installer
+make update                      # nsh to its latest nightly (CLI and crates), and the other dependencies
 ```
 
 The UI lives in `app/`; the vault, links, index and graph in `crates/calliope-core`, and sync in `crates/calliope-sync`. Neither crate depends on the UI, so both are tested on their own.
