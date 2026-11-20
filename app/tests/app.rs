@@ -104,6 +104,8 @@ fn phone_opens_reads_and_creates_notes() {
     app.press("label:Menu").unwrap();
     app.press("label:Settings").unwrap();
     app.wait_for("Appearance").unwrap();
+    // The menu slides away first: a back while it goes is its own.
+    app.wait_for_gone("Diary", Duration::from_secs(2)).unwrap();
     app.back().unwrap();
     app.wait_for_gone("Appearance", Duration::from_secs(2))
         .unwrap();
