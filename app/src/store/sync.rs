@@ -23,9 +23,6 @@ const AGAIN_AFTER: Duration = Duration::from_secs(60);
 
 #[derive(Clone, Default)]
 struct SyncConfig(Config);
-/// The run that would delete this many files, waiting for the user.
-#[derive(Clone, Default)]
-struct PendingDeletions(Option<usize>);
 /// The password went to a file, for want of secure storage.
 #[derive(Clone, Default)]
 struct SecretInFile(bool);
@@ -60,10 +57,6 @@ pub(crate) fn sync_config() -> Config {
 
 pub(crate) fn sync_status() -> SyncStatus {
     get::<SyncStatus>()
-}
-
-pub(crate) fn pending_deletions() -> Option<usize> {
-    get::<PendingDeletions>().0
 }
 
 pub(crate) fn secret_in_file() -> bool {
@@ -153,14 +146,6 @@ pub(crate) fn sync_now() {
     }
 }
 
-/// The user's answer to a run that would delete many files.
-pub(crate) fn confirm_deletions(go_ahead: bool) {
-    set(PendingDeletions(None));
-    if go_ahead {
-        start(true);
-    }
-}
-
 /// The open note was saved: it syncs once editing stops for a while.
 pub(super) fn edited() {
     EDITED.set(Some(Instant::now()));
@@ -244,9 +229,17 @@ fn start(confirmed: bool) {
                     spawn_task(notify_system(report.conflicts));
                 }
             }
+            // A run that would delete many files asks first, then runs
+            // again letting it.
             Ok(Err(Error::TooManyDeletions(n))) => {
                 set(SyncStatus::Idle);
-                set(PendingDeletions(Some(n)));
+                let ask = Ask {
+                    title: strings::DELETE_FILES.to_owned(),
+                    description: Some(strings::deleting(n).into()),
+                    action: strings::DELETE,
+                    destructive: true,
+                };
+                confirm(ask, || start(true));
             }
             Ok(Err(e)) => {
                 log::warn!("sync failed: {e:?}");

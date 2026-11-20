@@ -13,7 +13,7 @@ use nsh_core::{
 };
 
 use self::icons::icon;
-pub(crate) use self::page::{TOOLBAR_ROOM, floating_toolbar, page};
+pub(crate) use self::page::{TOOLBAR_ROOM, fab, floating_surface, floating_toolbar, page};
 use crate::strings;
 
 /// A quiet text button: no surface until hovered or pressed.
@@ -176,15 +176,22 @@ pub(crate) fn menu_entry(
         .child(text(label).text_sm().text_color(color))
 }
 
-/// The surface of a menu: the popup on the desktops, the sheet on phones.
+/// The surface of a menu: the popup on the desktops, the sheet on phones,
+/// whose last item stays above the system's bars at the bottom (Android's
+/// gesture bar, the iPhone's home indicator): nsh leaves that to the app.
 pub(crate) fn menu_popup(s: StyleRefinement) -> StyleRefinement {
-    s.min_w(px(176.0))
+    let s = s
+        .min_w(px(176.0))
         .p_1()
         .rounded(theme().radius)
         .border_1()
         .border_color(theme().border)
         .bg(theme().popover)
-        .shadow_lg()
+        .shadow_lg();
+    match is_desktop() {
+        true => s,
+        false => s.pb_safe_area_plus(px(4.0)),
+    }
 }
 
 /// A row of options, the current one highlighted (the view mode, the

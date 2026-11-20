@@ -15,7 +15,7 @@ use nsh_base::{
 use nsh_core::{keymap::When, prelude::*};
 
 use super::{
-    home::{home_page, menu_button, phone_toolbar},
+    home::{home_page, ios_new_note, menu_button, phone_toolbar},
     links::{WikiLinks, backlinks_sheet, wiki_links},
     mermaid::{mermaid, mermaid_blocks, warm_up},
 };
@@ -110,6 +110,7 @@ fn header() -> impl IntoElement {
         .child((!is_desktop()).then(menu_button))
         .child(title())
         .child(segmented(modes, store::mode, store::set_mode))
+        .child(ios_new_note())
 }
 
 /// The note's title, edited in place: Return or leaving it renames the

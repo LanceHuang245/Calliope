@@ -49,10 +49,7 @@ pub(crate) use self::{
         conflict, edit, image_src, note_path, note_title, opened, preview, resolve_conflict,
         select, text,
     },
-    sync::{
-        SyncStatus, confirm_deletions, pending_deletions, save_sync, secret_in_file, sync_config,
-        sync_now, sync_status, test_sync,
-    },
+    sync::{SyncStatus, save_sync, secret_in_file, sync_config, sync_now, sync_status, test_sync},
     trash::{clear_trash, delete_forever, load_trash, restore, toggle_trash, trashed},
     vault::{
         create_vault, has_files, kind_of, open_vault, pick_vault, refresh, tree_items, vault,

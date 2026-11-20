@@ -1,14 +1,11 @@
 //! Sync in the settings (MVP 8.7): the service and its settings, checking
-//! the connection, syncing on its own, and how the last run went; and the
-//! dialog asking before a run deletes many files.
+//! the connection, syncing on its own, and how the last run went.
 
 use calliope_sync::{Config, Provider};
 use nsh_core::prelude::*;
 
 use crate::{
-    components::{
-        ButtonVariant, button, confirm_dialog, field, labeled, muted, section, segmented,
-    },
+    components::{ButtonVariant, button, field, labeled, muted, section, segmented},
     store::{self, SyncStatus},
     strings,
 };
@@ -186,15 +183,4 @@ fn input(label: &'static str, value: &str, typed: impl Fn(String) + 'static) -> 
         .label(label)
         .default_value(value.to_owned())
         .on_change(move |text: &str| typed(text.to_owned()))
-}
-
-/// Asks before a run deletes `count` files: Delete runs it, Cancel, Escape
-/// or the backdrop do not.
-pub(crate) fn deletions_dialog(count: usize) -> impl IntoElement {
-    confirm_dialog(
-        strings::DELETE_FILES,
-        Some(strings::deleting(count).into()),
-        strings::DELETE,
-        store::confirm_deletions,
-    )
 }

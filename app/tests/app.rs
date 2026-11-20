@@ -11,11 +11,11 @@ use std::{
 use common::{desktop, vault};
 use nsh_core::{file_dialog::FileRequest, platform::Lifecycle, time::Clock};
 use nsh_engine::{EngineConfig, Root};
-use nsh_testing::Headless;
+use nsh_testing::{DialogAnswer, Headless};
 
-/// The phone layout `EngineConfig::new` gives: creating the vault, the home
-/// page, the files in the menu, a note, then the pages the floating toolbar
-/// and the menu push.
+/// The phone layout `EngineConfig::new` gives (iOS's): creating the vault,
+/// the home page, the files in the menu, renaming in the system's alert, a
+/// note, then the pages the floating toolbar and the menu push.
 #[test]
 fn phone_opens_reads_and_creates_notes() {
     let root = vault("phone");
@@ -37,6 +37,17 @@ fn phone_opens_reads_and_creates_notes() {
     app.press("label:Menu").unwrap();
     app.wait_for("Journal").unwrap();
     app.wait_for("Hello").unwrap();
+
+    // A held finger on a row offers renaming, in the system's alert with a
+    // text field.
+    app.on_dialog(|_| DialogAnswer::TypeAndPress {
+        text: "Diary".into(),
+        button: "Rename".into(),
+    });
+    app.long_press("text:Journal").unwrap();
+    app.press("text:Rename").unwrap();
+    app.wait_for("Diary").unwrap();
+    assert!(root.join("Diary").is_dir());
 
     // A note opens in Edit, closing the menu; Read renders it, its front
     // matter folded.
@@ -61,9 +72,13 @@ fn phone_opens_reads_and_creates_notes() {
     app.press("text:New note").unwrap();
     app.wait_for("label:Title").unwrap();
     assert!(root.join("Untitled.md").exists());
+    // iOS's `+` at the end of the note's top bar makes another.
+    app.press("label:New note").unwrap();
+    app.wait(Duration::from_millis(500)).unwrap();
+    assert!(root.join("Untitled 1.md").exists());
 
     // Another app's change shows when the app comes back to the front.
-    fs::write(root.join("Untitled.md"), "# Changed elsewhere\n").unwrap();
+    fs::write(root.join("Untitled 1.md"), "# Changed elsewhere\n").unwrap();
     app.set_environment("background", |e| e.lifecycle = Lifecycle::Background)
         .unwrap();
     app.set_environment("foreground", |e| e.lifecycle = Lifecycle::Active)

@@ -18,7 +18,7 @@ use nsh_core::{
 };
 
 use crate::{
-    components::{card, confirm_dialog, icon_button, icons},
+    components::{card, confirm_dialog, floating_surface, icon_button, icons},
     pages::{
         files::{files_page, rename_dialog},
         graph::graph_page,
@@ -28,7 +28,6 @@ use crate::{
         settings::settings_page,
         status::status_bar,
         switcher::quick_switcher,
-        sync::deletions_dialog,
         trash::trash_page,
         welcome::welcome_page,
     },
@@ -46,15 +45,10 @@ pub(crate) fn shell() -> impl IntoElement {
         .child(layout)
         .child(dynamic(move || store::renaming().map(rename_dialog)))
         .child(dynamic(move || store::switching().then(quick_switcher)))
-        .child(dynamic(move || {
-            store::pending_deletions().map(deletions_dialog)
-        }))
         // What the desktops ask before deleting or creating.
         .child(dynamic(move || {
-            store::asking().map(|ask| {
-                let description = ask.description.map(SharedString::from);
-                confirm_dialog(ask.title, description, ask.action, store::answer)
-            })
+            store::asking()
+                .map(|ask| confirm_dialog(ask.title, ask.description, ask.action, store::answer))
         }))
 }
 
@@ -266,7 +260,7 @@ fn toast(notice: Notice) -> impl IntoElement {
             hide();
         });
     }
-    view()
+    let toast = view()
         .bind_motion(&motion)
         .flex_row()
         .items_center()
@@ -275,10 +269,8 @@ fn toast(notice: Notice) -> impl IntoElement {
         .pr_1()
         .py_1()
         .rounded(move || theme().radius)
-        .border_1()
-        .border_color(move || theme().border)
-        .bg(move || theme().popover)
-        .shadow_md()
+        .shadow_md();
+    floating_surface(toast)
         .child(
             text(notice.message)
                 .flex_1()

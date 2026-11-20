@@ -14,7 +14,7 @@ use super::*;
 pub(crate) struct Ask {
     pub title: String,
     /// What it means, under the title.
-    pub description: Option<&'static str>,
+    pub description: Option<SharedString>,
     /// The button that goes on.
     pub action: &'static str,
     /// Going on deletes: the system's alert draws the button so.

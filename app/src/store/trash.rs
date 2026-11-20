@@ -71,7 +71,7 @@ fn change_trash(change: impl FnOnce(&Vault) -> io::Result<()>) {
 fn for_good(title: &'static str) -> Ask {
     Ask {
         title: title.to_owned(),
-        description: Some(strings::CANNOT_UNDO),
+        description: Some(strings::CANNOT_UNDO.into()),
         action: strings::DELETE,
         destructive: true,
     }

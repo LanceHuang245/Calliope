@@ -1,6 +1,9 @@
 //! Files and folders: the tree's expansion and selection, and creating,
 //! renaming and deleting items.
 
+use calliope_core::note;
+use nsh_base::{AlertDialogInput, alert_dialog};
+
 use super::*;
 
 pub(crate) fn expanded() -> Vec<SharedString> {
@@ -80,14 +83,37 @@ pub(crate) fn new_folder_in(dir: &str) {
             reveal(dir);
             refresh();
             set(Selected(Some(path.clone())));
-            set(Renaming(Some(path)));
+            start_rename(path);
         }
         Err(e) => notify(e),
     }
 }
 
+/// Asks for the new name of the item at `path`: in Calliope's dialog on
+/// the desktops, which the shell shows while [`renaming`]; in the system's
+/// alert with a text field on the phones (MVP 5.4).
 pub(crate) fn start_rename(path: String) {
-    set(Renaming(Some(path)));
+    if is_desktop() {
+        return set(Renaming(Some(path)));
+    }
+    let field = AlertDialogInput::new()
+        .default_value(note::title(&path).to_owned())
+        .select_text_on_focus(true)
+        .required(true);
+    let answer = alert_dialog()
+        .title(strings::RENAME)
+        .input(field)
+        .cancel("cancel", strings::CANCEL)
+        .action("rename", strings::RENAME)
+        .show();
+    spawn_task(async move {
+        if let Ok(answer) = answer.await
+            && answer.action.as_deref() == Some("rename")
+            && let Some(name) = answer.value
+        {
+            rename_item(path, &name);
+        }
+    });
 }
 
 pub(crate) fn cancel_rename() {
@@ -139,10 +165,13 @@ fn rename_item(old: String, name: &str) {
 pub(crate) fn delete(path: String) {
     let ask = Ask {
         title: strings::DELETE_TITLE.to_owned(),
-        description: Some(match is_desktop() {
-            true => strings::DELETE_TO_SYSTEM,
-            false => strings::DELETE_DESCRIPTION,
-        }),
+        description: Some(
+            match is_desktop() {
+                true => strings::DELETE_TO_SYSTEM,
+                false => strings::DELETE_DESCRIPTION,
+            }
+            .into(),
+        ),
         action: strings::DELETE,
         destructive: true,
     };

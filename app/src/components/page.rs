@@ -50,14 +50,37 @@ fn page_bar(title: &'static str, back: impl Fn() + 'static) -> View {
 }
 
 /// The room the [`floating_toolbar`] takes over the bottom of a phone's
-/// page: its bar (52 points) 16 points over the edge, and 8 to spare. What
-/// scrolls under it ends with as much, to scroll clear of it.
+/// page: its bar ([`BAR_HEIGHT`]) 16 points over the edge, and 8 to spare.
+/// What scrolls under it ends with as much, to scroll clear of it.
 pub(crate) const TOOLBAR_ROOM: f32 = 76.0;
 
-/// A toolbar floating over the bottom of a phone's page, in each system's
-/// look: Liquid Glass on iOS 26 (a blur of what is behind it before),
-/// Material 3's floating toolbar on Android (a raised, opaque surface).
-pub(crate) fn floating_toolbar(buttons: impl IntoElement) -> impl IntoElement {
+/// The [`floating_toolbar`]'s height: its buttons (44 points) and its
+/// padding; Android's [`fab`] beside it is as tall.
+const BAR_HEIGHT: f32 = 52.0;
+
+/// The surface of what floats over a page (the floating toolbar, the
+/// notices), in each system's look: Liquid Glass on iOS 26 (a blur of what
+/// is behind it before), an opaque raised surface elsewhere (Material's on
+/// Android).
+pub(crate) fn floating_surface<E: Styled>(element: E) -> E {
+    match os() {
+        Os::Ios => element
+            .glass_effect(GlassEffect::Regular)
+            .backdrop_blur(px(20.0)),
+        _ => element
+            .bg(move || theme().popover)
+            .border_1()
+            .border_color(move || theme().border),
+    }
+}
+
+/// A toolbar floating over the bottom of a phone's page (Material 3's
+/// floating toolbar on Android), with `beside` it on its right (Android's
+/// [`fab`]), the two centered together.
+pub(crate) fn floating_toolbar(
+    buttons: impl IntoElement,
+    beside: Option<AnyElement>,
+) -> impl IntoElement {
     let bar = toolbar()
         .flex_row()
         .items_center()
@@ -66,20 +89,43 @@ pub(crate) fn floating_toolbar(buttons: impl IntoElement) -> impl IntoElement {
         .rounded_full()
         .shadow_lg()
         .child(buttons);
-    let bar = match os() {
-        Os::Ios => bar
-            .glass_effect(GlassEffect::Regular)
-            .backdrop_blur(px(20.0)),
-        _ => bar
-            .bg(move || theme().popover)
-            .border_1()
-            .border_color(move || theme().border),
-    };
     view()
         .absolute()
         .left_0()
         .right_0()
         .bottom(px(16.0))
+        .flex_row()
         .items_center()
-        .child(bar)
+        .justify_center()
+        .gap_3()
+        .child(floating_surface(bar))
+        .child(beside)
+}
+
+/// Android's floating action button (Material 3's FAB, which nsh has not):
+/// a page's main action on the theme's `primary`, named by `label` for
+/// screen readers; round and as tall as the [`floating_toolbar`] it stands
+/// beside.
+pub(crate) fn fab(
+    paths: &'static str,
+    label: &'static str,
+    on_press: impl Fn() + 'static,
+) -> impl IntoElement {
+    nsh_base::button()
+        .w(px(BAR_HEIGHT))
+        .h(px(BAR_HEIGHT))
+        .items_center()
+        .justify_center()
+        .rounded_full()
+        .bg(move || theme().primary)
+        .shadow_lg()
+        .active(|s| s.opacity(0.8))
+        .accessibility_label(label)
+        .on_press(on_press)
+        .child(
+            icons::icon(paths)
+                .w(px(24.0))
+                .h(px(24.0))
+                .text_color(move || theme().primary_foreground),
+        )
 }
