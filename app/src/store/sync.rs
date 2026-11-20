@@ -26,6 +26,9 @@ struct SyncConfig(Config);
 /// The password went to a file, for want of secure storage.
 #[derive(Clone, Default)]
 struct SecretInFile(bool);
+/// A vault made from sync is checking its connection.
+#[derive(Clone, Default)]
+struct Connecting(bool);
 
 /// What the UI shows of syncing.
 #[derive(Clone, Default, PartialEq)]
@@ -63,6 +66,10 @@ pub(crate) fn secret_in_file() -> bool {
     get::<SecretInFile>().0
 }
 
+pub(crate) fn connecting() -> bool {
+    get::<Connecting>().0
+}
+
 /// The vault's account in the secrets: its folder.
 fn account(vault: &Vault) -> String {
     vault.root().display().to_string()
@@ -94,12 +101,20 @@ fn show_secret_in_file(vault: &Vault) {
 
 /// Keeps `config` for the open vault, and `secret` (the password or secret
 /// key) unless it is empty, which keeps the one before.
-pub(crate) fn save_sync(mut config: Config, secret: &str) {
+pub(crate) fn save_sync(config: Config, secret: &str) {
+    if keep_sync(config, secret) {
+        inform(strings::SYNC_SAVED);
+    }
+}
+
+/// [`save_sync`] without saying so: whether the settings were kept.
+fn keep_sync(mut config: Config, secret: &str) -> bool {
     let Some(vault) = untracked(vault) else {
-        return;
+        return false;
     };
     if let Err(e) = config.save(&vault) {
-        return notify(e);
+        notify(e);
+        return false;
     }
     if !secret.is_empty() {
         if let Err(e) = secrets::set(&account(&vault), secret) {
@@ -113,7 +128,33 @@ pub(crate) fn save_sync(mut config: Config, secret: &str) {
         config.device = device_name();
     }
     set(SyncConfig(config));
-    inform(strings::SYNC_SAVED);
+    true
+}
+
+/// The phone's vault `name` made from sync (MVP phase 4): the connection
+/// `config` and `secret` give is checked first, so wrong settings make no
+/// vault; then the vault is made, keeps the settings and syncs, which
+/// downloads everything into it (an empty side is a first sync).
+pub(crate) fn create_from_sync(name: String, config: Config, secret: String) {
+    if name.trim().is_empty() || untracked(connecting) {
+        return;
+    }
+    set(Connecting(true));
+    let (checked, key) = (config.clone(), secret.clone());
+    spawn_task(async move {
+        let tested = background(async move { calliope_sync::test(&checked, &key).await });
+        let tested = tested.await;
+        set(Connecting(false));
+        match tested {
+            Ok(Ok(())) => {}
+            Ok(Err(e)) => return notify(strings::sync_failed(&e)),
+            Err(e) => return notify(e),
+        }
+        create_vault(&name);
+        if keep_sync(config, &secret) {
+            start(false);
+        }
+    });
 }
 
 /// Checks the settings being edited, `secret` empty for the saved one.

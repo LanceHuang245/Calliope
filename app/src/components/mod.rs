@@ -45,8 +45,8 @@ pub(crate) enum ButtonVariant {
     Secondary,
 }
 
-/// A button showing `label`; every variant is the same size, so a row of
-/// them lines up.
+/// A button showing `label`, in its middle when the button is stretched;
+/// every variant is the same size, so a row of them lines up.
 pub(crate) fn button(
     variant: ButtonVariant,
     label: &'static str,
@@ -61,6 +61,7 @@ pub(crate) fn button(
         ButtonVariant::Secondary => theme().foreground,
     };
     nsh_base::button()
+        .items_center()
         .px_4()
         .py_2()
         .rounded(move || theme().radius)

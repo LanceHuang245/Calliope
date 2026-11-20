@@ -1,12 +1,13 @@
-//! The home page, where no note is open: a new note in its middle and, on a
-//! phone, the menu at the top and the floating toolbar at the bottom.
+//! The home page, where no note is open: a new note in its middle (the
+//! download's progress while an empty vault syncs) and, on a phone, the
+//! menu at the top and the floating toolbar at the bottom.
 
-use nsh_base::theme;
+use nsh_base::{progress, theme};
 use nsh_core::{platform::Os, prelude::*};
 
 use crate::{
     components::{
-        ButtonVariant, button, fab, floating_toolbar, icon_button, icons, toolbar_toggle,
+        ButtonVariant, button, fab, floating_toolbar, icon_button, icons, muted, toolbar_toggle,
     },
     store::{self, Route, SyncStatus},
     strings,
@@ -29,14 +30,57 @@ pub(crate) fn home_page() -> impl IntoElement {
                 .items_center()
                 .justify_center()
                 .gap_4()
-                .child(text(strings::NO_NOTE).text_color(move || theme().muted_foreground))
-                .child(button(
-                    ButtonVariant::Primary,
-                    strings::NEW_NOTE,
-                    store::new_note,
-                )),
+                .child(when(downloading, download_progress).otherwise(|| {
+                    view()
+                        .items_center()
+                        .gap_4()
+                        .child(text(strings::NO_NOTE).text_color(move || theme().muted_foreground))
+                        .child(button(
+                            ButtonVariant::Primary,
+                            strings::NEW_NOTE,
+                            store::new_note,
+                        ))
+                })),
         )
         .child((!is_desktop()).then(phone_toolbar))
+}
+
+/// Whether the vault is empty while it syncs: its first download (a
+/// phone's vault made from sync), which shows its progress.
+fn downloading() -> bool {
+    !store::has_files() && matches!(store::sync_status(), SyncStatus::Running(..))
+}
+
+/// The files synced of how many, and a bar of them; moving with no end
+/// while the run finds out how many (it lists the server first).
+fn download_progress() -> impl IntoElement {
+    let counts = || match store::sync_status() {
+        SyncStatus::Running(done, total) => (done, total),
+        _ => (0, 0),
+    };
+    let share = move || {
+        let (done, total) = counts();
+        match total {
+            0 => 0.0,
+            _ => done as f32 * 100.0 / total as f32,
+        }
+    };
+    view()
+        .w(px(240.0))
+        .gap_2()
+        .child(muted(move || {
+            let (done, total) = counts();
+            strings::syncing(done, total)
+        }))
+        .child(
+            progress()
+                .value(share)
+                .indeterminate(move || counts().1 == 0)
+                .track_style(|s| s.h(px(6.0)).rounded_full().overflow_hidden())
+                .indicator_style(|s| s.h_full().rounded_full())
+                .track_class("bg-muted")
+                .indicator_class("bg-primary"),
+        )
 }
 
 /// Syncs the vault; dimmed while it syncs.

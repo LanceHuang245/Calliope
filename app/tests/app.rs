@@ -53,8 +53,7 @@ fn phone_opens_reads_and_creates_notes() {
     // matter folded.
     app.press("Hello").unwrap();
     app.wait_for("label:Markdown source").unwrap();
-    app.wait_for_gone("Journal", Duration::from_secs(2))
-        .unwrap();
+    app.wait_for_gone("Diary", Duration::from_secs(2)).unwrap();
     app.press("Read").unwrap();
     app.wait_for("Hello world").unwrap();
     app.wait_for("Properties").unwrap();

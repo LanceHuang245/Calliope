@@ -28,6 +28,10 @@ pub(crate) const NEW_VAULT: &str = "New vault…";
 pub(crate) const NAME_VAULT: &str = "Name a vault to keep your notes in.";
 pub(crate) const VAULT_NAME: &str = "Vault name";
 pub(crate) const CREATE: &str = "Create";
+pub(crate) const CREATE_FROM_SYNC: &str = "Create from sync";
+pub(crate) const CONNECTING: &str = "Connecting…";
+pub(crate) const FROM_SYNC_HINT: &str =
+    "Connect to the server your notes sync with; the vault downloads from it.";
 
 // Note.
 pub(crate) const NO_NOTE: &str = "Select a note, or create one.";

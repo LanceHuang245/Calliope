@@ -87,8 +87,13 @@ pub(crate) fn sync_settings() -> impl IntoElement {
 }
 
 /// The settings of the service `provider`, typed into `draft`; the password
-/// or secret key into `secret`.
-fn fields(provider: Provider, draft: Signal<Config>, secret: Signal<String>) -> impl IntoElement {
+/// or secret key into `secret`. A phone's vault made from sync asks for
+/// them too (`welcome`).
+pub(crate) fn fields(
+    provider: Provider,
+    draft: Signal<Config>,
+    secret: Signal<String>,
+) -> impl IntoElement {
     let c = draft.get();
     let s3 = provider == Provider::S3;
     let entry = move |label, required, value: &str, set: fn(&mut Config, String)| {
