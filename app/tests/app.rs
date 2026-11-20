@@ -9,7 +9,7 @@ use std::{
 };
 
 use common::{desktop, vault};
-use nsh_core::{file_dialog::FileRequest, platform::Lifecycle, time::Clock};
+use nsh_core::{file_dialog::FileRequest, platform::Lifecycle, prelude::px, time::Clock};
 use nsh_engine::{EngineConfig, Root};
 use nsh_testing::{DialogAnswer, Headless};
 
@@ -75,6 +75,22 @@ fn phone_opens_reads_and_creates_notes() {
     app.press("label:New note").unwrap();
     app.wait(Duration::from_millis(500)).unwrap();
     assert!(root.join("Untitled 1.md").exists());
+
+    // With the source edited and the keyboard up, the keyboard toolbar
+    // starts the line as a task, then wraps the caret in code.
+    app.press("Edit").unwrap();
+    app.type_text("label:Markdown source", "Buy milk").unwrap();
+    app.set_environment("keyboard up", |e| e.keyboard_height = px(300.0))
+        .unwrap();
+    app.press("label:Task").unwrap();
+    app.press("label:Code").unwrap();
+    app.wait(Duration::from_millis(1500)).unwrap();
+    let typed = fs::read_to_string(root.join("Untitled 1.md")).unwrap();
+    assert_eq!(typed, "- [ ] Buy milk``");
+    app.set_environment("keyboard down", |e| e.keyboard_height = px(0.0))
+        .unwrap();
+    assert!(!app.shows("label:Task"));
+    app.press("Read").unwrap();
 
     // Another app's change shows when the app comes back to the front.
     fs::write(root.join("Untitled 1.md"), "# Changed elsewhere\n").unwrap();

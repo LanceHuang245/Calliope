@@ -16,6 +16,7 @@ use nsh_core::{keymap::When, prelude::*};
 
 use super::{
     home::{home_page, ios_new_note, menu_button, phone_toolbar},
+    keyboard_bar::keyboard_bar,
     links::{WikiLinks, backlinks_sheet, wiki_links},
     mermaid::{mermaid, mermaid_blocks, warm_up},
 };
@@ -42,6 +43,8 @@ fn note_view() -> impl IntoElement {
     let finding = signal(false);
     let query = signal(String::new());
     let editor = component_ref::<Editor>();
+    // The source has the focus: a phone's keyboard toolbar shows.
+    let editing = signal(false);
     // A note with diagrams: their fonts are found while it is edited.
     if untracked(store::text).contains("```mermaid") {
         warm_up();
@@ -76,13 +79,13 @@ fn note_view() -> impl IntoElement {
             let mode = store::mode();
             let wide = wide.get();
             untracked(|| match mode {
-                Mode::Edit => source(editor, query).into_element(),
+                Mode::Edit => source(editor, query, editing).into_element(),
                 Mode::Read => preview().into_element(),
-                Mode::Split if !wide => source(editor, query).into_element(),
+                Mode::Split if !wide => source(editor, query, editing).into_element(),
                 Mode::Split => h_resizable()
                     .flex_1()
                     .handle_style(|s| s.bg(theme().border))
-                    .child(resizable_panel().child(source(editor, query)))
+                    .child(resizable_panel().child(source(editor, query, editing)))
                     .child(resizable_panel().child(preview()))
                     .into_element(),
             })
@@ -90,6 +93,7 @@ fn note_view() -> impl IntoElement {
         // A phone shows the backlinks in a sheet when asked.
         .child((!is_desktop()).then(backlinks_sheet))
         .child((!is_desktop()).then(phone_toolbar))
+        .child((!is_desktop()).then(|| keyboard_bar(editor, editing)))
 }
 
 fn header() -> impl IntoElement {
@@ -137,7 +141,11 @@ fn title() -> impl IntoElement {
         .hover(|s| s.bg(theme().accent))
 }
 
-fn source(editor: ComponentRef<Editor>, query: Signal<String>) -> impl IntoElement {
+fn source(
+    editor: ComponentRef<Editor>,
+    query: Signal<String>,
+    editing: Signal<bool>,
+) -> impl IntoElement {
     // Room around the text: the gutter (its fold markers) already makes the
     // left side's; its rows move down with the text's.
     // A phone's last lines scroll clear of the floating toolbar.
@@ -148,6 +156,12 @@ fn source(editor: ComponentRef<Editor>, query: Signal<String>) -> impl IntoEleme
     let mut classes = EditorClasses::default();
     classes.gutter = Some(format!("pt-4 {bottom} pl-1 pr-0").into());
     classes.content = Some(format!("pt-4 {bottom} pl-0 pr-4").into());
+    // A finger picks the notes `[[` offers on a phone: their titles larger,
+    // in a list wide enough for them (its rows keep the editor's height).
+    if !is_desktop() {
+        classes.completion_item = Some("text-base".into());
+        classes.completion_menu = Some("min-w-[240px]".into());
+    }
     nsh_base::editor()
         .value(move || Some(store::text()))
         .on_change(store::edit)
@@ -182,6 +196,8 @@ fn source(editor: ComponentRef<Editor>, query: Signal<String>) -> impl IntoEleme
             };
             api.present_completions(request.id, items, None);
         })
+        .on_focus(move || editing.set(true))
+        .on_blur(move || editing.set(false))
         .component_ref(&editor)
         .flex_1()
 }

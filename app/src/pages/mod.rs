@@ -4,6 +4,7 @@
 pub(crate) mod files;
 pub(crate) mod graph;
 pub(crate) mod home;
+pub(crate) mod keyboard_bar;
 pub(crate) mod links;
 pub(crate) mod mermaid;
 pub(crate) mod note;

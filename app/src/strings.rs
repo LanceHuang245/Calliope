@@ -49,6 +49,12 @@ pub(crate) const CLOSE: &str = "Close";
 pub(crate) const PREVIOUS_MATCH: &str = "Previous match";
 pub(crate) const NEXT_MATCH: &str = "Next match";
 pub(crate) const PROPERTIES: &str = "Properties";
+// The keyboard toolbar's buttons.
+pub(crate) const LINK: &str = "Link to a note";
+pub(crate) const TAG: &str = "Tag";
+pub(crate) const LIST: &str = "List item";
+pub(crate) const TASK: &str = "Task";
+pub(crate) const CODE: &str = "Code";
 pub(crate) const CONFLICT: &str = "This note was changed by another app.";
 pub(crate) const KEEP_MINE: &str = "Keep mine";
 pub(crate) const USE_DISK: &str = "Use theirs";
