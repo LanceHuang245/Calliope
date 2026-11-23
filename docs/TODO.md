@@ -14,13 +14,6 @@
 - **原因**：滚动视图的 `keyboard_taps` 默认是 `KeyboardTaps::Never`：键盘弹起时，在里面点一下只收起键盘，里面的内容收不到这次点击。补全列表的滚动视图没有改这个默认值；键盘一收、编辑器失去焦点，补全列表随之关闭（`completion_blurred`）。nsh 自己的命令面板（`command.rs`）、列表框（`listbox.rs`）和菜单（`menu.rs`）都设了 `.keyboard_taps(KeyboardTaps::Handled)`，只有补全列表漏了。
 - **修复方向**：向 nsh 上游报告。修法是给补全列表的 `scroll()` 加上 `.keyboard_taps(KeyboardTaps::Handled)`，和 `command.rs` 一样（未编译验证）。Calliope 这边没有绕过办法：这个滚动视图在编辑器内部，应用设置不到。修好后 `make update` 即可。
 
-## 图谱不能用滚轮缩放、不能用触控板双指滑动平移
-
-- **位置**：`app/src/pages/graph.rs` 的 `diagram()`；MVP 文档 F6 的“交互”要求“平移、缩放（滚轮、触控板、双指捏合）”。
-- **问题**：图谱里单独滚动鼠标滚轮没有反应，触控板双指滑动也没有反应。现在只能拖动平移，用 `Ctrl` + 滚轮、触控板或手机的双指捏合缩放。
-- **原因**：nsh 只把滚轮和触控板滚动交给滚动视图（`scroll()` 的 `on_scroll`），其他元素收不到滚轮事件；`Ctrl` + 滚轮被当作捏合手势，交给 `pinch_value`（`nsh-platform-linux/src/input.rs`，锁定版本 `c5214aa`）。
-- **修复方向**：等 nsh 给元素开放滚轮事件后，滚轮缩放、双指滑动平移。
-
 ## Android 的同步密码没有存进 Keystore
 
 - **位置**：`app/src/secrets.rs`。MVP 文档 8.6 要求 Android 的密码存进 Keystore。

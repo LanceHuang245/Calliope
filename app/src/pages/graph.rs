@@ -1,7 +1,8 @@
 //! The graph of the vault: a node for each note, an edge for each link,
-//! drawn on a canvas. A drag moves it and a pinch (Ctrl + wheel on the
-//! desktops) zooms it, natively; a press on a node opens its note, and a
-//! pointer over one highlights its neighbors.
+//! drawn on a canvas. A drag moves it and a pinch zooms it, natively; on
+//! the desktops a mouse's wheel (or Ctrl + wheel) zooms it around the
+//! pointer and two fingers on a touchpad move it. A press on a node opens
+//! its note, and a pointer over one highlights its neighbors.
 //!
 //! Every node is drawn once, for each layout: moving and zooming draw
 //! nothing again, and a hovered node dims them and draws itself, its
@@ -24,6 +25,10 @@ use crate::{components::page, store, strings};
 const MARGIN: f32 = 80.0;
 /// How near a node's middle a pointer counts as on it, beyond its radius.
 const REACH: f32 = 4.0;
+/// A mouse wheel's line, in points (as Windows counts it).
+const LINE: f32 = 16.0;
+/// How far a wheel zooms: twice as near (or far) for each this many points.
+const ZOOM: f32 = 200.0;
 
 /// A graph and where the layout put its nodes.
 type Laid = Rc<(Graph, Vec<(f32, f32)>)>;
@@ -82,6 +87,15 @@ fn diagram(laid: Laid) -> impl IntoElement {
     );
     let hovered = signal(None::<usize>);
     let fitted = Cell::new(false);
+    // Where the graph is (x, y, scale), for the wheel: the values move on
+    // the UI thread, and drags and pinches say where they left them.
+    let placed = signal((0.0_f32, 0.0_f32, 1.0_f32));
+    let place = move |at: (f32, f32, f32)| {
+        x.set(at.0);
+        y.set(at.1);
+        scale.set(at.2);
+        placed.set(at);
+    };
     let node_at = {
         let laid = laid.clone();
         move |point: Point<Points>| {
@@ -100,11 +114,17 @@ fn diagram(laid: Laid) -> impl IntoElement {
         .on_layout(move |bounds: &Bounds<Points>| {
             if !fitted.replace(true) {
                 let (w, h) = (bounds.size.width.0, bounds.size.height.0);
-                x.set(w / 2.0 - half);
-                y.set(h / 2.0 - half);
-                scale.set((w.min(h) / (half * 2.0)).min(1.0));
+                let fit = (w.min(h) / (half * 2.0)).min(1.0);
+                place((w / 2.0 - half, h / 2.0 - half, fit));
             }
         })
+        .on_pan_end(move |e: &PanEvent| {
+            if let (Some(x), Some(y)) = (e.value_x, e.value_y) {
+                placed.update(|at| (at.0, at.1) = (x, y));
+            }
+        })
+        .on_pinch_end(move |e: &GestureEvent| placed.update(|at| at.2 = e.value))
+        .on_wheel(move |e: &WheelEvent| place(wheeled(placed.get_untracked(), half, e)))
         .child(
             view()
                 .absolute()
@@ -205,6 +225,22 @@ fn neighbors(laid: Laid, half: f32, hovered: usize) -> impl IntoElement {
     .h(px(y1 - y0 + MARGIN * 2.0))
 }
 
+/// Where the wheel `e` puts the graph at `(x, y, s)` (its translation and
+/// scale; `half` is half its canvas's side): a mouse's wheel, or Ctrl +
+/// wheel (a touchpad's pinch on Windows), zooms around the pointer; two
+/// fingers on a touchpad move it.
+fn wheeled((x, y, s): (f32, f32, f32), half: f32, e: &WheelEvent) -> (f32, f32, f32) {
+    let d = e.delta.points(px(LINE));
+    if matches!(e.delta, WheelDelta::Points(_)) && !e.modifiers.ctrl {
+        return (x - d.x.0, y - d.y.0, s);
+    }
+    // The canvas scales around its middle: the point under the pointer
+    // stays under it.
+    let k = 2.0_f32.powf(-d.y.0 / ZOOM);
+    let (qx, qy) = (e.position.x.0 - half, e.position.y.0 - half);
+    (qx - k * (qx - x), qy - k * (qy - y), s * k)
+}
+
 /// A node's radius: larger with more links.
 fn radius(degree: usize) -> f32 {
     3.0 + (degree as f32).sqrt() * 1.5
@@ -257,4 +293,47 @@ fn paint(
         p = p.fill_text(&n.label, at[i].0, at[i].1 + radius(n.degree) + 12.0);
     }
     p
+}
+
+#[cfg(test)]
+mod tests {
+    use nsh_core::{keymap::Modifiers, prelude::*};
+
+    use super::wheeled;
+
+    const HALF: f32 = 100.0;
+
+    fn wheel(delta: WheelDelta, ctrl: bool) -> WheelEvent {
+        let at = point(px(60.0), px(90.0));
+        let modifiers = Modifiers {
+            ctrl,
+            ..Modifiers::default()
+        };
+        WheelEvent::new(at, at, delta, modifiers)
+    }
+
+    /// Where a point `c` of the canvas shows with the graph at `(x, y, s)`.
+    fn shown((x, y, s): (f32, f32, f32), c: (f32, f32)) -> (f32, f32) {
+        (x + HALF + s * (c.0 - HALF), y + HALF + s * (c.1 - HALF))
+    }
+
+    #[test]
+    fn touchpads_move_the_graph_and_wheels_zoom_around_the_pointer() {
+        let at = (10.0, 20.0, 0.5);
+        let fingers = WheelDelta::Points(point(px(5.0), px(-8.0)));
+        assert_eq!(wheeled(at, HALF, &wheel(fingers, false)), (5.0, 28.0, 0.5));
+
+        // The canvas's point under the pointer, before.
+        let under = (HALF + (60.0 - 10.0 - HALF) / 0.5, HALF + (90.0 - 20.0 - HALF) / 0.5);
+        let notches = WheelDelta::Lines(point(0.0, -3.0));
+        let pinch = WheelDelta::Points(point(px(0.0), px(-48.0)));
+        for e in [wheel(notches, false), wheel(pinch, true)] {
+            let zoomed = wheeled(at, HALF, &e);
+            assert!(zoomed.2 > 0.5, "up zooms in: {zoomed:?}");
+            let (sx, sy) = shown(zoomed, under);
+            assert!((sx - 60.0).abs() < 1e-3 && (sy - 90.0).abs() < 1e-3);
+        }
+        let down = wheeled(at, HALF, &wheel(WheelDelta::Lines(point(0.0, 3.0)), false));
+        assert!(down.2 < 0.5, "down zooms out: {down:?}");
+    }
 }
