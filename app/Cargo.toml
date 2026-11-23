@@ -9,6 +9,7 @@ publish.workspace = true
 calliope-core.workspace = true
 calliope-sync.workspace = true
 jiff.workspace = true
+keyring-core.workspace = true
 log.workspace = true
 merman.workspace = true
 merman-export.workspace = true
@@ -19,7 +20,7 @@ usvg.workspace = true
 
 # `cargo run` (src/main.rs) on this machine's desktop backend. `nsh run` and
 # `nsh package` build runners of their own for every target. Each system's
-# secure storage keeps the sync passwords (src/secrets.rs; not Android).
+# secure storage keeps the sync passwords (src/secrets.rs).
 [target.'cfg(target_os = "linux")'.dependencies]
 nsh-platform-linux.workspace = true
 zbus-secret-service-keyring-store.workspace = true
@@ -32,8 +33,8 @@ apple-native-keyring-store = { workspace = true, features = ["keychain"] }
 nsh-platform-windows.workspace = true
 windows-native-keyring-store.workspace = true
 
-[target.'cfg(not(target_os = "android"))'.dependencies]
-keyring-core.workspace = true
+[target.'cfg(target_os = "android")'.dependencies]
+android-native-keyring-store.workspace = true
 
 [target.'cfg(target_os = "ios")'.dependencies]
 apple-native-keyring-store = { workspace = true, features = ["protected"] }

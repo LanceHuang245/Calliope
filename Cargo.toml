@@ -74,6 +74,8 @@ tokio = "1"
 
 # Sync passwords in the system's secure storage (`app/src/secrets.rs`).
 keyring-core = "1"
+# Android's reaches the app's Context through `ndk-context`, which nsh sets.
+android-native-keyring-store = "1"
 apple-native-keyring-store = "1"
 windows-native-keyring-store = "1"
 zbus-secret-service-keyring-store = { version = "1", features = ["rt-async-io-crypto-rust"] }

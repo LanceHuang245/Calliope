@@ -1,9 +1,9 @@
 //! Sync passwords and secret keys, one per account (a vault): kept in the
 //! system's secure storage (Windows' Credential Manager, the Keychain on
-//! macOS and iOS, the Secret Service on Linux). Where there is none, in
-//! `secrets.json` in the app's data directory, which only the app reads:
-//! on Android (nsh does not let an app reach its Keystore yet) and on a
-//! Linux desktop without GNOME Keyring or KWallet.
+//! macOS and iOS, the Secret Service on Linux, the Keystore on Android).
+//! Where there is none, in `secrets.json` in the app's data directory,
+//! which only the app reads: on a Linux desktop without GNOME Keyring or
+//! KWallet.
 
 use std::{collections::HashMap, fs, io};
 
@@ -24,7 +24,17 @@ pub(crate) fn set(account: &str, secret: &str) -> io::Result<()> {
 }
 
 pub(crate) fn get(account: &str) -> Option<String> {
-    system::get(account).or_else(|| read_file().remove(account))
+    if let Some(secret) = system::get(account) {
+        return Some(secret);
+    }
+    let mut file = read_file();
+    let secret = file.remove(account)?;
+    // Kept in the file while there was no secure storage (on Android before
+    // the Keystore): moved there once there is.
+    if system::set(account, &secret) {
+        let _ = write_file(&file);
+    }
+    Some(secret)
 }
 
 /// Whether the secret of `account` is in the file.
@@ -50,7 +60,6 @@ fn write_file(secrets: &HashMap<String, String>) -> io::Result<()> {
     io::Write::write_all(&mut options.open(dir.join("secrets.json"))?, &json)
 }
 
-#[cfg(not(target_os = "android"))]
 mod system {
     use std::sync::{Arc, OnceLock};
 
@@ -92,17 +101,8 @@ mod system {
         let store: Arc<CredentialStore> = apple_native_keyring_store::keychain::Store::new()?;
         #[cfg(target_os = "ios")]
         let store: Arc<CredentialStore> = apple_native_keyring_store::protected::Store::new()?;
+        #[cfg(target_os = "android")]
+        let store: Arc<CredentialStore> = android_native_keyring_store::Store::new()?;
         Ok(store)
-    }
-}
-
-#[cfg(target_os = "android")]
-mod system {
-    pub(super) fn set(_: &str, _: &str) -> bool {
-        false
-    }
-
-    pub(super) fn get(_: &str) -> Option<String> {
-        None
     }
 }
