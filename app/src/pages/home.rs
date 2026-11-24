@@ -2,6 +2,7 @@
 //! download's progress while an empty vault syncs) and, on a phone, the
 //! menu at the top and the floating toolbar at the bottom.
 
+use calliope_sync::Provider;
 use nsh_base::{progress, theme};
 use nsh_core::{platform::Os, prelude::*};
 
@@ -84,12 +85,18 @@ fn download_progress() -> impl IntoElement {
         )
 }
 
-/// Syncs the vault; dimmed while it syncs.
+fn sync_enabled() -> bool {
+    store::sync_config().provider != Provider::Off
+}
+
+/// Shows the desktop shortcut while sync is enabled, dimmed during a run.
 pub(crate) fn sync_button() -> impl IntoElement {
-    let running = || matches!(store::sync_status(), SyncStatus::Running(..));
-    view()
-        .opacity(move || if running() { 0.5_f32 } else { 1.0 })
-        .child(icon_button(icons::REFRESH, strings::SYNC, store::sync_now))
+    when(sync_enabled, || {
+        let running = || matches!(store::sync_status(), SyncStatus::Running(..));
+        view()
+            .opacity(move || if running() { 0.5_f32 } else { 1.0 })
+            .child(icon_button(icons::REFRESH, strings::SYNC, store::sync_now))
+    })
 }
 
 /// The phone's menu button: the files slide in from the left.
@@ -120,12 +127,9 @@ pub(crate) fn phone_toolbar() -> impl IntoElement {
             let buttons = view()
                 .flex_row()
                 .gap_1()
-                .child(toolbar_toggle(
-                    icons::REFRESH,
-                    strings::SYNC,
-                    syncing,
-                    store::sync_now,
-                ))
+                .child(when(sync_enabled, move || {
+                    toolbar_toggle(icons::REFRESH, strings::SYNC, syncing, store::sync_now)
+                }))
                 .child(toolbar_toggle(
                     icons::SEARCH,
                     strings::SEARCH,

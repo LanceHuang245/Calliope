@@ -61,6 +61,7 @@ pub(crate) const USE_DISK: &str = "Use theirs";
 
 // Settings.
 pub(crate) const APPEARANCE: &str = "Appearance";
+pub(crate) const THEME: &str = "Theme";
 pub(crate) const SYSTEM: &str = "System";
 pub(crate) const LIGHT: &str = "Light";
 pub(crate) const DARK: &str = "Dark";
@@ -117,6 +118,7 @@ pub(crate) const FIND_NOTE: &str = "Find or create a note";
 
 // Sync.
 pub(crate) const SYNC: &str = "Sync";
+pub(crate) const SYNC_PROVIDER: &str = "Sync provider";
 pub(crate) const WEBDAV: &str = "WebDAV";
 pub(crate) const S3: &str = "S3";
 pub(crate) const SERVER_ADDRESS: &str = "Server address";

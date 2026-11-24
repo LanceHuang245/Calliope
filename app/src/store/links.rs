@@ -75,7 +75,10 @@ pub(crate) fn graph(orphans: bool, missing: bool) -> Graph {
 /// settings, the trash or the graph).
 pub(crate) fn backlinks_shown() -> bool {
     !get::<BacklinksHidden>().0
-        && !matches!(route(), Route::Settings | Route::Trash | Route::Graph)
+        && !matches!(
+            route(),
+            Route::Settings | Route::SettingsDetail(_) | Route::Trash | Route::Graph
+        )
         && opened().is_some()
 }
 

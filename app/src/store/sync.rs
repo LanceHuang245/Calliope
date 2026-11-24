@@ -145,7 +145,7 @@ fn keep_sync(mut config: Config, secret: &str) -> bool {
 /// The sync button; it opens the settings while sync is off.
 pub(crate) fn sync_now() {
     match untracked(sync_config).provider {
-        Provider::Off => set_route(Route::Settings),
+        Provider::Off => set_route(Route::SettingsDetail(SettingsCategory::Sync)),
         _ => start(false),
     }
 }

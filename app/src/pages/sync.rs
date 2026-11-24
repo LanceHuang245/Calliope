@@ -5,7 +5,7 @@ use calliope_sync::{Config, Provider};
 use nsh_core::prelude::*;
 
 use crate::{
-    components::{ButtonVariant, button, field, labeled, muted, section, segmented},
+    components::{ButtonVariant, button, field, labeled, muted, segmented},
     store::{self, SyncStatus},
     strings,
 };
@@ -27,15 +27,18 @@ pub(crate) fn sync_settings() -> impl IntoElement {
         .w_full()
         .gap_2()
         .items_start()
-        .child(section(strings::SYNC))
-        .child(segmented(
-            vec![
-                (Provider::Off, strings::OFF),
-                (Provider::WebDav, strings::WEBDAV),
-                (Provider::S3, strings::S3),
-            ],
-            move || provider.get(),
-            move |p| provider.set(p),
+        .child(labeled(
+            strings::SYNC_PROVIDER,
+            false,
+            segmented(
+                vec![
+                    (Provider::Off, strings::OFF),
+                    (Provider::WebDav, strings::WEBDAV),
+                    (Provider::S3, strings::S3),
+                ],
+                move || provider.get(),
+                move |p| provider.set(p),
+            ),
         ))
         .child(dynamic(move || {
             let on = provider.get() != Provider::Off;

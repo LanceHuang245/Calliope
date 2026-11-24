@@ -27,7 +27,7 @@ use crate::{
         home::home_page,
         links::backlinks_panel,
         note::note_page,
-        settings::settings_page,
+        settings::{CATEGORIES, desktop_settings, settings_categories, settings_detail},
         status::status_bar,
         switcher::quick_switcher,
         trash::trash_page,
@@ -75,7 +75,10 @@ fn desktop() -> impl IntoElement {
         // trash for the note, as their back button does.
         on_back_press(|| {
             let route = untracked(store::route);
-            let page = matches!(route, Route::Graph | Route::Settings | Route::Trash);
+            let page = matches!(
+                route,
+                Route::Graph | Route::Settings | Route::SettingsDetail(_) | Route::Trash
+            );
             if page {
                 store::back_to_note();
             }
@@ -89,6 +92,11 @@ fn desktop() -> impl IntoElement {
         on_key("mod+\\", |_| store::toggle_sidebar());
         hide_system_title_bar();
     }
+    // Keep the settings sidebar mounted when only its selected category changes.
+    let workspace = computed(|| match store::route() {
+        Route::SettingsDetail(_) => Route::Settings,
+        route => route,
+    });
     // Three cards on the sidebar's color, as far from each other as from
     // the window's edges: the files, the workspace, the backlinks.
     let body = view()
@@ -98,16 +106,20 @@ fn desktop() -> impl IntoElement {
         .p_2()
         .pt_0()
         .bg(move || theme().sidebar)
-        .child(dynamic(move || (!store::sidebar_hidden()).then(sidebar)))
+        .child(dynamic(move || {
+            (!matches!(store::route(), Route::Settings | Route::SettingsDetail(_))
+                && !store::sidebar_hidden())
+            .then(sidebar)
+        }))
         .child(
             card()
                 .flex_1()
                 .overflow_hidden()
                 .child(dynamic(move || {
-                    let route = store::route();
+                    let route = workspace.get();
                     let has_vault = store::vault().is_some();
                     untracked(|| match (route, has_vault) {
-                        (Route::Settings, _) => settings_page().into_element(),
+                        (Route::Settings, _) => desktop_settings().into_element(),
                         (Route::Trash, true) => trash_page().into_element(),
                         (Route::Graph, true) => graph_page().into_element(),
                         (_, true) => note_page().into_element(),
@@ -240,7 +252,16 @@ fn stack() -> impl IntoElement {
                 .child(view().flex_1().p_safe_area().child(main)),
         )
         .child(when(shown(Route::Graph), graph_page))
-        .child(when(shown(Route::Settings), settings_page))
+        // Keep the category list under its detail page for the native back gesture.
+        .child(when(
+            || matches!(store::route(), Route::Settings | Route::SettingsDetail(_)),
+            settings_categories,
+        ))
+        .child(CATEGORIES.map(|category| {
+            when(shown(Route::SettingsDetail(category)), move || {
+                settings_detail(category)
+            })
+        }))
         .child(when(shown(Route::Trash), trash_page))
 }
 

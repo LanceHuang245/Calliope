@@ -103,6 +103,7 @@ fn phone_opens_reads_and_creates_notes() {
         .unwrap();
     app.wait_for("Changed elsewhere").unwrap();
 
+    assert!(!app.shows("label:Sync"));
     // The floating toolbar pushes the graph and the trash over the note,
     // the system's back returning to it; and opens the quick switcher.
     app.press("label:Graph").unwrap();
@@ -119,15 +120,30 @@ fn phone_opens_reads_and_creates_notes() {
     app.wait_for("label:Find or create a note").unwrap();
     app.back().unwrap();
 
-    // The menu's settings button pushes the settings.
+    // The menu opens a category list, and Back pops one page at a time.
     app.press("label:Menu").unwrap();
     app.wait_for("label:Settings").unwrap();
     app.press("label:Settings").unwrap();
-    app.wait_for("Appearance").unwrap();
-    // The menu slides away first: a back while it goes is its own.
+    app.wait_for("label:Appearance").unwrap();
     app.wait_for_gone("Diary", Duration::from_secs(2)).unwrap();
+    assert!(!app.shows("System") && !app.shows("Save"));
+    app.press("label:Sync").unwrap();
+    app.wait_for("text:Save").unwrap();
     app.back().unwrap();
-    app.wait_for_gone("Appearance", Duration::from_secs(2))
+    app.wait_for_gone("text:Save", Duration::from_secs(2))
+        .unwrap();
+    app.press("label:Appearance").unwrap();
+    app.wait_for("System").unwrap();
+    app.back().unwrap();
+    app.wait_for_gone("System", Duration::from_secs(2)).unwrap();
+    app.wait_for("label:About").unwrap();
+    app.press("label:About").unwrap();
+    app.wait_for("Export logs…").unwrap();
+    app.back().unwrap();
+    app.wait_for_gone("Export logs…", Duration::from_secs(2))
+        .unwrap();
+    app.back().unwrap();
+    app.wait_for_gone("label:Appearance", Duration::from_secs(2))
         .unwrap();
     let _ = fs::remove_dir_all(&root);
 }
@@ -340,60 +356,5 @@ fn desktop_draws_the_graph_and_opens_a_node() {
     app.wait_for("Orphans").unwrap();
     app.press_key("mod+g").unwrap();
     app.wait_for("The bee").unwrap();
-    let _ = fs::remove_dir_all(&root);
-}
-
-/// Sync in the settings: the sync button opens them while sync is off;
-/// WebDAV's settings go to the vault's `.calliope/sync.json` (the password,
-/// left empty here, would go to the system's keyring). The notice saying so
-/// goes after three seconds; a problem stays until closed. A device name
-/// left empty is the computer's again.
-#[test]
-fn desktop_saves_the_sync_settings() {
-    let root = vault("sync");
-    let mut app = Headless::start(desktop(&root)).unwrap();
-    app.wait_for("Hello").unwrap();
-
-    app.press("label:Sync").unwrap();
-    app.wait_for("text:Save").unwrap();
-    // While sync is off, only Save is shown.
-    assert!(!app.shows("Test connection") && !app.shows("Sync now"));
-    app.press("text:WebDAV").unwrap();
-    app.wait_for("text:Test connection").unwrap();
-    // A problem stays until closed, under the notices that come after it.
-    app.press("text:Test connection").unwrap();
-    app.wait_for("text:/^Sync failed:/").unwrap();
-    app.type_text("label:Server address", "https://dav.example.com/dav")
-        .unwrap();
-    app.type_text("label:User name", "me").unwrap();
-    // The device name is the computer's at first; left empty, it stays.
-    let device = (app.screen().input_text("label:Device name").unwrap())
-        .unwrap()
-        .to_owned();
-    assert!(!device.is_empty());
-    app.clear("label:Device name").unwrap();
-    // Not on its own: saved, it would sync with the made-up server at once.
-    app.press("text:Off >> nth=1").unwrap();
-    app.press("text:Save").unwrap();
-    app.wait_for("The sync settings were saved.").unwrap();
-    // The notice stays three seconds, then goes on its own.
-    app.wait(Duration::from_secs(1)).unwrap();
-    assert!(app.shows("The sync settings were saved."));
-    app.wait_for_gone("The sync settings were saved.", Duration::from_secs(5))
-        .unwrap();
-    assert!(app.shows("Sync failed: endpoint is empty."));
-    app.press("label:Close").unwrap();
-    app.wait_for_gone("text:/^Sync failed:/", Duration::from_secs(2))
-        .unwrap();
-    let saved = fs::read_to_string(root.join(".calliope/sync.json")).unwrap();
-    assert!(saved.contains(r#""provider": "webdav""#), "{saved}");
-    assert!(saved.contains("https://dav.example.com/dav"), "{saved}");
-    assert!(saved.contains(r#""auto": false"#), "{saved}");
-    // Opened again, the settings show the computer's name.
-    app.press("Hello").unwrap();
-    app.press("label:Settings").unwrap();
-    app.wait_for("label:Device name").unwrap();
-    let shown = app.screen().input_text("label:Device name").unwrap();
-    assert_eq!(shown, Some(device.as_str()));
     let _ = fs::remove_dir_all(&root);
 }

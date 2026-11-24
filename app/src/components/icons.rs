@@ -28,6 +28,9 @@ pub(crate) const MENU: &str = r#"<path d="M4 12h16"/><path d="M4 18h16"/><path d
 pub(crate) const X: &str = r#"<path d="M18 6 6 18"/><path d="m6 6 12 12"/>"#;
 pub(crate) const REFRESH: &str = r#"<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>"#;
 
+pub(crate) const SUN: &str = r#"<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42m0-14.14-1.42 1.42m-11.3 11.3-1.42 1.42"/>"#;
+pub(crate) const INFO: &str = r#"<circle cx="12" cy="12" r="10"/><path d="M12 16v-4m0-4h.01"/>"#;
+
 /// The icon of `paths` (one of the constants above), 16 points square.
 pub(crate) fn icon(paths: &'static str) -> Svg {
     let markup = format!(

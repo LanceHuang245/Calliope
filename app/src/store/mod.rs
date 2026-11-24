@@ -74,6 +74,13 @@ pub(crate) enum Mode {
     Read,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(crate) enum SettingsCategory {
+    Appearance,
+    Sync,
+    About,
+}
+
 /// What the main area shows: on a phone the whole screen, on a desktop the
 /// workspace beside the sidebar (`Home` and `Note` both show the open note,
 /// the home page without one).
@@ -84,6 +91,7 @@ pub(crate) enum Route {
     Note,
     Graph,
     Settings,
+    SettingsDetail(SettingsCategory),
     /// The vault's trash, opened from the settings.
     Trash,
 }
