@@ -13,7 +13,9 @@ use nsh_core::{
 };
 
 use self::icons::icon;
-pub(crate) use self::page::{TOOLBAR_ROOM, fab, floating_surface, floating_toolbar, page};
+pub(crate) use self::page::{
+    TOOLBAR_ROOM, fab, floating_surface, floating_toolbar, page, scroll_page,
+};
 use crate::strings;
 
 /// A quiet text button: no surface until hovered or pressed.

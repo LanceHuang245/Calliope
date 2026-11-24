@@ -7,7 +7,7 @@ use nsh_base::theme;
 use nsh_core::prelude::*;
 
 use crate::{
-    components::{ButtonVariant, action, button, muted, page},
+    components::{ButtonVariant, action, button, muted, scroll_page},
     store, strings,
 };
 
@@ -31,8 +31,7 @@ pub(crate) fn trash_page() -> impl IntoElement {
                 false => list(items).into_element(),
             })
         }));
-    let content = scroll().flex_1().child(content);
-    page(strings::TRASH, store::back_to_note, None, content)
+    scroll_page(strings::TRASH, store::back_to_note, content)
 }
 
 fn list(items: Vec<Trashed>) -> impl IntoElement {

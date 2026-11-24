@@ -30,6 +30,27 @@ pub(crate) fn page(
     }
 }
 
+/// A [`page`] whose `content` scrolls: on iOS its title is large and
+/// shrinks into the header as the content scrolls (MVP 5.4), which takes
+/// the scroll view straight in the page. Only iOS: nsh lays a large
+/// title's content out under the header everywhere, and only UIKit moves
+/// it clear.
+pub(crate) fn scroll_page(
+    title: &'static str,
+    back: impl Fn() + 'static,
+    content: impl IntoElement,
+) -> AnyElement {
+    let content = scroll().flex_1().child(content);
+    if is_desktop() {
+        return page(title, back, None, content);
+    }
+    (nav_page().title(title).header_large_title(os() == Os::Ios))
+        .pb_safe_area()
+        .on_dismiss(back)
+        .child(content)
+        .into_element()
+}
+
 /// A page's top bar, as the note's: the button that goes `back`, then the
 /// `title` taking the room left; a page adds its own buttons after it.
 fn page_bar(title: &'static str, back: impl Fn() + 'static) -> View {

@@ -4,7 +4,7 @@ use nsh_core::prelude::*;
 
 use super::sync::sync_settings;
 use crate::{
-    components::{action, muted, page, section, segmented},
+    components::{action, muted, scroll_page, section, segmented},
     store::{self, Theme},
     strings,
 };
@@ -38,6 +38,5 @@ pub(crate) fn settings_page() -> impl IntoElement {
         .child(muted(strings::version()))
         .child(muted(strings::LICENSE))
         .child(action(strings::EXPORT_LOGS, store::export_logs));
-    let content = scroll().flex_1().child(content);
-    page(strings::SETTINGS, store::back_to_note, None, content)
+    scroll_page(strings::SETTINGS, store::back_to_note, content)
 }
