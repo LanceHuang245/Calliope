@@ -12,7 +12,12 @@ use nsh_base::{
     text_view::{CustomNode, Image},
     theme,
 };
-use nsh_core::{keymap::When, prelude::*};
+use nsh_core::{
+    keymap::When,
+    mobile::{SegmentedControlItem, segmented_control},
+    platform::Os,
+    prelude::*,
+};
 
 use super::{
     home::{home_page, menu_button, phone_toolbar},
@@ -107,6 +112,21 @@ fn header() -> impl IntoElement {
         ],
         false => vec![(Mode::Edit, strings::EDIT), (Mode::Read, strings::READ)],
     };
+    // Use UIKit on an iPhone or narrow iPad, sharing the app's mode state.
+    let mode_picker = if cfg!(target_os = "ios") && os() == Os::Ios && !desktop_layout() {
+        segmented_control()
+            .items(vec![
+                SegmentedControlItem::new(strings::EDIT),
+                SegmentedControlItem::new(strings::READ),
+            ])
+            .selected_index(|| u32::from(store::mode() == Mode::Read))
+            .on_change(|index: &u32| {
+                store::set_mode(if *index == 0 { Mode::Edit } else { Mode::Read })
+            })
+            .into_element()
+    } else {
+        segmented(modes, store::mode, store::set_mode).into_element()
+    };
     view()
         .flex_row()
         .items_center()
@@ -115,7 +135,7 @@ fn header() -> impl IntoElement {
         .py_2()
         .child((!desktop_layout()).then(menu_button))
         .child(title())
-        .child(segmented(modes, store::mode, store::set_mode))
+        .child(mode_picker)
 }
 
 /// The note's title, edited in place: Return or leaving it renames the

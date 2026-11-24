@@ -120,9 +120,21 @@ pub(crate) fn sync_button() -> impl IntoElement {
     })
 }
 
-/// The phone's menu button: the files slide in from the left.
+/// The phone's menu button opens the same file drawer on both platforms.
 pub(crate) fn menu_button() -> impl IntoElement {
-    icon_button(icons::MENU, strings::MENU, || store::set_menu_open(true))
+    const MENU: ToolbarAction = ToolbarAction {
+        icon: icons::MENU,
+        symbol: "line.3.horizontal",
+        label: strings::MENU,
+        selected: || false,
+        visible: || true,
+        press: || store::set_menu_open(true),
+    };
+    if cfg!(target_os = "ios") && os() == Os::Ios {
+        glass_toolbar(&[MENU]).into_element()
+    } else {
+        icon_button(MENU.icon, MENU.label, MENU.press).into_element()
+    }
 }
 
 /// The phones' floating toolbar, over the home page and the note (the

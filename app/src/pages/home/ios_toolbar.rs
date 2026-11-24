@@ -24,14 +24,18 @@ pub(crate) fn register(components: &Components) {
         GLASS_TOOLBAR,
         Rc::new(|context| {
             let mtm = MainThreadMarker::new().expect("UIKit mounts on the main thread");
-            // Resolve the class dynamically so the app can still launch on earlier iOS.
-            let class = AnyClass::get(c"UIGlassEffect").expect("glass toolbar mounts on iOS 26");
-            // SAFETY: This is UIGlassEffect's UIKit factory and interactive property.
-            let effect: Retained<UIVisualEffect> =
-                unsafe { msg_send![class, effectWithStyle: 0_isize] };
-            let _: () = unsafe { msg_send![&*effect, setInteractive: Bool::YES] };
-            let glass =
-                UIVisualEffectView::initWithEffect(UIVisualEffectView::alloc(mtm), Some(&effect));
+            // Earlier iOS uses the same UIKit buttons without a glass effect.
+            let effect = AnyClass::get(c"UIGlassEffect").map(|class| {
+                // SAFETY: This is UIGlassEffect's UIKit factory and interactive property.
+                let effect: Retained<UIVisualEffect> =
+                    unsafe { msg_send![class, effectWithStyle: 0_isize] };
+                let _: () = unsafe { msg_send![&*effect, setInteractive: Bool::YES] };
+                effect
+            });
+            let glass = UIVisualEffectView::initWithEffect(
+                UIVisualEffectView::alloc(mtm),
+                effect.as_deref(),
+            );
             glass.setUserInteractionEnabled(true);
             glass.layer().setCornerRadius(f64::from(BAR_HEIGHT / 2.0));
             glass.setClipsToBounds(true);
