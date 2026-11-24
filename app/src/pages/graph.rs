@@ -11,9 +11,8 @@
 use std::{cell::Cell, collections::HashSet, f32::consts::TAU, rc::Rc};
 
 use calliope_core::graph::Graph;
-use nsh_base::{button, theme};
+use nsh_base::{MenuButtonItem, button, menu_button, theme};
 use nsh_core::{
-    GlassEffect,
     canvas::{CanvasNode, CanvasTextAlign},
     color::Hsla,
     element::AdaptiveColor,
@@ -21,7 +20,10 @@ use nsh_core::{
     prelude::*,
 };
 
-use crate::{components::page, store, strings};
+use crate::{
+    components::{icons, page},
+    store, strings,
+};
 
 /// The room around the outermost nodes, for their labels.
 const MARGIN: f32 = 80.0;
@@ -36,8 +38,9 @@ const ZOOM: f32 = 200.0;
 type Laid = Rc<(Graph, Vec<(f32, f32)>)>;
 
 pub(crate) fn graph_page() -> impl IntoElement {
-    let orphans = signal(false);
-    let missing = signal(false);
+    let mobile = matches!(os(), Os::Ios | Os::Android);
+    let orphans = signal(mobile);
+    let missing = signal(mobile);
     // Laid out off the UI thread, again when the links or the options change.
     let laid = signal(None::<Laid>);
     effect(move || {
@@ -52,43 +55,60 @@ pub(crate) fn graph_page() -> impl IntoElement {
             }
         });
     });
-    let options = view()
-        .flex_row()
-        .gap_2()
-        .child(option(strings::ORPHANS, orphans))
-        .child(option(strings::UNCREATED, missing));
+    let options = if mobile {
+        mobile_filters(orphans, missing).into_element()
+    } else {
+        view()
+            .flex_row()
+            .gap_2()
+            .child(option(strings::ORPHANS, orphans))
+            .child(option(strings::UNCREATED, missing))
+            .into_element()
+    };
     let diagram = dynamic(move || laid.get().map(|laid| untracked(|| diagram(laid))));
-    page(
-        strings::GRAPH,
-        store::back_to_note,
-        Some(options.into_element()),
-        diagram,
-    )
+    page(strings::GRAPH, store::back_to_note, Some(options), diagram)
 }
 
-/// Each filter has its own selection, shown as a glass pill on iOS 26.
+/// The system menu reads both filters independently each time it opens.
+fn mobile_filters(orphans: Signal<bool>, missing: Signal<bool>) -> impl IntoElement {
+    menu_button()
+        .test_id("graph-filters")
+        .accessibility_label(strings::FILTERS)
+        .items(move || {
+            vec![
+                MenuButtonItem::new("orphans", strings::ORPHANS).checked(orphans.get()),
+                MenuButtonItem::new("uncreated", strings::UNCREATED).checked(missing.get()),
+            ]
+        })
+        .on_select(move |id: &SharedString| match id.as_ref() {
+            "orphans" => orphans.update(|on| *on = !*on),
+            "uncreated" => missing.update(|on| *on = !*on),
+            _ => {}
+        })
+        .w(px(44.0))
+        .h(px(44.0))
+        .items_center()
+        .justify_center()
+        .child(
+            icons::icon(icons::FILTER)
+                .w(px(20.0))
+                .h(px(20.0))
+                .pointer_events(PointerEvents::None)
+                .text_color(move || theme().foreground),
+        )
+}
+
 fn option(label: &'static str, on: Signal<bool>) -> impl IntoElement {
-    let option = button()
+    button()
         .px_2()
         .py_1()
         .accessibility_label(label)
         .selected(move || on.get())
         .on_press(move || on.update(|on| *on = !*on))
-        .child(text(label).text_sm().text_color(move || theme().foreground));
-    if os() == Os::Ios && os_version().0 >= 26 {
-        option.rounded_full().style_when(
-            move || on.get(),
-            |s| {
-                s.glass_effect(GlassEffect::Regular)
-                    .glass_tint_color(theme().accent)
-            },
-        )
-    } else {
-        option
-            .rounded(move || theme().radius)
-            .hover(|s| s.bg(theme().accent))
-            .style_when(move || on.get(), |s| s.bg(theme().accent))
-    }
+        .child(text(label).text_sm().text_color(move || theme().foreground))
+        .rounded(move || theme().radius)
+        .hover(|s| s.bg(theme().accent))
+        .style_when(move || on.get(), |s| s.bg(theme().accent))
 }
 
 fn diagram(laid: Laid) -> impl IntoElement {

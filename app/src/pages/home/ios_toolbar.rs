@@ -18,41 +18,47 @@ use objc2_ui_kit::{
     UIImage, UIView, UIVisualEffect, UIVisualEffectView,
 };
 
-use super::{BAR_HEIGHT, GLASS_BUTTON, GLASS_INSET, GLASS_STRIDE, GLASS_TOOLBAR};
+use super::{GLASS_BUTTON, GLASS_INSET, GLASS_MENU, GLASS_STRIDE, GLASS_TOOLBAR};
 
 pub(crate) fn register(components: &Components) {
-    components.register(
-        GLASS_TOOLBAR,
-        Rc::new(|context| {
-            let mtm = MainThreadMarker::new().expect("UIKit mounts on the main thread");
-            // Earlier iOS uses the same UIKit buttons without a glass effect.
-            let effect = AnyClass::get(c"UIGlassEffect").map(|class| {
-                // SAFETY: This is UIGlassEffect's UIKit factory and interactive property.
-                let effect: Retained<UIVisualEffect> =
-                    unsafe { msg_send![class, effectWithStyle: 0_isize] };
-                let _: () = unsafe { msg_send![&*effect, setInteractive: Bool::YES] };
-                effect
-            });
-            let glass = UIVisualEffectView::initWithEffect(
-                UIVisualEffectView::alloc(mtm),
-                effect.as_deref(),
-            );
-            glass.setUserInteractionEnabled(true);
-            glass.layer().setCornerRadius(f64::from(BAR_HEIGHT / 2.0));
-            glass.setClipsToBounds(true);
-            Box::new(GlassToolbar {
-                glass,
-                buttons: Vec::new(),
-                context,
-            })
-        }),
-    );
+    for (name, inset) in [(GLASS_TOOLBAR, GLASS_INSET), (GLASS_MENU, 0.0)] {
+        components.register(
+            name,
+            Rc::new(move |context| {
+                let mtm = MainThreadMarker::new().expect("UIKit mounts on the main thread");
+                // Earlier iOS uses the same UIKit buttons without a glass effect.
+                let effect = AnyClass::get(c"UIGlassEffect").map(|class| {
+                    // SAFETY: This is UIGlassEffect's UIKit factory and interactive property.
+                    let effect: Retained<UIVisualEffect> =
+                        unsafe { msg_send![class, effectWithStyle: 0_isize] };
+                    let _: () = unsafe { msg_send![&*effect, setInteractive: Bool::YES] };
+                    effect
+                });
+                let glass = UIVisualEffectView::initWithEffect(
+                    UIVisualEffectView::alloc(mtm),
+                    effect.as_deref(),
+                );
+                glass.setUserInteractionEnabled(true);
+                glass
+                    .layer()
+                    .setCornerRadius(f64::from(GLASS_BUTTON / 2.0 + inset));
+                glass.setClipsToBounds(true);
+                Box::new(GlassToolbar {
+                    glass,
+                    buttons: Vec::new(),
+                    context,
+                    inset,
+                })
+            }),
+        );
+    }
 }
 
 struct GlassToolbar {
     glass: Retained<UIVisualEffectView>,
     buttons: Vec<(u64, Retained<UIButton>)>,
     context: ComponentContext,
+    inset: f32,
 }
 
 impl NativeComponent for GlassToolbar {
@@ -101,8 +107,8 @@ impl GlassToolbar {
         let button = UIButton::buttonWithType(UIButtonType::System, mtm);
         button.setFrame(CGRect::new(
             CGPoint::new(
-                f64::from(GLASS_INSET + slot as f32 * GLASS_STRIDE),
-                f64::from(GLASS_INSET),
+                f64::from(self.inset + slot as f32 * GLASS_STRIDE),
+                f64::from(self.inset),
             ),
             CGSize::new(f64::from(GLASS_BUTTON), f64::from(GLASS_BUTTON)),
         ));

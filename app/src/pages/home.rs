@@ -21,6 +21,7 @@ mod ios_toolbar;
 pub(crate) use ios_toolbar::register as register_ios_toolbar;
 
 const GLASS_TOOLBAR: &str = "calliope.glass-toolbar";
+const GLASS_MENU: &str = "calliope.glass-menu";
 const GLASS_INSET: f32 = 4.0;
 const GLASS_BUTTON: f32 = 44.0;
 const GLASS_STRIDE: f32 = GLASS_BUTTON + 4.0;
@@ -131,7 +132,7 @@ pub(crate) fn menu_button() -> impl IntoElement {
         press: || store::set_menu_open(true),
     };
     if cfg!(target_os = "ios") && os() == Os::Ios {
-        glass_toolbar(&[MENU]).into_element()
+        glass_toolbar(&[MENU], true).into_element()
     } else {
         icon_button(MENU.icon, MENU.label, MENU.press).into_element()
     }
@@ -191,8 +192,8 @@ pub(crate) fn phone_toolbar() -> impl IntoElement {
         || {
             if cfg!(target_os = "ios") && os() == Os::Ios && os_version().0 >= 26 {
                 return floating_toolbar(
-                    glass_toolbar(&ACTIONS),
-                    glass_toolbar(&[NEW_NOTE_ACTION]),
+                    glass_toolbar(&ACTIONS, false),
+                    glass_toolbar(&[NEW_NOTE_ACTION], false),
                     true,
                 )
                 .into_element();
@@ -216,13 +217,15 @@ pub(crate) fn phone_toolbar() -> impl IntoElement {
     )
 }
 
-fn glass_toolbar(actions: &'static [ToolbarAction]) -> impl IntoElement {
-    native(GLASS_TOOLBAR)
+fn glass_toolbar(actions: &'static [ToolbarAction], compact: bool) -> impl IntoElement {
+    // The standalone menu drops the capsule's padding and keeps its 44-point touch target.
+    let inset = if compact { 0.0 } else { GLASS_INSET };
+    native(if compact { GLASS_MENU } else { GLASS_TOOLBAR })
         .w(move || {
             let shown = actions.iter().filter(|action| (action.visible)()).count();
-            px(shown as f32 * GLASS_STRIDE - (GLASS_STRIDE - GLASS_BUTTON) + 2.0 * GLASS_INSET)
+            px(shown as f32 * GLASS_STRIDE - (GLASS_STRIDE - GLASS_BUTTON) + 2.0 * inset)
         })
-        .h(px(BAR_HEIGHT))
+        .h(px(if compact { GLASS_BUTTON } else { BAR_HEIGHT }))
         .prop("items", move || {
             serde_json::Value::Array(
                 actions

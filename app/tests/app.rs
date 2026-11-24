@@ -114,13 +114,12 @@ fn phone_opens_reads_and_creates_notes() {
     // The floating toolbar pushes the graph and the trash over the note,
     // the system's back returning to it; and opens the quick switcher.
     app.press("label:Graph").unwrap();
-    app.wait_for("label:Orphans").unwrap();
-    app.press("label:Orphans").unwrap();
-    app.press("label:Uncreated notes").unwrap();
-    assert!(app.screen().selected("label:Orphans").unwrap());
-    assert!(app.screen().selected("label:Uncreated notes").unwrap());
+    app.wait_for("id:graph-filters").unwrap();
+    assert!(!app.shows("text:Filters"));
+    assert!(!app.shows("Orphans"));
+    assert!(!app.shows("Uncreated notes"));
     app.back().unwrap();
-    app.wait_for_gone("Orphans", Duration::from_secs(2))
+    app.wait_for_gone("id:graph-filters", Duration::from_secs(2))
         .unwrap();
     app.press("label:Trash").unwrap();
     app.wait_for("The trash is empty.").unwrap();
