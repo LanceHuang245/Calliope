@@ -20,6 +20,7 @@ pub enum Provider {
 #[serde(default)]
 pub struct Config {
     pub provider: Provider,
+    pub encrypted: bool,
     /// The WebDAV server's address, or the S3 endpoint.
     pub endpoint: String,
     /// The WebDAV user name, or the S3 access key id.
@@ -43,6 +44,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             provider: Provider::Off,
+            encrypted: false,
             endpoint: String::new(),
             user: String::new(),
             root: String::new(),
@@ -74,7 +76,8 @@ impl Config {
             root,
             ..
         } = self;
-        format!("{provider:?} {endpoint} {user} {bucket} {root}")
+        let mode = if self.encrypted { " crypt" } else { "" };
+        format!("{provider:?} {endpoint} {user} {bucket} {root}{mode}")
     }
 
     pub fn save(&self, vault: &Vault) -> std::io::Result<()> {

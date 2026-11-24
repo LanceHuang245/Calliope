@@ -11,20 +11,36 @@
 //! - [`remote`] and [`local`]: the two sides, their files and versions.
 
 pub mod config;
+mod crypt;
 mod engine;
 mod local;
 mod plan;
 mod remote;
 mod state;
+mod sync_remote;
 #[cfg(test)]
 mod tests;
 mod tls;
 
 pub use config::{Config, Provider};
-pub use engine::{Report, sync, test};
+pub use engine::{Report, prepare, sync, test};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    #[error("the encryption passphrase is incorrect or the remote verification file is damaged")]
+    WrongPassphrase,
+    #[error("an encryption passphrase is required")]
+    MissingPassphrase,
+    #[error("this encrypted remote has not been initialized by Calliope")]
+    UninitializedRemote,
+    #[error("this remote is encrypted; select encrypted mode")]
+    EncryptedRemote,
+    #[error("choose a new remote folder or prefix for encryption")]
+    RemoteNotEmpty,
+    #[error("invalid encrypted data or path")]
+    InvalidCiphertext,
+    #[error("could not get randomness for encryption")]
+    EncryptionRandomness,
     #[error("{}", describe(.0))]
     Remote(#[from] opendal::Error),
     #[error("{0}")]

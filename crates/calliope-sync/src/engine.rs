@@ -10,14 +10,15 @@ use std::{
 };
 
 use calliope_core::vault::Vault;
-use opendal::{ErrorKind, Operator};
+use opendal::ErrorKind;
 
 use crate::{
     Config, Result,
     local::{self, Stamp},
     plan::{self, Action, Side},
-    remote::{self, Version},
+    remote::Version,
     state::{self, Record, State},
+    sync_remote::Remote,
 };
 
 /// What a run did.
@@ -31,8 +32,24 @@ pub struct Report {
 }
 
 /// Checks that the remote `config` names can be listed with `secret`.
-pub async fn test(config: &Config, secret: &str) -> Result<()> {
-    remote::list(&remote::operator(config, secret).await?)
+pub async fn test(config: &Config, secret: &str, passphrase: &str, allow_new: bool) -> Result<()> {
+    Remote::connect(config, secret, passphrase, allow_new, false)
+        .await?
+        .list()
+        .await
+        .map(drop)
+}
+
+/// Prepare a configured remote, creating its verifier only on explicit setup.
+pub async fn prepare(
+    config: &Config,
+    secret: &str,
+    passphrase: &str,
+    allow_new: bool,
+) -> Result<()> {
+    Remote::connect(config, secret, passphrase, allow_new, true)
+        .await?
+        .list()
         .await
         .map(drop)
 }
@@ -45,13 +62,14 @@ pub async fn sync(
     vault: &Vault,
     config: &Config,
     secret: &str,
+    passphrase: &str,
     confirmed: bool,
     progress: impl Fn(usize, usize) + Sync,
 ) -> Result<Report> {
-    let op = remote::operator(config, secret).await?;
+    let remote = Remote::connect(config, secret, passphrase, false, false).await?;
     run(
         vault,
-        &op,
+        &remote,
         &config.remote_id(),
         &config.device,
         confirmed,
@@ -62,13 +80,13 @@ pub async fn sync(
 
 pub(crate) async fn run(
     vault: &Vault,
-    op: &Operator,
+    store: &Remote,
     remote_id: &str,
     device: &str,
     confirmed: bool,
     progress: impl Fn(usize, usize) + Sync,
 ) -> Result<Report> {
-    let remote = remote::list(op).await?;
+    let remote = store.list().await?;
     let local = local::list(vault)?;
     let mut state = state::load(vault, remote_id);
     // One side empty and the other not (a new device, a remote folder
@@ -88,7 +106,7 @@ pub(crate) async fn run(
             (Some(v), Some(r)) if v.same(&r.remote) => Side::Same,
             // Recorded too soon after it was written: its content tells.
             (Some(v), Some(r)) if r.unsure() => {
-                let data = remote::retry(|| op.read(path)).await?.to_vec();
+                let data = store.read(path).await?;
                 match local::hash(&data) == r.hash {
                     true => {
                         r.remote = state::kept_version(v.clone());
@@ -107,7 +125,7 @@ pub(crate) async fn run(
 
     let mut run = Run {
         vault,
-        op,
+        store,
         device,
         local,
         remote,
@@ -156,7 +174,7 @@ fn local_side(
 
 struct Run<'a> {
     vault: &'a Vault,
-    op: &'a Operator,
+    store: &'a Remote,
     device: &'a str,
     /// Both sides as listed.
     local: HashMap<String, Stamp>,
@@ -174,7 +192,7 @@ impl Run<'_> {
             // which sees it changed: never overwritten or deleted unseen.
             Action::Download | Action::DeleteLocal if self.touched(path) => {}
             Action::Download => {
-                let data = remote::retry(|| self.op.read(path)).await?.to_vec();
+                let data = self.store.read(path).await?;
                 self.vault.write_bytes(path, &data)?;
                 self.record(path, &data, self.remote[path].clone());
                 self.report.downloaded += 1;
@@ -187,10 +205,13 @@ impl Run<'_> {
             Action::DeleteRemote => {
                 // Likewise a remote file changed since the listing: the next
                 // run downloads it.
-                match remote::retry(|| self.op.stat(path)).await {
-                    Ok(meta) if !Version::of(&meta).same(&self.remote[path]) => return Ok(()),
-                    Err(e) if e.kind() != ErrorKind::NotFound => return Err(e.into()),
-                    _ => remote::retry(|| self.op.delete(path)).await?,
+                match self.store.version(path).await {
+                    Ok(version) if !version.same(&self.remote[path]) => return Ok(()),
+                    Err(crate::Error::Remote(e)) if e.kind() == ErrorKind::NotFound => {
+                        self.store.delete(path).await?;
+                    }
+                    Err(e) => return Err(e),
+                    _ => self.store.delete(path).await?,
                 }
                 self.state.remove(path);
                 self.report.deleted += 1;
@@ -224,8 +245,7 @@ impl Run<'_> {
         };
         let data = fs::read(self.vault.abs(path))?;
         let hash = local::hash(&data);
-        remote::retry(|| self.op.write(path, data.clone())).await?;
-        let remote = Version::of(&remote::retry(|| self.op.stat(path)).await?);
+        let remote = self.store.write(path, data).await?;
         let record = Record::new(hash, stamp, remote);
         self.state.insert(path.to_owned(), record);
         self.report.uploaded += 1;
@@ -237,7 +257,7 @@ impl Run<'_> {
     /// with the time and this device (`Note (conflict 2026-11-06 1530
     /// Pixel 9).md`), and the local one takes its place on the remote.
     async fn conflict(&mut self, path: &str) -> Result<()> {
-        let theirs = remote::retry(|| self.op.read(path)).await?.to_vec();
+        let theirs = self.store.read(path).await?;
         let mine = fs::read(self.vault.abs(path))?;
         let mut remote = self.remote[path].clone();
         if theirs != mine {
@@ -245,8 +265,7 @@ impl Run<'_> {
             let tag = format!("conflict {now} {}", self.device);
             let copy = self.vault.save_copy(path, tag.trim(), &theirs)?;
             self.upload(&copy).await?;
-            remote::retry(|| self.op.write(path, mine.clone())).await?;
-            remote = Version::of(&remote::retry(|| self.op.stat(path)).await?);
+            remote = self.store.write(path, mine.clone()).await?;
             self.report.conflicts.push(copy);
         }
         self.record(path, &mine, remote);

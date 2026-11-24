@@ -15,6 +15,9 @@ use nsh_core::{notifications::Notification, platform::Lifecycle};
 use super::{note::save, *};
 use crate::secrets;
 
+mod setup;
+pub(crate) use setup::{create_from_sync, save_sync, test_sync};
+
 /// Edits sync this long after the last one.
 const AFTER_EDITS: Duration = Duration::from_secs(30);
 /// Opening the vault or coming back to the app syncs, unless it synced
@@ -75,6 +78,22 @@ fn account(vault: &Vault) -> String {
     vault.root().display().to_string()
 }
 
+/// Scope the passphrase to the vault and destination so a failed setup for
+/// another remote cannot replace the credential used by an existing one.
+fn crypt_account(account: &str, config: &Config) -> String {
+    format!(
+        "{account}
+{:?}
+{}
+{}
+{}",
+        config.provider,
+        config.endpoint.trim_end_matches('/'),
+        config.bucket,
+        config.root.trim_matches('/')
+    )
+}
+
 /// Reads the settings of the vault just opened, then syncs it.
 pub(super) fn load_sync() {
     let Some(vault) = untracked(vault) else {
@@ -99,15 +118,7 @@ fn show_secret_in_file(vault: &Vault) {
     ));
 }
 
-/// Keeps `config` for the open vault, and `secret` (the password or secret
-/// key) unless it is empty, which keeps the one before.
-pub(crate) fn save_sync(config: Config, secret: &str) {
-    if keep_sync(config, secret) {
-        inform(strings::SYNC_SAVED);
-    }
-}
-
-/// [`save_sync`] without saying so: whether the settings were kept.
+/// Persists the sync settings and reports whether they were kept.
 fn keep_sync(mut config: Config, secret: &str) -> bool {
     let Some(vault) = untracked(vault) else {
         return false;
@@ -129,54 +140,6 @@ fn keep_sync(mut config: Config, secret: &str) -> bool {
     }
     set(SyncConfig(config));
     true
-}
-
-/// The phone's vault `name` made from sync (MVP phase 4): the connection
-/// `config` and `secret` give is checked first, so wrong settings make no
-/// vault; then the vault is made, keeps the settings and syncs, which
-/// downloads everything into it (an empty side is a first sync).
-pub(crate) fn create_from_sync(name: String, config: Config, secret: String) {
-    if name.trim().is_empty() || untracked(connecting) {
-        return;
-    }
-    set(Connecting(true));
-    let (checked, key) = (config.clone(), secret.clone());
-    spawn_task(async move {
-        let tested = background(async move { calliope_sync::test(&checked, &key).await });
-        let tested = tested.await;
-        set(Connecting(false));
-        match tested {
-            Ok(Ok(())) => {}
-            Ok(Err(e)) => return notify(strings::sync_failed(&e)),
-            Err(e) => return notify(e),
-        }
-        create_vault(&name);
-        if keep_sync(config, &secret) {
-            start(false);
-        }
-    });
-}
-
-/// Checks the settings being edited, `secret` empty for the saved one.
-pub(crate) fn test_sync(config: Config, secret: String) {
-    let Some(vault) = untracked(vault) else {
-        return;
-    };
-    let account = account(&vault);
-    spawn_task(async move {
-        let tested = background(async move {
-            let secret = match secret.is_empty() {
-                true => secrets::get(&account).unwrap_or_default(),
-                false => secret,
-            };
-            calliope_sync::test(&config, &secret).await
-        });
-        match tested.await {
-            Ok(Ok(())) => inform(strings::SYNC_WORKS),
-            Ok(Err(e)) => notify(strings::sync_failed(&e)),
-            Err(e) => notify(e),
-        }
-    });
 }
 
 /// The sync button; it opens the settings while sync is off.
@@ -237,11 +200,14 @@ fn start(confirmed: bool) {
     let Some(vault) = untracked(vault) else {
         return;
     };
-    if RUNNING.get() || config.provider == Provider::Off {
+    if RUNNING.get() || untracked(connecting) || config.provider == Provider::Off {
         return;
     }
-    // What is typed so far goes with it.
-    save();
+    // Encrypted sync checks the passphrase before writing vault files.
+    // Its pending editor changes are still handled by the normal autosave.
+    if !config.encrypted {
+        save();
+    }
     EDITED.set(None);
     RUNNING.set(true);
     for n in &PROGRESS {
@@ -252,10 +218,22 @@ fn start(confirmed: bool) {
     spawn_task(async move {
         let run = background(async move {
             let secret = secrets::get(&account).unwrap_or_default();
-            calliope_sync::sync(&vault, &config, &secret, confirmed, |done, total| {
-                PROGRESS[0].store(done, Ordering::Relaxed);
-                PROGRESS[1].store(total, Ordering::Relaxed);
-            })
+            let passphrase = if config.encrypted {
+                secrets::passphrase(&crypt_account(&account, &config)).unwrap_or_default()
+            } else {
+                String::new()
+            };
+            calliope_sync::sync(
+                &vault,
+                &config,
+                &secret,
+                &passphrase,
+                confirmed,
+                |done, total| {
+                    PROGRESS[0].store(done, Ordering::Relaxed);
+                    PROGRESS[1].store(total, Ordering::Relaxed);
+                },
+            )
             .await
         });
         let result = run.await;

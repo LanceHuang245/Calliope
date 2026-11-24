@@ -5,12 +5,14 @@
 //! `CALLIOPE_TEST_S3` (`endpoint bucket user secret`) name, when set (CI
 //! runs them in Docker).
 
+mod encrypted;
+
 use std::{collections::BTreeMap, fs};
 
 use calliope_core::vault::Vault;
 use opendal::{Operator, services::Fs};
 
-use crate::{Config, Error, Provider, Report, engine::run, local, remote};
+use crate::{Config, Error, Provider, Report, engine::run, local, remote, sync_remote::Remote};
 
 /// A device's vault, empty, for `test`.
 fn device(test: &str, name: &str) -> Vault {
@@ -27,56 +29,85 @@ fn folder(test: &str, name: &str) -> std::path::PathBuf {
     path
 }
 
-/// Every remote to run `test` on, empty.
-async fn remotes(test: &str) -> Vec<Operator> {
+const PASSPHRASE: &str = "Phase 5 compatibility test";
+
+/// Run the same sync scenarios on plain and encrypted remotes, both on disk
+/// and against the servers CI supplies.
+async fn remotes(test: &str) -> Vec<Remote> {
+    let mut remotes = Vec::new();
+    for encrypted in [false, true] {
+        let mode = if encrypted { "crypt" } else { "plain" };
+        let folder = folder(test, mode);
+        let op = Operator::new(Fs::default().root(&folder.to_string_lossy())).unwrap();
+        remotes.push(if encrypted {
+            Remote::encrypted_fs(op, PASSPHRASE).await.unwrap()
+        } else {
+            Remote::plain(op)
+        });
+
+        for (mut config, secret) in server_configs(&format!("{test}-{mode}")) {
+            config.encrypted = encrypted;
+            let op = remote::operator(&config, &secret).await.unwrap();
+            op.delete_with("").recursive(true).await.unwrap();
+            remotes.push(
+                Remote::connect(&config, &secret, PASSPHRASE, true, true)
+                    .await
+                    .unwrap(),
+            );
+        }
+    }
+    remotes
+}
+
+fn server_configs(test: &str) -> Vec<(Config, String)> {
     let root = format!("calliope-{test}-{}", std::process::id());
-    let env = |name| std::env::var(name).ok();
-    let folder = folder(test, "remote");
-    let mut ops = vec![Operator::new(Fs::default().root(&folder.to_string_lossy())).unwrap()];
-    if let Some(env) = env("CALLIOPE_TEST_WEBDAV") {
+    let mut configs = Vec::new();
+    if let Ok(env) = std::env::var("CALLIOPE_TEST_WEBDAV") {
         let [endpoint, user, secret] = env.split(' ').collect::<Vec<_>>()[..] else {
             panic!("CALLIOPE_TEST_WEBDAV: endpoint user secret");
         };
-        let config = Config {
-            provider: Provider::WebDav,
-            endpoint: endpoint.into(),
-            user: user.into(),
-            root: root.clone(),
-            ..Config::default()
-        };
-        ops.push(remote::operator(&config, secret).await.unwrap());
+        configs.push((
+            Config {
+                provider: Provider::WebDav,
+                endpoint: endpoint.into(),
+                user: user.into(),
+                root: root.clone(),
+                ..Config::default()
+            },
+            secret.into(),
+        ));
     }
-    if let Some(env) = env("CALLIOPE_TEST_S3") {
+    if let Ok(env) = std::env::var("CALLIOPE_TEST_S3") {
         let [endpoint, bucket, user, secret] = env.split(' ').collect::<Vec<_>>()[..] else {
             panic!("CALLIOPE_TEST_S3: endpoint bucket user secret");
         };
-        let config = Config {
-            provider: Provider::S3,
-            endpoint: endpoint.into(),
-            bucket: bucket.into(),
-            user: user.into(),
-            root: root.clone(),
-            ..Config::default()
-        };
-        ops.push(remote::operator(&config, secret).await.unwrap());
+        configs.push((
+            Config {
+                provider: Provider::S3,
+                endpoint: endpoint.into(),
+                bucket: bucket.into(),
+                user: user.into(),
+                root,
+                ..Config::default()
+            },
+            secret.into(),
+        ));
     }
-    for op in &ops {
-        op.delete_with("").recursive(true).await.unwrap();
-    }
-    ops
+    configs
 }
 
-/// A run, its deletions confirmed (`asks_before_deleting_many` tests
-/// asking).
-async fn sync(vault: &Vault, op: &Operator) -> Report {
-    run(vault, op, &id(op), "Test", true, |_, _| {})
-        .await
-        .unwrap()
-}
-
-/// The remote `op` stands for, as [`Config::remote_id`] names one.
-fn id(op: &Operator) -> String {
-    format!("{} {}", op.info().scheme(), op.info().root())
+/// A run, its deletions confirmed unless a test asks otherwise.
+async fn sync(vault: &Vault, remote: &Remote) -> Report {
+    run(
+        vault,
+        remote,
+        remote.identity().as_str(),
+        "Test",
+        true,
+        |_, _| {},
+    )
+    .await
+    .unwrap()
 }
 
 /// The content of every file of `vault` that syncs, by path.
@@ -106,6 +137,7 @@ async fn edits_in_the_same_tick_are_seen() {
     let folder = folder("tick", "remote");
     fs::create_dir_all(&folder).unwrap();
     let op = Operator::new(Fs::default().root(&folder.to_string_lossy())).unwrap();
+    let op = Remote::plain(op);
     let (a, b) = (device("tick", "a"), device("tick", "b"));
     write(&a, "Note.md", "hello");
     sync(&a, &op).await;
@@ -121,7 +153,9 @@ async fn edits_in_the_same_tick_are_seen() {
     // (`progress` hears of each file just before it is synced).
     rewrite_in_the_same_tick(&folder.join("Note.md"), "later");
     let edit = |_, _| rewrite_in_the_same_tick(&b.abs("Note.md"), "mine!");
-    run(&b, &op, &id(&op), "Test", true, edit).await.unwrap();
+    run(&b, &op, &op.identity(), "Test", true, edit)
+        .await
+        .unwrap();
     assert_eq!(b.read("Note.md").unwrap(), "mine!");
 }
 
@@ -149,7 +183,11 @@ async fn devices_follow_each_other() {
         let today = jiff::ZonedDateTime::now().date();
         assert_eq!(a.read(&format!(".trash/{today}/Old.md")).unwrap(), "old");
         // Nothing left to do.
-        assert_eq!(sync(&a, &op).await.uploaded, 0);
+        let report = sync(&a, &op).await;
+        assert_eq!(
+            (report.uploaded, report.downloaded, report.deleted),
+            (0, 0, 0)
+        );
     }
 }
 
@@ -159,6 +197,7 @@ async fn conflicts_keep_both_sides() {
         let (a, b) = (device("conflict", "a"), device("conflict", "b"));
         write(&a, "Plan.md", "plan");
         write(&a, "Gone.md", "gone");
+        write(&a, "Restored.md", "original");
         sync(&a, &op).await;
         sync(&b, &op).await;
 
@@ -167,6 +206,8 @@ async fn conflicts_keep_both_sides() {
         // Deleted on one side, changed on the other: kept.
         fs::remove_file(a.abs("Gone.md")).unwrap();
         write(&b, "Gone.md", "kept by b");
+        fs::remove_file(b.abs("Restored.md")).unwrap();
+        write(&a, "Restored.md", "kept by a");
         sync(&a, &op).await;
         let report = sync(&b, &op).await;
         sync(&a, &op).await;
@@ -177,6 +218,7 @@ async fn conflicts_keep_both_sides() {
         assert_eq!(b.read("Plan.md").unwrap(), "plan by b");
         assert_eq!(b.read(copy).unwrap(), "plan by a");
         assert_eq!(b.read("Gone.md").unwrap(), "kept by b");
+        assert_eq!(b.read("Restored.md").unwrap(), "kept by a");
         assert_eq!(files(&a), files(&b));
     }
 }
@@ -208,7 +250,7 @@ async fn a_first_sync_merges_both_sides() {
 async fn a_new_remote_is_merged() {
     let fs_remote = |name| {
         let root = folder("switch", name).to_string_lossy().into_owned();
-        Operator::new(Fs::default().root(&root)).unwrap()
+        Remote::plain(Operator::new(Fs::default().root(&root)).unwrap())
     };
     let (old, new) = (fs_remote("old"), fs_remote("new"));
     let (a, b) = (device("switch", "a"), device("switch", "b"));
@@ -231,7 +273,7 @@ async fn an_emptied_remote_deletes_nothing() {
         let a = device("emptied", "a");
         write(&a, "Note.md", "note");
         sync(&a, &op).await;
-        op.delete_with("").recursive(true).await.unwrap();
+        op.delete("Note.md").await.unwrap();
         assert_eq!(sync(&a, &op).await.uploaded, 1);
         assert_eq!(a.read("Note.md").unwrap(), "note");
     }
@@ -249,10 +291,10 @@ async fn asks_before_deleting_many() {
         for i in 0..25 {
             fs::remove_file(a.abs(&format!("{i}.md"))).unwrap();
         }
-        let refused = run(&a, &op, &id(&op), "Test", false, |_, _| {}).await;
+        let refused = run(&a, &op, &op.identity(), "Test", false, |_, _| {}).await;
         assert!(matches!(refused, Err(Error::TooManyDeletions(25))));
         assert_eq!(files(&b).len(), 30);
-        run(&a, &op, &id(&op), "Test", true, |_, _| {})
+        run(&a, &op, &op.identity(), "Test", true, |_, _| {})
             .await
             .unwrap();
         sync(&b, &op).await;

@@ -2,7 +2,6 @@
 //! holds with what identifies each one's version.
 
 use std::{
-    collections::HashMap,
     future::IntoFuture,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
@@ -14,7 +13,7 @@ use opendal::{
 use opendal_http_transport_reqwest::ReqwestTransport;
 use serde::{Deserialize, Serialize};
 
-use crate::{Config, Provider, Result, excluded};
+use crate::{Config, Provider, Result};
 
 /// A remote file's version: its ETag when the server gives one, else its
 /// modification time (in nanoseconds) and size.
@@ -128,7 +127,7 @@ async fn asked_region(client: &reqwest::Client, endpoint: &str, bucket: &str) ->
 
 /// The HTTP client: TLS as [`crate::tls`] trusts, and timeouts so a dead
 /// network fails the run.
-fn client(config: &Config) -> Result<reqwest::Client> {
+pub(crate) fn client(config: &Config) -> Result<reqwest::Client> {
     let unexpected =
         |e: &dyn std::fmt::Display| opendal::Error::new(ErrorKind::Unexpected, e.to_string());
     let tls = crate::tls::config(&config.certificate).map_err(|e| unexpected(&e))?;
@@ -168,15 +167,12 @@ fn is_retryable(e: &opendal::Error) -> bool {
 
 /// Every remote file that syncs, by path; none while the vault's folder is
 /// not there yet.
-pub(crate) async fn list(op: &Operator) -> Result<HashMap<String, Version>> {
+pub(crate) async fn entries(op: &Operator) -> Result<Vec<opendal::Entry>> {
     let entries = match retry(|| op.list_with("").recursive(true)).await {
-        Err(e) if e.kind() == ErrorKind::NotFound => return Ok(HashMap::new()),
+        Err(e) if e.kind() == ErrorKind::NotFound => return Ok(Vec::new()),
         entries => entries?,
     };
-    Ok((entries.into_iter())
-        .filter(|e| e.metadata().is_file() && !excluded(e.path()))
-        .map(|e| (e.path().to_owned(), Version::of(e.metadata())))
-        .collect())
+    Ok(entries)
 }
 
 #[cfg(test)]

@@ -135,6 +135,20 @@ pub(crate) const CERTIFICATE_HINT: &str = "Only for a server with a certificate 
 pub(crate) const AUTO_SYNC: &str = "Sync automatically";
 pub(crate) const SYNC_MINUTES: &str = "Every how many minutes";
 pub(crate) const SECRET_KEPT: &str = "Leave it empty to keep the saved one.";
+pub(crate) const PLAINTEXT_REMOTE: &str = "Plaintext";
+pub(crate) const NEW_ENCRYPTED_REMOTE: &str = "Encrypt new";
+pub(crate) const JOIN_ENCRYPTED_REMOTE: &str = "Join encrypted";
+pub(crate) const REMOTE_MODE: &str = "Remote encryption";
+pub(crate) const ENCRYPTION_PASSPHRASE: &str = "Encryption passphrase";
+pub(crate) const CONFIRM_PASSPHRASE: &str = "Confirm passphrase";
+pub(crate) const PASSPHRASE_LOSS: &str =
+    "If you lose this passphrase, your encrypted data cannot be recovered.";
+pub(crate) const PASSPHRASE_MISMATCH: &str = "Enter the same encryption passphrase twice.";
+pub(crate) const PASSPHRASE_STORAGE: &str =
+    "System secure storage is unavailable. The encryption passphrase could not be saved.";
+pub(crate) const SYNC_VAULT_EXISTS: &str = "Choose a name for a new local vault.";
+pub(crate) const REMOTE_MODE_FIXED: &str =
+    "Choose a new remote folder or prefix to change encryption mode.";
 pub(crate) const TEST_CONNECTION: &str = "Test connection";
 pub(crate) const SYNC_NOW: &str = "Sync now";
 pub(crate) const SYNC_SAVED: &str = "The sync settings were saved.";

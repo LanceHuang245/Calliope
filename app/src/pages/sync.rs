@@ -15,10 +15,12 @@ pub(crate) fn sync_settings() -> impl IntoElement {
     // own: changing it shows other fields, typing in one does not.
     let saved = untracked(store::sync_config);
     let provider = signal(saved.provider);
+    let mode = secret_fields(saved.encrypted);
     let draft = signal(saved);
     let secret = signal(String::new());
     let edited = move || Config {
         provider: provider.get(),
+        encrypted: mode.encrypted(),
         ..draft.get()
     };
     view()
@@ -37,7 +39,15 @@ pub(crate) fn sync_settings() -> impl IntoElement {
         ))
         .child(dynamic(move || {
             let on = provider.get() != Provider::Off;
-            untracked(|| on.then(|| fields(provider.get(), draft, secret)))
+            untracked(|| {
+                on.then(|| {
+                    view()
+                        .w_full()
+                        .gap_3()
+                        .child(fields(provider.get(), draft, secret))
+                        .child(encryption_fields(mode, true))
+                })
+            })
         }))
         // Only show Save when sync is off; Test connection and Sync now apply to active providers.
         .child(
@@ -48,7 +58,12 @@ pub(crate) fn sync_settings() -> impl IntoElement {
                 .gap_2()
                 .pt_2()
                 .child(button(ButtonVariant::Primary, strings::SAVE, move || {
-                    store::save_sync(edited(), &secret.get())
+                    let config = edited();
+                    if config.provider == Provider::Off {
+                        store::save_sync(config, secret.get(), String::new(), false);
+                    } else if let Some((passphrase, new)) = mode.submitted() {
+                        store::save_sync(config, secret.get(), passphrase, new);
+                    }
                 }))
                 .child(dynamic(move || {
                     (provider.get() != Provider::Off).then(|| {
@@ -60,7 +75,10 @@ pub(crate) fn sync_settings() -> impl IntoElement {
                             .child(button(
                                 ButtonVariant::Secondary,
                                 strings::TEST_CONNECTION,
-                                move || store::test_sync(edited(), secret.get()),
+                                move || {
+                                    let (passphrase, new) = mode.for_test();
+                                    store::test_sync(edited(), secret.get(), passphrase, new);
+                                },
                             ))
                             .child(button(
                                 ButtonVariant::Secondary,
@@ -80,6 +98,9 @@ pub(crate) fn sync_settings() -> impl IntoElement {
                     SyncStatus::Failed(error) => strings::sync_failed(&error),
                 })
             })
+        }))
+        .child(dynamic(|| {
+            store::connecting().then(|| muted(strings::CONNECTING))
         }))
         .child(dynamic(|| {
             store::secret_in_file().then(|| muted(strings::SECRET_IN_FILE))
@@ -188,4 +209,105 @@ fn input(label: &'static str, value: &str, typed: impl Fn(String) + 'static) -> 
         .label(label)
         .default_value(value.to_owned())
         .on_change(move |text: &str| typed(text.to_owned()))
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum RemoteMode {
+    Plaintext,
+    New,
+    Join,
+}
+
+#[derive(Clone, Copy)]
+pub(crate) struct EncryptionFields {
+    mode: Signal<RemoteMode>,
+    passphrase: Signal<String>,
+    confirmation: Signal<String>,
+}
+
+pub(crate) fn secret_fields(encrypted: bool) -> EncryptionFields {
+    EncryptionFields {
+        mode: signal(if encrypted {
+            RemoteMode::Join
+        } else {
+            RemoteMode::Plaintext
+        }),
+        passphrase: signal(String::new()),
+        confirmation: signal(String::new()),
+    }
+}
+
+impl EncryptionFields {
+    pub(crate) fn encrypted(self) -> bool {
+        self.mode.get() != RemoteMode::Plaintext
+    }
+
+    pub(crate) fn for_test(self) -> (String, bool) {
+        let mode = self.mode.get();
+        let passphrase = if self.encrypted() {
+            self.passphrase.get()
+        } else {
+            String::new()
+        };
+        (passphrase, mode == RemoteMode::New)
+    }
+
+    fn submitted(self) -> Option<(String, bool)> {
+        let (passphrase, new) = self.for_test();
+        if new && (passphrase.is_empty() || passphrase != self.confirmation.get()) {
+            store::notify(strings::PASSPHRASE_MISMATCH);
+            return None;
+        }
+        Some((passphrase, new))
+    }
+}
+
+/// New remotes confirm the passphrase. Joining an existing remote asks once.
+pub(crate) fn encryption_fields(fields: EncryptionFields, allow_new: bool) -> impl IntoElement {
+    let mut modes = vec![(RemoteMode::Plaintext, strings::PLAINTEXT_REMOTE)];
+    if allow_new {
+        modes.push((RemoteMode::New, strings::NEW_ENCRYPTED_REMOTE));
+    }
+    modes.push((RemoteMode::Join, strings::JOIN_ENCRYPTED_REMOTE));
+    view()
+        .gap_2()
+        .items_start()
+        .child(muted(strings::REMOTE_MODE))
+        .child(segmented(
+            modes,
+            move || fields.mode.get(),
+            move |mode| {
+                fields.passphrase.set(String::new());
+                fields.confirmation.set(String::new());
+                fields.mode.set(mode);
+            },
+        ))
+        .child(dynamic(move || {
+            let mode = fields.mode.get();
+            (mode != RemoteMode::Plaintext).then(|| {
+                view()
+                    .gap_2()
+                    .child(labeled(
+                        strings::ENCRYPTION_PASSPHRASE,
+                        true,
+                        input(strings::ENCRYPTION_PASSPHRASE, "", move |typed| {
+                            fields.passphrase.set(typed);
+                        })
+                        .masked(true),
+                    ))
+                    .child((mode == RemoteMode::New).then(|| {
+                        view()
+                            .gap_2()
+                            .child(muted(strings::PASSPHRASE_LOSS))
+                            .child(labeled(
+                                strings::CONFIRM_PASSPHRASE,
+                                true,
+                                input(strings::CONFIRM_PASSPHRASE, "", move |typed| {
+                                    fields.confirmation.set(typed);
+                                })
+                                .masked(true),
+                            ))
+                    }))
+            })
+        }))
 }

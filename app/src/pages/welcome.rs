@@ -6,7 +6,7 @@ use calliope_sync::{Config, Provider};
 use nsh_base::theme;
 use nsh_core::{element::AnyElement, prelude::*};
 
-use super::sync::fields;
+use super::sync::{encryption_fields, fields, secret_fields};
 use crate::{
     components::{ButtonVariant, action, button, field, labeled, muted, segmented},
     store, strings,
@@ -86,12 +86,14 @@ fn sync_form(from_sync: Signal<bool>) -> impl IntoElement {
     let provider = signal(Provider::WebDav);
     let draft = signal(Config::default());
     let secret = signal(String::new());
+    let mode = secret_fields(false);
     let create = move || {
         let config = Config {
             provider: provider.get(),
+            encrypted: mode.encrypted(),
             ..draft.get()
         };
-        store::create_from_sync(name.get(), config, secret.get())
+        store::create_from_sync(name.get(), config, secret.get(), mode.for_test().0)
     };
     let form = view()
         .p_6()
@@ -124,6 +126,7 @@ fn sync_form(from_sync: Signal<bool>) -> impl IntoElement {
             let provider = provider.get();
             untracked(|| fields(provider, draft, secret))
         }))
+        .child(encryption_fields(mode, false))
         .child(
             view()
                 .flex_row()

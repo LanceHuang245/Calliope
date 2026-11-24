@@ -37,6 +37,15 @@ pub(crate) fn get(account: &str) -> Option<String> {
     Some(secret)
 }
 
+/// Encryption passphrases live only in the system's secure storage.
+pub(crate) fn set_passphrase(account: &str, passphrase: &str) -> bool {
+    system::set(&format!("crypt:{account}"), passphrase)
+}
+
+pub(crate) fn passphrase(account: &str) -> Option<String> {
+    system::get(&format!("crypt:{account}"))
+}
+
 /// Whether the secret of `account` is in the file.
 pub(crate) fn in_file(account: &str) -> bool {
     read_file().contains_key(account)

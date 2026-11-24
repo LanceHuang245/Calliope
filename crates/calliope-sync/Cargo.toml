@@ -6,6 +6,12 @@ edition.workspace = true
 publish.workspace = true
 
 [dependencies]
+aes = { version = "0.9", features = ["zeroize"] }
+crypto_secretbox = "0.1.1"
+data-encoding = "2"
+getrandom = "0.3"
+scrypt = "0.11"
+zeroize = "1"
 calliope-core.workspace = true
 jiff.workspace = true
 log.workspace = true
