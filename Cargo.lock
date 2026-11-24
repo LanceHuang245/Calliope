@@ -441,9 +441,9 @@ dependencies = [
 
 [[package]]
 name = "brotli-decompressor"
-version = "6.3.2"
+version = "6.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cc031cd87c6529082b0b65c604e86af0ed7744841b17ccfe60b1e31fa606179e"
+checksum = "664148598c930650998ef56df301329ffe7b4cdb02d49b2a3fca3bcaf2185bcb"
 dependencies = [
  "alloc-no-stdlib",
 ]
@@ -539,7 +539,7 @@ dependencies = [
  "apple-native-keyring-store",
  "calliope-core",
  "calliope-sync",
- "jiff 1.0.2",
+ "jiff 1.0.3",
  "keyring-core",
  "log",
  "merman",
@@ -561,7 +561,7 @@ dependencies = [
 name = "calliope-core"
 version = "0.1.0"
 dependencies = [
- "jiff 1.0.2",
+ "jiff 1.0.3",
  "log",
  "notify",
  "thiserror 2.0.21",
@@ -573,7 +573,7 @@ name = "calliope-sync"
 version = "0.1.0"
 dependencies = [
  "calliope-core",
- "jiff 1.0.2",
+ "jiff 1.0.3",
  "log",
  "opendal",
  "opendal-http-transport-reqwest",
@@ -855,9 +855,9 @@ dependencies = [
 
 [[package]]
 name = "crc32fast"
-version = "1.5.5"
+version = "1.5.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2b929dd2a135771f40afabd1073f85eed59c800b7c61901e5c254270497dad64"
+checksum = "fd9ae8fcb3ea71b0b26338b4ffb13006bb175de8fd07921089a906ce7e5e6945"
 dependencies = [
  "cfg-if",
 ]
@@ -2443,12 +2443,12 @@ dependencies = [
 
 [[package]]
 name = "jiff"
-version = "1.0.2"
+version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c5e77cbfb9fff4798e283c2d69dff39fc2c45e7da017e5ce95b654e46ea41236"
+checksum = "107f2e89536b6818514025f6787b0d94d819e54fe3b40365275fc753de485b3f"
 dependencies = [
- "jiff-core 1.0.1",
- "jiff-static 1.0.2",
+ "jiff-core 1.0.2",
+ "jiff-static 1.0.3",
  "jiff-tzdb-platform 1.0.0",
  "log",
  "portable-atomic",
@@ -2468,9 +2468,9 @@ dependencies = [
 
 [[package]]
 name = "jiff-core"
-version = "1.0.1"
+version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b6b46a105a9874634dd96231021526bf24ca04955a5998c59a9c7666e634b7b8"
+checksum = "d44c923edf2bf456a982253f1a9ee1f6e89e421dffd0065d9b9a581da0def58f"
 dependencies = [
  "log",
 ]
@@ -2489,11 +2489,11 @@ dependencies = [
 
 [[package]]
 name = "jiff-static"
-version = "1.0.2"
+version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e9067a0b23e5be3147d56b2dcf652b18e6b1364caca93fb157653b6fbcab23a9"
+checksum = "4996f71e569e3a3e32b925c28ef8f0027dc30bb1d594b33eeda409eea185f5c8"
 dependencies = [
- "jiff-core 1.0.1",
+ "jiff-core 1.0.2",
  "proc-macro2",
  "quote",
  "syn 3.0.10",
@@ -3139,7 +3139,7 @@ dependencies = [
 [[package]]
 name = "nsh-base"
 version = "0.6.0"
-source = "git+https://github.com/longbridge/nsh?rev=589a60f7569c14023c262c126f50279f27ddf470#589a60f7569c14023c262c126f50279f27ddf470"
+source = "git+https://github.com/longbridge/nsh?rev=21080f1cccc081d28c509817d6f95c5e06419251#21080f1cccc081d28c509817d6f95c5e06419251"
 dependencies = [
  "chrono",
  "html5ever 0.27.0",
@@ -3169,7 +3169,7 @@ dependencies = [
 [[package]]
 name = "nsh-core"
 version = "0.6.0"
-source = "git+https://github.com/longbridge/nsh?rev=589a60f7569c14023c262c126f50279f27ddf470#589a60f7569c14023c262c126f50279f27ddf470"
+source = "git+https://github.com/longbridge/nsh?rev=21080f1cccc081d28c509817d6f95c5e06419251#21080f1cccc081d28c509817d6f95c5e06419251"
 dependencies = [
  "cap-std",
  "chrono",
@@ -3212,7 +3212,7 @@ dependencies = [
 [[package]]
 name = "nsh-engine"
 version = "0.6.0"
-source = "git+https://github.com/longbridge/nsh?rev=589a60f7569c14023c262c126f50279f27ddf470#589a60f7569c14023c262c126f50279f27ddf470"
+source = "git+https://github.com/longbridge/nsh?rev=21080f1cccc081d28c509817d6f95c5e06419251#21080f1cccc081d28c509817d6f95c5e06419251"
 dependencies = [
  "crossbeam-channel",
  "env_filter",
@@ -3231,7 +3231,7 @@ dependencies = [
 [[package]]
 name = "nsh-macros"
 version = "0.6.0"
-source = "git+https://github.com/longbridge/nsh?rev=589a60f7569c14023c262c126f50279f27ddf470#589a60f7569c14023c262c126f50279f27ddf470"
+source = "git+https://github.com/longbridge/nsh?rev=21080f1cccc081d28c509817d6f95c5e06419251#21080f1cccc081d28c509817d6f95c5e06419251"
 dependencies = [
  "imagesize 0.15.0",
  "proc-macro2",
@@ -3244,7 +3244,7 @@ dependencies = [
 [[package]]
 name = "nsh-platform-apple"
 version = "0.6.0"
-source = "git+https://github.com/longbridge/nsh?rev=589a60f7569c14023c262c126f50279f27ddf470#589a60f7569c14023c262c126f50279f27ddf470"
+source = "git+https://github.com/longbridge/nsh?rev=21080f1cccc081d28c509817d6f95c5e06419251#21080f1cccc081d28c509817d6f95c5e06419251"
 dependencies = [
  "block2",
  "cc",
@@ -3268,7 +3268,7 @@ dependencies = [
 [[package]]
 name = "nsh-platform-linux"
 version = "0.6.0"
-source = "git+https://github.com/longbridge/nsh?rev=589a60f7569c14023c262c126f50279f27ddf470#589a60f7569c14023c262c126f50279f27ddf470"
+source = "git+https://github.com/longbridge/nsh?rev=21080f1cccc081d28c509817d6f95c5e06419251#21080f1cccc081d28c509817d6f95c5e06419251"
 dependencies = [
  "crossbeam-channel",
  "gtk4",
@@ -3287,7 +3287,7 @@ dependencies = [
 [[package]]
 name = "nsh-platform-macos"
 version = "0.6.0"
-source = "git+https://github.com/longbridge/nsh?rev=589a60f7569c14023c262c126f50279f27ddf470#589a60f7569c14023c262c126f50279f27ddf470"
+source = "git+https://github.com/longbridge/nsh?rev=21080f1cccc081d28c509817d6f95c5e06419251#21080f1cccc081d28c509817d6f95c5e06419251"
 dependencies = [
  "block2",
  "crossbeam-channel",
@@ -3316,7 +3316,7 @@ dependencies = [
 [[package]]
 name = "nsh-platform-windows"
 version = "0.6.0"
-source = "git+https://github.com/longbridge/nsh?rev=589a60f7569c14023c262c126f50279f27ddf470#589a60f7569c14023c262c126f50279f27ddf470"
+source = "git+https://github.com/longbridge/nsh?rev=21080f1cccc081d28c509817d6f95c5e06419251#21080f1cccc081d28c509817d6f95c5e06419251"
 dependencies = [
  "crossbeam-channel",
  "image",
@@ -3336,7 +3336,7 @@ dependencies = [
 [[package]]
 name = "nsh-testing"
 version = "0.6.0"
-source = "git+https://github.com/longbridge/nsh?rev=589a60f7569c14023c262c126f50279f27ddf470#589a60f7569c14023c262c126f50279f27ddf470"
+source = "git+https://github.com/longbridge/nsh?rev=21080f1cccc081d28c509817d6f95c5e06419251#21080f1cccc081d28c509817d6f95c5e06419251"
 dependencies = [
  "crossbeam-channel",
  "log",
@@ -3350,7 +3350,7 @@ dependencies = [
 [[package]]
 name = "nsh-updater"
 version = "0.6.0"
-source = "git+https://github.com/longbridge/nsh?rev=589a60f7569c14023c262c126f50279f27ddf470#589a60f7569c14023c262c126f50279f27ddf470"
+source = "git+https://github.com/longbridge/nsh?rev=21080f1cccc081d28c509817d6f95c5e06419251#21080f1cccc081d28c509817d6f95c5e06419251"
 dependencies = [
  "base64 0.22.1",
  "ed25519-dalek",
@@ -4482,7 +4482,7 @@ dependencies = [
  "hex",
  "hmac",
  "http",
- "jiff 1.0.2",
+ "jiff 1.0.3",
  "log",
  "percent-encoding",
  "sha1 0.11.0",
@@ -6890,9 +6890,9 @@ dependencies = [
 
 [[package]]
 name = "zlib-rs"
-version = "0.6.8"
+version = "0.6.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b268e58e7c693d7c271f93ffc4ba3b380412554231c85bf61ca7af91042a4112"
+checksum = "aa76918995d776d9dd34d371030be228d021137449771493d56e29f77e4148ac"
 
 [[package]]
 name = "zmij"
