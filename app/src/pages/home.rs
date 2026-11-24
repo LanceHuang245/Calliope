@@ -4,28 +4,49 @@
 
 use calliope_sync::Provider;
 use nsh_base::{progress, theme};
-use nsh_core::{platform::Os, prelude::*};
+use nsh_core::{element::NativeEvent, platform::Os, prelude::*};
 
 use crate::{
     components::{
-        ButtonVariant, button, desktop_layout, fab, floating_toolbar, icon_button, icons, muted,
-        toolbar_toggle,
+        BAR_HEIGHT, ButtonVariant, button, desktop_layout, fab, floating_toolbar, icon_button,
+        icons, muted, toolbar_toggle,
     },
     store::{self, Route, SyncStatus},
     strings,
 };
 
+#[cfg(target_os = "ios")]
+mod ios_toolbar;
+#[cfg(target_os = "ios")]
+pub(crate) use ios_toolbar::register as register_ios_toolbar;
+
+const GLASS_TOOLBAR: &str = "calliope.glass-toolbar";
+const GLASS_INSET: f32 = 4.0;
+const GLASS_BUTTON: f32 = 44.0;
+const GLASS_STRIDE: f32 = GLASS_BUTTON + 4.0;
+
+struct ToolbarAction {
+    icon: &'static str,
+    symbol: &'static str,
+    label: &'static str,
+    selected: fn() -> bool,
+    visible: fn() -> bool,
+    press: fn(),
+}
+
+const NEW_NOTE_ACTION: ToolbarAction = ToolbarAction {
+    icon: icons::PLUS,
+    symbol: "plus",
+    label: strings::NEW_NOTE,
+    selected: || false,
+    visible: || true,
+    press: store::new_note,
+};
+
 pub(crate) fn home_page() -> impl IntoElement {
     view()
         .flex_1()
-        .child((!desktop_layout()).then(|| {
-            view()
-                .flex_row()
-                .justify_between()
-                .p_2()
-                .child(menu_button())
-                .child(ios_new_note())
-        }))
+        .child((!desktop_layout()).then(|| view().flex_row().p_2().child(menu_button())))
         .child(
             view()
                 .flex_1()
@@ -104,64 +125,111 @@ pub(crate) fn menu_button() -> impl IntoElement {
     icon_button(icons::MENU, strings::MENU, || store::set_menu_open(true))
 }
 
-/// iOS's new note (MVP 5.4): a `+` at the end of the top bar, where its
-/// navigation bars have it (Android's is the [`phone_toolbar`]'s FAB; the
-/// desktops' layout has its own over the files).
-pub(crate) fn ios_new_note() -> Option<impl IntoElement> {
-    (os() == Os::Ios && !desktop_layout())
-        .then(|| icon_button(icons::PLUS, strings::NEW_NOTE, store::new_note))
-}
-
 /// The phones' floating toolbar, over the home page and the note (the
 /// desktops have these under the files): sync (filled while it runs), the
 /// quick switcher, the graph, the note's backlinks (with a note open) and
-/// the trash; on Android with the FAB making a note beside it. Gone while
+/// the trash, with the new note button beside them. Gone while
 /// the keyboard is up, the text taking the room.
 pub(crate) fn phone_toolbar() -> impl IntoElement {
-    let syncing = || matches!(store::sync_status(), SyncStatus::Running(..));
-    let graph = || store::route() == Route::Graph;
-    let trash = || store::route() == Route::Trash;
+    // Native buttons and the fallback both use the same visibility, state and actions.
+    static ACTIONS: [ToolbarAction; 5] = [
+        ToolbarAction {
+            icon: icons::REFRESH,
+            symbol: "arrow.clockwise",
+            label: strings::SYNC,
+            selected: || matches!(store::sync_status(), SyncStatus::Running(..)),
+            visible: sync_enabled,
+            press: store::sync_now,
+        },
+        ToolbarAction {
+            icon: icons::SEARCH,
+            symbol: "magnifyingglass",
+            label: strings::SEARCH,
+            selected: store::switching,
+            visible: || true,
+            press: || store::set_switching(true),
+        },
+        ToolbarAction {
+            icon: icons::NETWORK,
+            symbol: "point.3.connected.trianglepath.dotted",
+            label: strings::GRAPH,
+            selected: || store::route() == Route::Graph,
+            visible: || true,
+            press: store::toggle_graph,
+        },
+        ToolbarAction {
+            icon: icons::LINK,
+            symbol: "link",
+            label: strings::BACKLINKS,
+            selected: store::backlinks_shown,
+            visible: || store::opened().is_some(),
+            press: store::toggle_backlinks,
+        },
+        ToolbarAction {
+            icon: icons::TRASH,
+            symbol: "trash",
+            label: strings::TRASH,
+            selected: || store::route() == Route::Trash,
+            visible: || true,
+            press: store::toggle_trash,
+        },
+    ];
     when(
         || keyboard_height() <= px(0.0),
-        move || {
+        || {
+            if cfg!(target_os = "ios") && os() == Os::Ios && os_version().0 >= 26 {
+                return floating_toolbar(
+                    glass_toolbar(&ACTIONS),
+                    glass_toolbar(&[NEW_NOTE_ACTION]),
+                    true,
+                )
+                .into_element();
+            }
             let buttons = view()
                 .flex_row()
                 .gap_1()
-                .child(when(sync_enabled, move || {
-                    toolbar_toggle(icons::REFRESH, strings::SYNC, syncing, store::sync_now)
-                }))
-                .child(toolbar_toggle(
-                    icons::SEARCH,
-                    strings::SEARCH,
-                    store::switching,
-                    || store::set_switching(true),
-                ))
-                .child(toolbar_toggle(
-                    icons::NETWORK,
-                    strings::GRAPH,
-                    graph,
-                    store::toggle_graph,
-                ))
-                .child(when(
-                    || store::opened().is_some(),
-                    || {
-                        toolbar_toggle(
-                            icons::LINK,
-                            strings::BACKLINKS,
-                            store::backlinks_shown,
-                            store::toggle_backlinks,
-                        )
-                    },
-                ))
-                .child(toolbar_toggle(
-                    icons::TRASH,
-                    strings::TRASH,
-                    trash,
-                    store::toggle_trash,
-                ));
-            let new_note = (os() != Os::Ios)
-                .then(|| fab(icons::PLUS, strings::NEW_NOTE, store::new_note).into_element());
-            floating_toolbar(buttons, new_note)
+                .child(ACTIONS.iter().map(|action| {
+                    when(action.visible, move || {
+                        toolbar_toggle(action.icon, action.label, action.selected, action.press)
+                    })
+                }));
+            let add = &NEW_NOTE_ACTION;
+            floating_toolbar(buttons, fab(add.icon, add.label, add.press), false).into_element()
         },
     )
+}
+
+fn glass_toolbar(actions: &'static [ToolbarAction]) -> impl IntoElement {
+    native(GLASS_TOOLBAR)
+        .w(move || {
+            let shown = actions.iter().filter(|action| (action.visible)()).count();
+            px(shown as f32 * GLASS_STRIDE - (GLASS_STRIDE - GLASS_BUTTON) + 2.0 * GLASS_INSET)
+        })
+        .h(px(BAR_HEIGHT))
+        .prop("items", move || {
+            serde_json::Value::Array(
+                actions
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, action)| (action.visible)())
+                    .map(|(index, action)| {
+                        serde_json::json!({
+                            "index": index,
+                            "label": action.label,
+                            "symbol": action.symbol,
+                            "selected": (action.selected)(),
+                        })
+                    })
+                    .collect(),
+            )
+        })
+        .on_native_event(move |event: &NativeEvent| {
+            if &*event.name == "press"
+                && let Some(index) = event.data.as_u64()
+                && let Some(action) = actions.get(index as usize)
+                && (action.visible)()
+            {
+                (action.press)();
+            }
+        })
 }

@@ -548,6 +548,7 @@ version = "0.1.0"
 dependencies = [
  "android-native-keyring-store",
  "apple-native-keyring-store",
+ "block2",
  "calliope-core",
  "calliope-sync",
  "jiff 1.0.3",
@@ -558,10 +559,16 @@ dependencies = [
  "nsh-base",
  "nsh-core",
  "nsh-engine",
+ "nsh-platform-ios",
  "nsh-platform-linux",
  "nsh-platform-macos",
  "nsh-platform-windows",
  "nsh-testing",
+ "objc2",
+ "objc2-core-foundation",
+ "objc2-foundation",
+ "objc2-quartz-core",
+ "objc2-ui-kit",
  "serde_json",
  "usvg 0.47.0",
  "windows-native-keyring-store",
@@ -3330,6 +3337,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "nsh-platform-ios"
+version = "0.6.0"
+source = "git+https://github.com/longbridge/nsh?rev=21080f1cccc081d28c509817d6f95c5e06419251#21080f1cccc081d28c509817d6f95c5e06419251"
+dependencies = [
+ "block2",
+ "dispatch2",
+ "libc",
+ "log",
+ "nsh-base",
+ "nsh-core",
+ "nsh-engine",
+ "nsh-platform-apple",
+ "objc2",
+ "objc2-authentication-services",
+ "objc2-core-foundation",
+ "objc2-core-graphics",
+ "objc2-core-text",
+ "objc2-foundation",
+ "objc2-image-io",
+ "objc2-io-surface",
+ "objc2-quartz-core",
+ "objc2-ui-kit",
+ "rustc-hash 2.1.3",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "nsh-platform-linux"
 version = "0.6.0"
 source = "git+https://github.com/longbridge/nsh?rev=21080f1cccc081d28c509817d6f95c5e06419251#21080f1cccc081d28c509817d6f95c5e06419251"
@@ -3524,6 +3559,18 @@ dependencies = [
  "objc2-core-graphics",
  "objc2-foundation",
  "objc2-quartz-core",
+]
+
+[[package]]
+name = "objc2-authentication-services"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ee6d6f7dab884a28adaec1012eb3889257a49cc145724e35f93ece2d209f8b25"
+dependencies = [
+ "block2",
+ "objc2",
+ "objc2-app-kit",
+ "objc2-foundation",
 ]
 
 [[package]]

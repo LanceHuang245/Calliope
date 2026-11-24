@@ -29,6 +29,7 @@ nsh-core = { git = "https://github.com/longbridge/nsh", rev = "21080f1cccc081d28
 nsh-base = { git = "https://github.com/longbridge/nsh", rev = "21080f1cccc081d28c509817d6f95c5e06419251", features = ["highlight", "math"] }
 nsh-engine = { git = "https://github.com/longbridge/nsh", rev = "21080f1cccc081d28c509817d6f95c5e06419251", default-features = false }
 nsh-testing = { git = "https://github.com/longbridge/nsh", rev = "21080f1cccc081d28c509817d6f95c5e06419251" }
+nsh-platform-ios = { git = "https://github.com/longbridge/nsh", rev = "21080f1cccc081d28c509817d6f95c5e06419251", default-features = false }
 # The desktop backends `cargo run` uses (`app/src/main.rs`). Without `js`, a
 # Rust app links no QuickJS.
 nsh-platform-linux = { git = "https://github.com/longbridge/nsh", rev = "21080f1cccc081d28c509817d6f95c5e06419251", default-features = false }

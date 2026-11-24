@@ -8,13 +8,16 @@ mod page;
 
 use nsh_base::{ButtonElement, dialog, input, menu_item, tab, tabs, theme};
 use nsh_core::{
+    GlassEffect,
     element::{AnyElement, StyleRefinement},
+    platform::Os,
     prelude::*,
 };
 
 use self::icons::icon;
 pub(crate) use self::page::{
-    TOOLBAR_ROOM, desktop_layout, fab, floating_surface, floating_toolbar, page, scroll_page,
+    BAR_HEIGHT, TOOLBAR_ROOM, desktop_layout, fab, floating_surface, floating_toolbar, page,
+    scroll_page,
 };
 use crate::strings;
 
@@ -93,6 +96,7 @@ pub(crate) fn icon_toggle(
 ) -> impl IntoElement {
     view().tooltip(tooltip(label)).child(
         toggle(paths, label, on, on_press, 16.0)
+            .active(|s| s.bg(theme().accent))
             .p(px(6.0))
             .rounded(move || theme().radius),
     )
@@ -106,9 +110,28 @@ pub(crate) fn toolbar_toggle(
     on: impl Fn() -> bool + Copy + 'static,
     on_press: impl Fn() + 'static,
 ) -> impl IntoElement {
-    toggle(paths, label, on, on_press, 20.0)
+    let button = toggle(paths, label, on, on_press, 20.0)
         .p(px(12.0))
-        .rounded_full()
+        .rounded_full();
+    if os() == Os::Ios {
+        ios_glass_press(button)
+    } else {
+        button.active(|s| s.bg(theme().accent))
+    }
+}
+
+// nsh's glass is a backdrop. Highlight the pressed control and animate
+// its scale as the finger presses and releases it.
+fn ios_glass_press(button: ButtonElement) -> ButtonElement {
+    button
+        .transition_transform()
+        .duration(160.0)
+        .ease_out()
+        .active(|s| {
+            s.scale(0.92)
+                .glass_effect(GlassEffect::Regular)
+                .glass_tint_color(theme().accent)
+        })
 }
 
 /// The icon toggles' button: its icon `size` points square, filled while
@@ -122,7 +145,6 @@ fn toggle(
 ) -> ButtonElement {
     nsh_base::button()
         .hover(|s| s.bg(theme().accent))
-        .active(|s| s.bg(theme().accent))
         .style_when(on, |s| s.bg(theme().accent))
         .selected(on)
         .accessibility_label(label)

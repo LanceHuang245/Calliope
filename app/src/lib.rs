@@ -29,6 +29,13 @@ fn native(registry: &mut Registry) {
     registry.register::<App>();
 }
 
+// The iOS runner installs this factory before it mounts the app.
+#[cfg(target_os = "ios")]
+#[nsh_core::element::native_components(ios)]
+fn ios_components(components: &nsh_platform_ios::Components) {
+    pages::home::register_ios_toolbar(components);
+}
+
 /// The app's root. On the desktops it shows in the window it declares
 /// (nsh makes none for a Rust root); off them `window()` shows its content
 /// in the app's one surface.

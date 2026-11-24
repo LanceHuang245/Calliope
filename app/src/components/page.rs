@@ -9,7 +9,7 @@ use nsh_core::{
     prelude::*,
 };
 
-use super::{icon_button, icons};
+use super::{icon_button, icons, ios_glass_press};
 use crate::strings;
 
 /// How wide a tablet takes the desktops' layout (MVP phase 4).
@@ -92,8 +92,8 @@ fn page_bar(title: &'static str, back: impl Fn() + 'static) -> View {
 pub(crate) const TOOLBAR_ROOM: f32 = 76.0;
 
 /// The [`floating_toolbar`]'s height: its buttons (44 points) and its
-/// padding; Android's [`fab`] beside it is as tall.
-const BAR_HEIGHT: f32 = 52.0;
+/// padding; the [`fab`] beside it is as tall.
+pub(crate) const BAR_HEIGHT: f32 = 52.0;
 
 /// The surface of what floats over a page (the floating toolbar, the
 /// notices), in each system's look: Liquid Glass on iOS 26 (a blur of what
@@ -112,20 +112,24 @@ pub(crate) fn floating_surface<E: Styled>(element: E) -> E {
 }
 
 /// A toolbar floating over the bottom of a phone's page (Material 3's
-/// floating toolbar on Android), with `beside` it on its right (Android's
-/// [`fab`]), the two centered together.
+/// floating toolbar on Android), with the [`fab`] beside it on the right.
 pub(crate) fn floating_toolbar(
     buttons: impl IntoElement,
-    beside: Option<AnyElement>,
+    beside: impl IntoElement,
+    native_glass: bool,
 ) -> impl IntoElement {
     let bar = toolbar()
         .flex_row()
         .items_center()
         .gap_1()
-        .p_1()
         .rounded_full()
         .shadow_lg()
         .child(buttons);
+    let bar = if native_glass {
+        bar
+    } else {
+        floating_surface(bar.p_1())
+    };
     view()
         .absolute()
         .left_0()
@@ -135,34 +139,38 @@ pub(crate) fn floating_toolbar(
         .items_center()
         .justify_center()
         .gap_3()
-        .child(floating_surface(bar))
+        .child(bar)
         .child(beside)
 }
 
-/// Android's floating action button (Material 3's FAB, which nsh has not):
-/// a page's main action on the theme's `primary`, named by `label` for
-/// screen readers; round and as tall as the [`floating_toolbar`] it stands
-/// beside.
+/// A separate round action as tall as the toolbar, using each platform's surface.
 pub(crate) fn fab(
     paths: &'static str,
     label: &'static str,
     on_press: impl Fn() + 'static,
 ) -> impl IntoElement {
-    nsh_base::button()
+    let button = nsh_base::button()
         .w(px(BAR_HEIGHT))
         .h(px(BAR_HEIGHT))
         .items_center()
         .justify_center()
         .rounded_full()
-        .bg(move || theme().primary)
         .shadow_lg()
-        .active(|s| s.opacity(0.8))
         .accessibility_label(label)
         .on_press(on_press)
         .child(
             icons::icon(paths)
                 .w(px(24.0))
                 .h(px(24.0))
-                .text_color(move || theme().primary_foreground),
-        )
+                .text_color(move || match os() {
+                    Os::Ios => theme().foreground,
+                    _ => theme().primary_foreground,
+                }),
+        );
+    match os() {
+        Os::Ios => floating_surface(ios_glass_press(button)),
+        _ => button
+            .bg(move || theme().primary)
+            .active(|s| s.opacity(0.8)),
+    }
 }

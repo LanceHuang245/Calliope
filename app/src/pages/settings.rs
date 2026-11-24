@@ -1,7 +1,7 @@
 //! Settings categories share their contents across desktop and mobile.
 
 use nsh_base::theme;
-use nsh_core::{element::AnyElement, prelude::*};
+use nsh_core::{element::AnyElement, platform::Os, prelude::*};
 
 use super::sync::sync_settings;
 use crate::{
@@ -69,6 +69,7 @@ pub(crate) fn settings_categories() -> impl IntoElement {
         store::back_to_note,
         view()
             .p_6()
+            .px(px(if os() == Os::Ios { 12.0 } else { 24.0 }))
             .gap_1()
             .child(CATEGORIES.map(|category| category_button(category, false))),
     )

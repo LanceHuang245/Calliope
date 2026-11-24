@@ -9,7 +9,12 @@ use std::{
 };
 
 use common::{desktop, vault};
-use nsh_core::{file_dialog::FileRequest, platform::Lifecycle, prelude::px, time::Clock};
+use nsh_core::{
+    file_dialog::FileRequest,
+    platform::Lifecycle,
+    prelude::{px, size},
+    time::Clock,
+};
 use nsh_engine::{EngineConfig, Root};
 use nsh_testing::{DialogAnswer, Headless};
 
@@ -23,7 +28,9 @@ fn phone_opens_reads_and_creates_notes() {
     // reads it.
     // SAFETY: set before the app starts, read by the app only.
     unsafe { std::env::set_var("CALLIOPE_SANDBOX", root.parent().unwrap()) };
-    let mut app = Headless::start(EngineConfig::new(Root::of::<calliope::App>())).unwrap();
+    let mut config = EngineConfig::new(Root::of::<calliope::App>());
+    config.environment.os_version = (26, 0);
+    let mut app = Headless::start(config).unwrap();
 
     // Without a vault the phone names one; here the vault made above.
     let name = root.file_name().unwrap().to_str().unwrap();
@@ -74,7 +81,7 @@ fn phone_opens_reads_and_creates_notes() {
     app.press("text:New note").unwrap();
     app.wait_for("label:Title").unwrap();
     assert!(root.join("Untitled.md").exists());
-    // iOS's `+` at the end of the note's top bar makes another.
+    // The separate new-note button beside the iOS toolbar makes another.
     app.press("label:New note").unwrap();
     app.wait(Duration::from_millis(500)).unwrap();
     assert!(root.join("Untitled 1.md").exists());
@@ -107,7 +114,11 @@ fn phone_opens_reads_and_creates_notes() {
     // The floating toolbar pushes the graph and the trash over the note,
     // the system's back returning to it; and opens the quick switcher.
     app.press("label:Graph").unwrap();
-    app.wait_for("Orphans").unwrap();
+    app.wait_for("label:Orphans").unwrap();
+    app.press("label:Orphans").unwrap();
+    app.press("label:Uncreated notes").unwrap();
+    assert!(app.screen().selected("label:Orphans").unwrap());
+    assert!(app.screen().selected("label:Uncreated notes").unwrap());
     app.back().unwrap();
     app.wait_for_gone("Orphans", Duration::from_secs(2))
         .unwrap();
@@ -116,8 +127,13 @@ fn phone_opens_reads_and_creates_notes() {
     app.back().unwrap();
     app.wait_for_gone("The trash is empty.", Duration::from_secs(2))
         .unwrap();
+    app.set_viewport(size(px(360.0), px(780.0))).unwrap();
     app.press("label:Search").unwrap();
-    app.wait_for("label:Find or create a note").unwrap();
+    let search = "label:Find or create a note";
+    app.wait_for(search).unwrap();
+    let bounds = app.screen().layout(search).unwrap().unwrap().bounds;
+    assert!(bounds.origin.x.0 >= 16.0);
+    assert!(bounds.origin.x.0 + bounds.size.width.0 <= 344.0);
     app.back().unwrap();
 
     // The menu opens a category list, and Back pops one page at a time.

@@ -13,9 +13,11 @@ use std::{cell::Cell, collections::HashSet, f32::consts::TAU, rc::Rc};
 use calliope_core::graph::Graph;
 use nsh_base::{button, theme};
 use nsh_core::{
+    GlassEffect,
     canvas::{CanvasNode, CanvasTextAlign},
     color::Hsla,
     element::AdaptiveColor,
+    platform::Os,
     prelude::*,
 };
 
@@ -64,16 +66,29 @@ pub(crate) fn graph_page() -> impl IntoElement {
     )
 }
 
-/// An option of the graph: a button, filled while it is on.
+/// Each filter has its own selection, shown as a glass pill on iOS 26.
 fn option(label: &'static str, on: Signal<bool>) -> impl IntoElement {
-    button()
+    let option = button()
         .px_2()
         .py_1()
-        .rounded(move || theme().radius)
-        .hover(|s| s.bg(theme().accent))
-        .style_when(move || on.get(), |s| s.bg(theme().accent))
+        .accessibility_label(label)
+        .selected(move || on.get())
         .on_press(move || on.update(|on| *on = !*on))
-        .child(text(label).text_sm().text_color(move || theme().foreground))
+        .child(text(label).text_sm().text_color(move || theme().foreground));
+    if os() == Os::Ios && os_version().0 >= 26 {
+        option.rounded_full().style_when(
+            move || on.get(),
+            |s| {
+                s.glass_effect(GlassEffect::Regular)
+                    .glass_tint_color(theme().accent)
+            },
+        )
+    } else {
+        option
+            .rounded(move || theme().radius)
+            .hover(|s| s.bg(theme().accent))
+            .style_when(move || on.get(), |s| s.bg(theme().accent))
+    }
 }
 
 fn diagram(laid: Laid) -> impl IntoElement {
