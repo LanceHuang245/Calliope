@@ -21,7 +21,9 @@ use super::{
     mermaid::{mermaid, mermaid_blocks, warm_up},
 };
 use crate::{
-    components::{TOOLBAR_ROOM, action, banner, field, icon_button, icons, segmented},
+    components::{
+        TOOLBAR_ROOM, action, banner, desktop_layout, field, icon_button, icons, segmented,
+    },
     store::{self, Mode},
     strings,
 };
@@ -91,13 +93,13 @@ fn note_view() -> impl IntoElement {
             })
         }))
         // A phone shows the backlinks in a sheet when asked.
-        .child((!is_desktop()).then(backlinks_sheet))
-        .child((!is_desktop()).then(phone_toolbar))
-        .child((!is_desktop()).then(|| keyboard_bar(editor, editing)))
+        .child((!desktop_layout()).then(backlinks_sheet))
+        .child((!desktop_layout()).then(phone_toolbar))
+        .child((!desktop_layout()).then(|| keyboard_bar(editor, editing)))
 }
 
 fn header() -> impl IntoElement {
-    let modes = match is_desktop() {
+    let modes = match desktop_layout() {
         true => vec![
             (Mode::Edit, strings::EDIT),
             (Mode::Split, strings::SPLIT),
@@ -111,7 +113,7 @@ fn header() -> impl IntoElement {
         .gap_2()
         .px_4()
         .py_2()
-        .child((!is_desktop()).then(menu_button))
+        .child((!desktop_layout()).then(menu_button))
         .child(title())
         .child(segmented(modes, store::mode, store::set_mode))
         .child(ios_new_note())
@@ -149,7 +151,7 @@ fn source(
     // Room around the text: the gutter (its fold markers) already makes the
     // left side's; its rows move down with the text's.
     // A phone's last lines scroll clear of the floating toolbar.
-    let bottom = match is_desktop() {
+    let bottom = match desktop_layout() {
         true => "pb-4".to_owned(),
         false => format!("pb-[{TOOLBAR_ROOM}px]"),
     };
@@ -272,7 +274,7 @@ fn preview() -> impl IntoElement {
     });
     provide_context(MarkdownPlugins::new().with(WikiLinks));
     // A phone's last lines scroll clear of the floating toolbar.
-    let bottom = match is_desktop() {
+    let bottom = match desktop_layout() {
         true => px(24.0),
         false => px(TOOLBAR_ROOM),
     };

@@ -1,9 +1,11 @@
 //! The app shell: the layout of each device idiom, with no page logic.
 //!
-//! - Desktop (Windows, macOS, Linux): the app's own title bar over a
-//!   sidebar (the files and the app's actions) beside the workspace (the
-//!   note, or the settings) and the open note's backlinks, with the app's
-//!   shortcuts and a status bar in the bottom right corner.
+//! - Desktop (Windows, macOS, Linux; tablets from 900 points wide): the
+//!   app's own title bar over a sidebar (the files and the app's actions)
+//!   beside the workspace (the note, or the settings) and the open note's
+//!   backlinks, with the app's shortcuts and a status bar in the bottom
+//!   right corner. A tablet keeps the system's status bar and back, and
+//!   has no title bar or shortcuts.
 //! - Phone (iOS, Android): one screen at a time, the files, a note or the
 //!   settings (the system tab bar and navigation stacks come later).
 
@@ -18,7 +20,7 @@ use nsh_core::{
 };
 
 use crate::{
-    components::{card, confirm_dialog, floating_surface, icon_button, icons},
+    components::{card, confirm_dialog, desktop_layout, floating_surface, icon_button, icons},
     pages::{
         files::{files_page, rename_dialog},
         graph::graph_page,
@@ -31,15 +33,29 @@ use crate::{
         trash::trash_page,
         welcome::welcome_page,
     },
-    store::{self, Notice, Route},
+    store::{self, Mode, Notice, Route},
     strings,
 };
 
 pub(crate) fn shell() -> impl IntoElement {
-    let layout = match is_desktop() {
-        true => desktop().into_element(),
-        false => mobile().into_element(),
-    };
+    // A tablet turned, or put beside another app, can change the layout.
+    let wide = computed(desktop_layout);
+    let layout = dynamic(move || {
+        let wide = wide.get();
+        untracked(|| {
+            // Each layout starts with its own backlinks: the desktops' beside
+            // the note, the phones' sheet only when asked. The phones' has
+            // no Split: a tablet turned from it edits.
+            store::set_backlinks_shown(wide);
+            if !wide && store::mode() == Mode::Split {
+                store::set_mode(Mode::Edit);
+            }
+            match wide {
+                true => desktop().into_element(),
+                false => mobile().into_element(),
+            }
+        })
+    });
     view()
         .flex_1()
         .child(layout)
@@ -53,12 +69,26 @@ pub(crate) fn shell() -> impl IntoElement {
 }
 
 fn desktop() -> impl IntoElement {
-    on_key("mod+n", |_| store::new_note());
-    on_key("mod+e", |_| store::toggle_read());
-    on_key("mod+o", |_| store::set_switching(true));
-    on_key("mod+g", |_| store::toggle_graph());
-    on_key("mod+\\", |_| store::toggle_sidebar());
-    hide_system_title_bar();
+    let tablet = !is_desktop();
+    if tablet {
+        // A tablet's back (Android) leaves the graph, the settings or the
+        // trash for the note, as their back button does.
+        on_back_press(|| {
+            let route = untracked(store::route);
+            let page = matches!(route, Route::Graph | Route::Settings | Route::Trash);
+            if page {
+                store::back_to_note();
+            }
+            page
+        });
+    } else {
+        on_key("mod+n", |_| store::new_note());
+        on_key("mod+e", |_| store::toggle_read());
+        on_key("mod+o", |_| store::set_switching(true));
+        on_key("mod+g", |_| store::toggle_graph());
+        on_key("mod+\\", |_| store::toggle_sidebar());
+        hide_system_title_bar();
+    }
     // Three cards on the sidebar's color, as far from each other as from
     // the window's edges: the files, the workspace, the backlinks.
     let body = view()
@@ -90,11 +120,21 @@ fn desktop() -> impl IntoElement {
         .child(dynamic(move || {
             store::backlinks_shown().then(|| card().w(px(260.0)).child(backlinks_panel()))
         }));
-    view()
+    let layout = view()
         .flex_1()
-        .child(app_title_bar())
+        .child((!tablet).then(app_title_bar))
         .child(body)
-        .child(status_bar())
+        .child(status_bar());
+    match tablet {
+        // Clear of the system's status bar and gesture bar, on the
+        // sidebar's color.
+        true => layout
+            .bg(move || theme().sidebar)
+            .px_safe_area()
+            .pt_safe_area_plus(px(8.0))
+            .pb_safe_area(),
+        false => layout,
+    }
 }
 
 /// Hides the system's title bar: the app fills the window up to its top

@@ -14,7 +14,7 @@ use nsh_core::{
 
 use self::icons::icon;
 pub(crate) use self::page::{
-    TOOLBAR_ROOM, fab, floating_surface, floating_toolbar, page, scroll_page,
+    TOOLBAR_ROOM, desktop_layout, fab, floating_surface, floating_toolbar, page, scroll_page,
 };
 use crate::strings;
 

@@ -7,7 +7,8 @@ use nsh_core::{platform::Os, prelude::*};
 
 use crate::{
     components::{
-        ButtonVariant, button, fab, floating_toolbar, icon_button, icons, muted, toolbar_toggle,
+        ButtonVariant, button, desktop_layout, fab, floating_toolbar, icon_button, icons, muted,
+        toolbar_toggle,
     },
     store::{self, Route, SyncStatus},
     strings,
@@ -16,7 +17,7 @@ use crate::{
 pub(crate) fn home_page() -> impl IntoElement {
     view()
         .flex_1()
-        .child((!is_desktop()).then(|| {
+        .child((!desktop_layout()).then(|| {
             view()
                 .flex_row()
                 .justify_between()
@@ -42,7 +43,7 @@ pub(crate) fn home_page() -> impl IntoElement {
                         ))
                 })),
         )
-        .child((!is_desktop()).then(phone_toolbar))
+        .child((!desktop_layout()).then(phone_toolbar))
 }
 
 /// Whether the vault is empty while it syncs: its first download (a
@@ -97,9 +98,11 @@ pub(crate) fn menu_button() -> impl IntoElement {
 }
 
 /// iOS's new note (MVP 5.4): a `+` at the end of the top bar, where its
-/// navigation bars have it (Android's is the [`phone_toolbar`]'s FAB).
+/// navigation bars have it (Android's is the [`phone_toolbar`]'s FAB; the
+/// desktops' layout has its own over the files).
 pub(crate) fn ios_new_note() -> Option<impl IntoElement> {
-    (os() == Os::Ios).then(|| icon_button(icons::PLUS, strings::NEW_NOTE, store::new_note))
+    (os() == Os::Ios && !desktop_layout())
+        .then(|| icon_button(icons::PLUS, strings::NEW_NOTE, store::new_note))
 }
 
 /// The phones' floating toolbar, over the home page and the note (the

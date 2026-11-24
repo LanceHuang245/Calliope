@@ -2,10 +2,26 @@
 //! navigation stack on the phones, and the phones' floating toolbar.
 
 use nsh_base::{nav_page, theme, toolbar};
-use nsh_core::{GlassEffect, element::AnyElement, platform::Os, prelude::*};
+use nsh_core::{
+    GlassEffect,
+    element::AnyElement,
+    platform::{Idiom, Os},
+    prelude::*,
+};
 
 use super::{icon_button, icons};
 use crate::strings;
+
+/// How wide a tablet takes the desktops' layout (MVP phase 4).
+const TABLET_DESKTOP_WIDTH: f32 = 900.0;
+
+/// Whether the desktops' layout shows (sidebar, cards, Split): on the
+/// desktops, and on a tablet at least [`TABLET_DESKTOP_WIDTH`] wide; a
+/// phone keeps its own, turned or not. It follows a tablet turned, or put
+/// beside another app.
+pub(crate) fn desktop_layout() -> bool {
+    is_desktop() || (idiom() == Idiom::Pad && window().width >= px(TABLET_DESKTOP_WIDTH))
+}
 
 /// A page: on the desktops `content` under its top bar ([`page_bar`], the
 /// `actions` after the title); on the phones a page of the navigation
@@ -18,7 +34,7 @@ pub(crate) fn page(
     actions: Option<AnyElement>,
     content: impl IntoElement,
 ) -> AnyElement {
-    if is_desktop() {
+    if desktop_layout() {
         let bar = page_bar(title, back).child(actions);
         return view().flex_1().child(bar).child(content).into_element();
     }
@@ -41,7 +57,7 @@ pub(crate) fn scroll_page(
     content: impl IntoElement,
 ) -> AnyElement {
     let content = scroll().flex_1().child(content);
-    if is_desktop() {
+    if desktop_layout() {
         return page(title, back, None, content);
     }
     (nav_page().title(title).header_large_title(os() == Os::Ios))

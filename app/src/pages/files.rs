@@ -10,7 +10,7 @@ use nsh_core::prelude::*;
 use super::home::sync_button;
 use crate::{
     components::{
-        ButtonVariant, button, card, field, icon_button, icon_toggle,
+        ButtonVariant, button, card, desktop_layout, field, icon_button, icon_toggle,
         icons::{self, icon},
         menu_entry, menu_popup, overlay,
     },
@@ -29,7 +29,7 @@ pub(crate) fn files_page() -> impl IntoElement {
                 .p_1()
                 // On a phone the files are the menu, over the page.
                 .child(
-                    (!is_desktop()).then(|| {
+                    (!desktop_layout()).then(|| {
                         icon_button(icons::X, strings::CLOSE, || store::set_menu_open(false))
                     }),
                 )
@@ -69,7 +69,7 @@ pub(crate) fn files_page() -> impl IntoElement {
                 .flex_row()
                 .gap_1()
                 .pt_1()
-                .child(is_desktop().then(|| {
+                .child(desktop_layout().then(|| {
                     view()
                         .flex_row()
                         .gap_1()
