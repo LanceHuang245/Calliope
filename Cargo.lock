@@ -3210,7 +3210,7 @@ dependencies = [
 [[package]]
 name = "nsh-base"
 version = "0.6.0"
-source = "git+https://github.com/longbridge/nsh?rev=21080f1cccc081d28c509817d6f95c5e06419251#21080f1cccc081d28c509817d6f95c5e06419251"
+source = "git+https://github.com/longbridge/nsh?rev=2964346c285f57004f2531fb768cc9840b8d7ff5#2964346c285f57004f2531fb768cc9840b8d7ff5"
 dependencies = [
  "chrono",
  "html5ever 0.27.0",
@@ -3240,7 +3240,7 @@ dependencies = [
 [[package]]
 name = "nsh-core"
 version = "0.6.0"
-source = "git+https://github.com/longbridge/nsh?rev=21080f1cccc081d28c509817d6f95c5e06419251#21080f1cccc081d28c509817d6f95c5e06419251"
+source = "git+https://github.com/longbridge/nsh?rev=2964346c285f57004f2531fb768cc9840b8d7ff5#2964346c285f57004f2531fb768cc9840b8d7ff5"
 dependencies = [
  "cap-std",
  "chrono",
@@ -3283,7 +3283,7 @@ dependencies = [
 [[package]]
 name = "nsh-engine"
 version = "0.6.0"
-source = "git+https://github.com/longbridge/nsh?rev=21080f1cccc081d28c509817d6f95c5e06419251#21080f1cccc081d28c509817d6f95c5e06419251"
+source = "git+https://github.com/longbridge/nsh?rev=2964346c285f57004f2531fb768cc9840b8d7ff5#2964346c285f57004f2531fb768cc9840b8d7ff5"
 dependencies = [
  "crossbeam-channel",
  "env_filter",
@@ -3302,7 +3302,7 @@ dependencies = [
 [[package]]
 name = "nsh-macros"
 version = "0.6.0"
-source = "git+https://github.com/longbridge/nsh?rev=21080f1cccc081d28c509817d6f95c5e06419251#21080f1cccc081d28c509817d6f95c5e06419251"
+source = "git+https://github.com/longbridge/nsh?rev=2964346c285f57004f2531fb768cc9840b8d7ff5#2964346c285f57004f2531fb768cc9840b8d7ff5"
 dependencies = [
  "imagesize 0.15.0",
  "proc-macro2",
@@ -3315,7 +3315,7 @@ dependencies = [
 [[package]]
 name = "nsh-platform-apple"
 version = "0.6.0"
-source = "git+https://github.com/longbridge/nsh?rev=21080f1cccc081d28c509817d6f95c5e06419251#21080f1cccc081d28c509817d6f95c5e06419251"
+source = "git+https://github.com/longbridge/nsh?rev=2964346c285f57004f2531fb768cc9840b8d7ff5#2964346c285f57004f2531fb768cc9840b8d7ff5"
 dependencies = [
  "block2",
  "cc",
@@ -3339,7 +3339,7 @@ dependencies = [
 [[package]]
 name = "nsh-platform-ios"
 version = "0.6.0"
-source = "git+https://github.com/longbridge/nsh?rev=21080f1cccc081d28c509817d6f95c5e06419251#21080f1cccc081d28c509817d6f95c5e06419251"
+source = "git+https://github.com/longbridge/nsh?rev=2964346c285f57004f2531fb768cc9840b8d7ff5#2964346c285f57004f2531fb768cc9840b8d7ff5"
 dependencies = [
  "block2",
  "dispatch2",
@@ -3367,7 +3367,7 @@ dependencies = [
 [[package]]
 name = "nsh-platform-linux"
 version = "0.6.0"
-source = "git+https://github.com/longbridge/nsh?rev=21080f1cccc081d28c509817d6f95c5e06419251#21080f1cccc081d28c509817d6f95c5e06419251"
+source = "git+https://github.com/longbridge/nsh?rev=2964346c285f57004f2531fb768cc9840b8d7ff5#2964346c285f57004f2531fb768cc9840b8d7ff5"
 dependencies = [
  "crossbeam-channel",
  "gtk4",
@@ -3386,7 +3386,7 @@ dependencies = [
 [[package]]
 name = "nsh-platform-macos"
 version = "0.6.0"
-source = "git+https://github.com/longbridge/nsh?rev=21080f1cccc081d28c509817d6f95c5e06419251#21080f1cccc081d28c509817d6f95c5e06419251"
+source = "git+https://github.com/longbridge/nsh?rev=2964346c285f57004f2531fb768cc9840b8d7ff5#2964346c285f57004f2531fb768cc9840b8d7ff5"
 dependencies = [
  "block2",
  "crossbeam-channel",
@@ -3415,7 +3415,7 @@ dependencies = [
 [[package]]
 name = "nsh-platform-windows"
 version = "0.6.0"
-source = "git+https://github.com/longbridge/nsh?rev=21080f1cccc081d28c509817d6f95c5e06419251#21080f1cccc081d28c509817d6f95c5e06419251"
+source = "git+https://github.com/longbridge/nsh?rev=2964346c285f57004f2531fb768cc9840b8d7ff5#2964346c285f57004f2531fb768cc9840b8d7ff5"
 dependencies = [
  "crossbeam-channel",
  "image",
@@ -3435,7 +3435,7 @@ dependencies = [
 [[package]]
 name = "nsh-testing"
 version = "0.6.0"
-source = "git+https://github.com/longbridge/nsh?rev=21080f1cccc081d28c509817d6f95c5e06419251#21080f1cccc081d28c509817d6f95c5e06419251"
+source = "git+https://github.com/longbridge/nsh?rev=2964346c285f57004f2531fb768cc9840b8d7ff5#2964346c285f57004f2531fb768cc9840b8d7ff5"
 dependencies = [
  "crossbeam-channel",
  "log",
@@ -3449,7 +3449,7 @@ dependencies = [
 [[package]]
 name = "nsh-updater"
 version = "0.6.0"
-source = "git+https://github.com/longbridge/nsh?rev=21080f1cccc081d28c509817d6f95c5e06419251#21080f1cccc081d28c509817d6f95c5e06419251"
+source = "git+https://github.com/longbridge/nsh?rev=2964346c285f57004f2531fb768cc9840b8d7ff5#2964346c285f57004f2531fb768cc9840b8d7ff5"
 dependencies = [
  "base64 0.22.1",
  "ed25519-dalek",
@@ -5520,9 +5520,9 @@ dependencies = [
 
 [[package]]
 name = "taffy"
-version = "0.15.1"
+version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "31f7bd2d97198df05186f93a3a3c306845f40e8b3c22bf9279cdd7e5cf5fea7d"
+checksum = "cae92eb1b204bfd239b5c463e1bd2c3ce4913d2d3abfb5c64f5cfee9d65e5c68"
 dependencies = [
  "serde",
  "slotmap",
@@ -6956,18 +6956,18 @@ dependencies = [
 
 [[package]]
 name = "zerocopy"
-version = "0.8.64"
+version = "0.8.65"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ed43f3060383c64b000f3c630550aebdfa9d3b76d48de32390483dd2cc7e0865"
+checksum = "32bc8a75f879cd6fe53a6bedf3c28f0e1b914c77424fc2be9e2ec85d7d25aff5"
 dependencies = [
  "zerocopy-derive",
 ]
 
 [[package]]
 name = "zerocopy-derive"
-version = "0.8.64"
+version = "0.8.65"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a5cbd820fe3e35fb38c83b6dc7e6b1618bc46e0cd10073ae94e8d52dc468d8b9"
+checksum = "b8bfd2644ea1681f60cf95029ff18aa8ad1cc3f7b8fe37286f8e473bb29f816b"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -7094,27 +7094,27 @@ dependencies = [
 
 [[package]]
 name = "zstd"
-version = "0.14.4"
+version = "0.14.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ad5020ab8f27bfc0024ad0a07aed6bf022a16208f479686fbed4fdd0c85eb0b3"
+checksum = "465cb081cac3a28a84ef547702dba1fe0f4a9f22e4e57a0b675ceee028c2af80"
 dependencies = [
  "zstd-safe",
 ]
 
 [[package]]
 name = "zstd-safe"
-version = "8.3.0"
+version = "8.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a9ea9cc2576c2fcc104e9cec04f46e3ede564f4fbc206831e4ef7e859a4140d"
+checksum = "9b09bddd92c53b91833f4df03e0ea07e02d8367cfcd15a3b9acda94fc273f793"
 dependencies = [
  "zstd-sys",
 ]
 
 [[package]]
 name = "zstd-sys"
-version = "2.1.3+zstd.1.5.7"
+version = "2.2.0+zstd.1.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f729a06d0257428fd9d997ac8db7e1407bd0262ab016b085b36bc52957c0052d"
+checksum = "c3f4089cda6dda4dc43c43dd9f8964140064fd2f752f3da46c3a483c3c175160"
 dependencies = [
  "cc",
  "pkg-config",

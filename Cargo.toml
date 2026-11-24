@@ -25,16 +25,16 @@ calliope-sync = { path = "crates/calliope-sync" }
 # this checkout.
 # `nsh-base`: `highlight` colors code blocks, `math` typesets formulas.
 # `svg`: the icons (`app/src/components/icons.rs`).
-nsh-core = { git = "https://github.com/longbridge/nsh", rev = "21080f1cccc081d28c509817d6f95c5e06419251", features = ["svg"] }
-nsh-base = { git = "https://github.com/longbridge/nsh", rev = "21080f1cccc081d28c509817d6f95c5e06419251", features = ["highlight", "math"] }
-nsh-engine = { git = "https://github.com/longbridge/nsh", rev = "21080f1cccc081d28c509817d6f95c5e06419251", default-features = false }
-nsh-testing = { git = "https://github.com/longbridge/nsh", rev = "21080f1cccc081d28c509817d6f95c5e06419251" }
-nsh-platform-ios = { git = "https://github.com/longbridge/nsh", rev = "21080f1cccc081d28c509817d6f95c5e06419251", default-features = false }
+nsh-core = { git = "https://github.com/longbridge/nsh", rev = "2964346c285f57004f2531fb768cc9840b8d7ff5", features = ["svg"] }
+nsh-base = { git = "https://github.com/longbridge/nsh", rev = "2964346c285f57004f2531fb768cc9840b8d7ff5", features = ["highlight", "math"] }
+nsh-engine = { git = "https://github.com/longbridge/nsh", rev = "2964346c285f57004f2531fb768cc9840b8d7ff5", default-features = false }
+nsh-testing = { git = "https://github.com/longbridge/nsh", rev = "2964346c285f57004f2531fb768cc9840b8d7ff5" }
+nsh-platform-ios = { git = "https://github.com/longbridge/nsh", rev = "2964346c285f57004f2531fb768cc9840b8d7ff5", default-features = false }
 # The desktop backends `cargo run` uses (`app/src/main.rs`). Without `js`, a
 # Rust app links no QuickJS.
-nsh-platform-linux = { git = "https://github.com/longbridge/nsh", rev = "21080f1cccc081d28c509817d6f95c5e06419251", default-features = false }
-nsh-platform-macos = { git = "https://github.com/longbridge/nsh", rev = "21080f1cccc081d28c509817d6f95c5e06419251", default-features = false }
-nsh-platform-windows = { git = "https://github.com/longbridge/nsh", rev = "21080f1cccc081d28c509817d6f95c5e06419251", default-features = false }
+nsh-platform-linux = { git = "https://github.com/longbridge/nsh", rev = "2964346c285f57004f2531fb768cc9840b8d7ff5", default-features = false }
+nsh-platform-macos = { git = "https://github.com/longbridge/nsh", rev = "2964346c285f57004f2531fb768cc9840b8d7ff5", default-features = false }
+nsh-platform-windows = { git = "https://github.com/longbridge/nsh", rev = "2964346c285f57004f2531fb768cc9840b8d7ff5", default-features = false }
 
 # Mermaid diagrams (`app/src/pages/mermaid.rs`): only the diagrams Calliope
 # shows, as SVG laid out with the system's fonts; no ELK layout (EPL-2.0).
