@@ -46,7 +46,8 @@ objc2-foundation = { version = "0.3.2", default-features = false, features = ["s
 objc2-quartz-core = { version = "0.3.2", default-features = false, features = ["std", "CALayer"] }
 objc2-ui-kit = { version = "0.3.2", default-features = false, features = [
     "std", "block2", "objc2-core-foundation", "objc2-quartz-core", "UIAction",
-    "UIButton", "UIColor", "UIControl", "UIImage", "UIInterface", "UIMenuElement",
+    "UIButton", "UIButtonConfiguration", "UIColor", "UIControl", "UIGeometry",
+    "UIImage", "UIInterface", "UIMenuElement",
     "UIResponder", "UIView",
     "UIVisualEffect", "UIVisualEffectView",
 ] }

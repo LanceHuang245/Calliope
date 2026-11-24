@@ -13,8 +13,9 @@ use objc2::{
 use objc2_core_foundation::{CGPoint, CGRect, CGSize};
 use objc2_foundation::NSString;
 use objc2_ui_kit::{
-    UIAction, UIButton, UIButtonType, UIColor, UIControlEvents, UIImage, UIView, UIVisualEffect,
-    UIVisualEffectView,
+    NSDirectionalEdgeInsets, UIAction, UIButton, UIButtonConfiguration,
+    UIButtonConfigurationCornerStyle, UIButtonType, UIColor, UIControlEvents, UIControlState,
+    UIImage, UIView, UIVisualEffect, UIVisualEffectView,
 };
 
 use super::{BAR_HEIGHT, GLASS_BUTTON, GLASS_INSET, GLASS_STRIDE, GLASS_TOOLBAR};
@@ -87,15 +88,9 @@ impl NativeComponent for GlassToolbar {
             }
         }
         for ((_, button), (_, item)) in self.buttons.iter().zip(items) {
-            let selected = item["selected"].as_bool().unwrap_or(false);
-            button.setSelected(selected);
-            let tint = if selected {
-                UIColor::labelColor()
-            } else {
-                UIColor::secondaryLabelColor()
-            };
-            // SAFETY: The tint is always a UIKit color.
-            unsafe { button.setTintColor(Some(&tint)) };
+            if let Some(selected) = item["selected"].as_bool() {
+                button.setSelected(selected);
+            }
         }
     }
 }
@@ -113,10 +108,31 @@ impl GlassToolbar {
         ));
         let title = NSString::from_str(item["label"].as_str().unwrap_or_default());
         let symbol = NSString::from_str(item["symbol"].as_str().unwrap_or_default());
-        if let Some(image) = UIImage::systemImageNamed(&symbol) {
-            button.setImage_forState(Some(&image), objc2_ui_kit::UIControlState::Normal);
+        let image = UIImage::systemImageNamed(&symbol);
+        if item["selected"].is_boolean() {
+            // UIKit resolves normal and selected appearances from the same configuration.
+            let configuration = UIButtonConfiguration::plainButtonConfiguration(mtm);
+            configuration.setCornerStyle(UIButtonConfigurationCornerStyle::Capsule);
+            configuration.setContentInsets(NSDirectionalEdgeInsets {
+                top: 0.0,
+                leading: 0.0,
+                bottom: 0.0,
+                trailing: 0.0,
+            });
+            if let Some(image) = image.as_deref() {
+                configuration.setImage(Some(image));
+            } else {
+                configuration.setTitle(Some(&title));
+            }
+            button.setConfiguration(Some(&configuration));
         } else {
-            button.setTitle_forState(Some(&title), objc2_ui_kit::UIControlState::Normal);
+            if let Some(image) = image.as_deref() {
+                button.setImage_forState(Some(image), UIControlState::Normal);
+            } else {
+                button.setTitle_forState(Some(&title), UIControlState::Normal);
+            }
+            // SAFETY: The standalone command's tint is always a UIKit color.
+            unsafe { button.setTintColor(Some(&UIColor::secondaryLabelColor())) };
         }
         // SAFETY: UIKit's accessibilityLabel setter takes an NSString.
         let _: () = unsafe { msg_send![&*button, setAccessibilityLabel: &*title] };

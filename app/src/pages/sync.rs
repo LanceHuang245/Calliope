@@ -4,6 +4,8 @@
 use calliope_sync::{Config, Provider};
 use nsh_core::prelude::*;
 
+use super::settings::settings_segmented;
+
 use crate::{
     components::{ButtonVariant, button, field, labeled, muted, segmented},
     store::{self, SyncStatus},
@@ -30,7 +32,7 @@ pub(crate) fn sync_settings() -> impl IntoElement {
         .child(labeled(
             strings::SYNC_PROVIDER,
             false,
-            segmented(
+            settings_segmented(
                 vec![
                     (Provider::Off, strings::OFF),
                     (Provider::WebDav, strings::WEBDAV),
@@ -47,7 +49,7 @@ pub(crate) fn sync_settings() -> impl IntoElement {
                     view()
                         .w_full()
                         .gap_3()
-                        .child(fields(provider.get(), draft, secret))
+                        .child(fields(provider.get(), draft, secret, true))
                         .child(encryption_fields(mode, true))
                 })
             })
@@ -117,6 +119,7 @@ pub(crate) fn fields(
     provider: Provider,
     draft: Signal<Config>,
     secret: Signal<String>,
+    in_settings: bool,
 ) -> impl IntoElement {
     let c = draft.get();
     let s3 = provider == Provider::S3;
@@ -135,6 +138,14 @@ pub(crate) fn fields(
     let kept = untracked(store::sync_config).provider != Provider::Off;
     // Memoize so typing in any field does not rebuild the interval input.
     let show_interval = computed(move || is_desktop() && draft.get().auto);
+    let choices = vec![(true, strings::ON), (false, strings::OFF)];
+    let auto = move || draft.get().auto;
+    let set_auto = move |on| draft.update(|c| c.auto = on);
+    let auto_picker = if in_settings {
+        settings_segmented(choices, auto, set_auto)
+    } else {
+        segmented(choices, auto, set_auto).into_element()
+    };
     view()
         .w_full()
         .pt_2()
@@ -177,15 +188,7 @@ pub(crate) fn fields(
         .child(entry(strings::DEVICE_NAME, false, &c.device, |c, t| {
             c.device = t
         }))
-        .child(labeled(
-            strings::AUTO_SYNC,
-            false,
-            segmented(
-                vec![(true, strings::ON), (false, strings::OFF)],
-                move || draft.get().auto,
-                move |on| draft.update(|c| c.auto = on),
-            ),
-        ))
+        .child(labeled(strings::AUTO_SYNC, false, auto_picker))
         // The desktops also sync every few minutes while auto-sync is on; 0 never.
         .child(dynamic(move || {
             let show = show_interval.get();
@@ -272,19 +275,22 @@ pub(crate) fn encryption_fields(fields: EncryptionFields, allow_new: bool) -> im
         modes.push((RemoteMode::New, strings::NEW_ENCRYPTED_REMOTE));
     }
     modes.push((RemoteMode::Join, strings::JOIN_ENCRYPTED_REMOTE));
+    let current = move || fields.mode.get();
+    let choose = move |mode| {
+        fields.passphrase.set(String::new());
+        fields.confirmation.set(String::new());
+        fields.mode.set(mode);
+    };
+    let picker = if allow_new {
+        settings_segmented(modes, current, choose)
+    } else {
+        segmented(modes, current, choose).into_element()
+    };
     view()
         .gap_2()
         .items_start()
         .child(muted(strings::REMOTE_MODE))
-        .child(segmented(
-            modes,
-            move || fields.mode.get(),
-            move |mode| {
-                fields.passphrase.set(String::new());
-                fields.confirmation.set(String::new());
-                fields.mode.set(mode);
-            },
-        ))
+        .child(picker)
         .child(dynamic(move || {
             let mode = fields.mode.get();
             (mode != RemoteMode::Plaintext).then(|| {

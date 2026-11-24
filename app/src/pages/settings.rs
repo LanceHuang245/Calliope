@@ -1,7 +1,12 @@
 //! Settings categories share their contents across desktop and mobile.
 
 use nsh_base::theme;
-use nsh_core::{element::AnyElement, platform::Os, prelude::*};
+use nsh_core::{
+    element::AnyElement,
+    mobile::{SegmentedControlItem, segmented_control},
+    platform::Os,
+    prelude::*,
+};
 
 use super::sync::sync_settings;
 use crate::{
@@ -115,7 +120,7 @@ fn category_content(category: SettingsCategory) -> impl IntoElement {
         SettingsCategory::Appearance => labeled(
             strings::THEME,
             false,
-            segmented(
+            settings_segmented(
                 vec![
                     (Theme::System, strings::SYSTEM),
                     (Theme::Light, strings::LIGHT),
@@ -149,4 +154,38 @@ fn category_content(category: SettingsCategory) -> impl IntoElement {
             .into_element(),
     };
     view().p_6().gap_2().items_start().child(content)
+}
+
+// UIKit owns the selection appearance; each settings field still owns its value.
+pub(crate) fn settings_segmented<T: Copy + PartialEq + 'static>(
+    options: Vec<(T, &'static str)>,
+    current: impl Fn() -> T + Copy + 'static,
+    choose: impl Fn(T) + Copy + 'static,
+) -> AnyElement {
+    if cfg!(target_os = "ios") && os() == Os::Ios {
+        let selection = options.clone();
+        segmented_control()
+            .items(
+                options
+                    .iter()
+                    .map(|(_, title)| SegmentedControlItem::new(*title))
+                    .collect::<Vec<_>>(),
+            )
+            .selected_index(move || {
+                let value = current();
+                selection
+                    .iter()
+                    .position(|(option, _)| *option == value)
+                    .unwrap_or(selection.len()) as u32
+            })
+            .on_change(move |index: &u32| {
+                if let Some(&(value, _)) = options.get(*index as usize) {
+                    choose(value);
+                }
+            })
+            .max_w(relative(1.0))
+            .into_element()
+    } else {
+        segmented(options, current, choose).into_element()
+    }
 }

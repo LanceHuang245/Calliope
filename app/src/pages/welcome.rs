@@ -124,7 +124,7 @@ fn sync_form(from_sync: Signal<bool>) -> impl IntoElement {
         // The service's fields again when it changes, as in the settings.
         .child(dynamic(move || {
             let provider = provider.get();
-            untracked(|| fields(provider, draft, secret))
+            untracked(|| fields(provider, draft, secret, false))
         }))
         .child(encryption_fields(mode, false))
         .child(

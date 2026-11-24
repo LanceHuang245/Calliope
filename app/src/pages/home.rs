@@ -29,7 +29,7 @@ struct ToolbarAction {
     icon: &'static str,
     symbol: &'static str,
     label: &'static str,
-    selected: fn() -> bool,
+    selected: Option<fn() -> bool>,
     visible: fn() -> bool,
     press: fn(),
 }
@@ -38,7 +38,7 @@ const NEW_NOTE_ACTION: ToolbarAction = ToolbarAction {
     icon: icons::PLUS,
     symbol: "plus",
     label: strings::NEW_NOTE,
-    selected: || false,
+    selected: None,
     visible: || true,
     press: store::new_note,
 };
@@ -126,7 +126,7 @@ pub(crate) fn menu_button() -> impl IntoElement {
         icon: icons::MENU,
         symbol: "line.3.horizontal",
         label: strings::MENU,
-        selected: || false,
+        selected: None,
         visible: || true,
         press: || store::set_menu_open(true),
     };
@@ -149,7 +149,7 @@ pub(crate) fn phone_toolbar() -> impl IntoElement {
             icon: icons::REFRESH,
             symbol: "arrow.clockwise",
             label: strings::SYNC,
-            selected: || matches!(store::sync_status(), SyncStatus::Running(..)),
+            selected: Some(|| matches!(store::sync_status(), SyncStatus::Running(..))),
             visible: sync_enabled,
             press: store::sync_now,
         },
@@ -157,7 +157,7 @@ pub(crate) fn phone_toolbar() -> impl IntoElement {
             icon: icons::SEARCH,
             symbol: "magnifyingglass",
             label: strings::SEARCH,
-            selected: store::switching,
+            selected: Some(store::switching),
             visible: || true,
             press: || store::set_switching(true),
         },
@@ -165,7 +165,7 @@ pub(crate) fn phone_toolbar() -> impl IntoElement {
             icon: icons::NETWORK,
             symbol: "point.3.connected.trianglepath.dotted",
             label: strings::GRAPH,
-            selected: || store::route() == Route::Graph,
+            selected: Some(|| store::route() == Route::Graph),
             visible: || true,
             press: store::toggle_graph,
         },
@@ -173,7 +173,7 @@ pub(crate) fn phone_toolbar() -> impl IntoElement {
             icon: icons::LINK,
             symbol: "link",
             label: strings::BACKLINKS,
-            selected: store::backlinks_shown,
+            selected: Some(store::backlinks_shown),
             visible: || store::opened().is_some(),
             press: store::toggle_backlinks,
         },
@@ -181,7 +181,7 @@ pub(crate) fn phone_toolbar() -> impl IntoElement {
             icon: icons::TRASH,
             symbol: "trash",
             label: strings::TRASH,
-            selected: || store::route() == Route::Trash,
+            selected: Some(|| store::route() == Route::Trash),
             visible: || true,
             press: store::toggle_trash,
         },
@@ -202,7 +202,12 @@ pub(crate) fn phone_toolbar() -> impl IntoElement {
                 .gap_1()
                 .child(ACTIONS.iter().map(|action| {
                     when(action.visible, move || {
-                        toolbar_toggle(action.icon, action.label, action.selected, action.press)
+                        toolbar_toggle(
+                            action.icon,
+                            action.label,
+                            move || action.selected.is_some_and(|selected| selected()),
+                            action.press,
+                        )
                     })
                 }));
             let add = &NEW_NOTE_ACTION;
@@ -229,7 +234,7 @@ fn glass_toolbar(actions: &'static [ToolbarAction]) -> impl IntoElement {
                             "index": index,
                             "label": action.label,
                             "symbol": action.symbol,
-                            "selected": (action.selected)(),
+                            "selected": action.selected.map(|selected| selected()),
                         })
                     })
                     .collect(),
