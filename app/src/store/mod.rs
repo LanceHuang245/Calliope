@@ -310,7 +310,8 @@ pub(crate) fn export_logs() {
     };
     log::logger().flush();
     if !is_desktop() {
-        set_clipboard(fs::read_to_string(&log).unwrap_or_default());
+        // Whether the copy reached the system's clipboard goes unasked.
+        drop(set_clipboard(fs::read_to_string(&log).unwrap_or_default()));
         inform(strings::LOGS_COPIED);
         return;
     }

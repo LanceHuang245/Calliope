@@ -324,7 +324,10 @@ mod tests {
         assert_eq!(wheeled(at, HALF, &wheel(fingers, false)), (5.0, 28.0, 0.5));
 
         // The canvas's point under the pointer, before.
-        let under = (HALF + (60.0 - 10.0 - HALF) / 0.5, HALF + (90.0 - 20.0 - HALF) / 0.5);
+        let under = (
+            HALF + (60.0 - 10.0 - HALF) / 0.5,
+            HALF + (90.0 - 20.0 - HALF) / 0.5,
+        );
         let notches = WheelDelta::Lines(point(0.0, -3.0));
         let pinch = WheelDelta::Points(point(px(0.0), px(-48.0)));
         for e in [wheel(notches, false), wheel(pinch, true)] {
