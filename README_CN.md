@@ -29,6 +29,16 @@ Calliope 是一款本地优先、跨平台的 Markdown 知识库，使用 Rust �
 - 主题：浅色、深色或跟随系统
 - 五个平台原生运行：Windows、macOS、Linux、Android 和 iOS
 
+## 截图
+
+### Windows
+
+<img src="images/calliope-windows.png" alt="Calliope 的 Windows 分栏视图" width="1000">
+
+### Android
+
+<img src="images/calliope-android.png" alt="Calliope 的 Android 阅读模式" width="320">
+
 ## 路线图
 Calliope 分阶段开发，双链、图谱和同步已经完成。接下来：
 - 移动端：系统 TabBar 与导航，Android 上的 Material 3 和 iOS 上的 Liquid Glass

@@ -29,6 +29,16 @@ Notes stay as plain Markdown files in a folder you own, connected through wiki l
 - Themes: light, dark, or following the system
 - Native on five platforms: Windows, macOS, Linux, Android and iOS
 
+## Screenshot
+
+### Windows
+
+<img src="images/calliope-windows.png" alt="Calliope on Windows in split view" width="1000">
+
+### Android
+
+<img src="images/calliope-android.png" alt="Calliope on Android in read mode" width="320">
+
 ## Roadmap
 Calliope is built in stages; links, the graph and sync are done. Next:
 - Mobile: the system's tab bar and navigation, Material 3 on Android and Liquid Glass on iOS
