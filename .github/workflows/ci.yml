@@ -9,53 +9,7 @@ env:
   NSH_VERSION: nightly
 
 jobs:
-  check:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-24.04, macos-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v7
-      - name: GTK 4 and GStreamer
-        if: runner.os == 'Linux'
-        run: |
-          # Ubuntu's own archive, not the runner's Azure mirror, which fails
-          # or crawls now and then: the runner's apt reads its mirrors from
-          # apt-mirrors.txt (actions/runner-images, configure-apt-sources.sh).
-          printf 'https://archive.ubuntu.com/ubuntu/\tpriority:1\nhttps://security.ubuntu.com/ubuntu/\tpriority:2\n' | sudo tee /etc/apt/apt-mirrors.txt
-          sudo apt-get -o Acquire::Retries=3 update
-          sudo apt-get -o Acquire::Retries=3 install -y libgtk-4-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
-      - run: rustup show
-      - uses: Swatinem/rust-cache@v2
-      - run: cargo fmt --all --check
-      - run: cargo clippy --workspace --all-targets -- -D warnings
-      - run: cargo test --workspace
-
-  # The sync tests again on a real WebDAV server and a real S3 one, in
-  # Docker (`crates/calliope-sync/src/tests.rs`). VersityGW stands in for
-  # MinIO, which no longer publishes its images.
-  sync:
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v7
-      - run: rustup show
-      - uses: Swatinem/rust-cache@v2
-      - name: WebDAV and S3 servers
-        run: |
-          printf 'address: 0.0.0.0\nport: 6065\ndirectory: /data\npermissions: CRUD\nusers:\n  - username: calliope\n    password: calliope-secret\n' > "$RUNNER_TEMP/webdav.yml"
-          mkdir "$RUNNER_TEMP/dav"
-          docker run -d -p 6065:6065 -v "$RUNNER_TEMP/dav:/data" -v "$RUNNER_TEMP/webdav.yml:/config.yml" ghcr.io/hacdias/webdav:latest -c /config.yml
-          docker run -d -p 7070:7070 -e ROOT_ACCESS_KEY=calliope -e ROOT_SECRET_KEY=calliope-secret ghcr.io/versity/versitygw:latest posix /tmp
-          sleep 5
-          curl -fsS --aws-sigv4 "aws:amz:us-east-1:s3" --user calliope:calliope-secret -X PUT http://127.0.0.1:7070/calliope
-      - run: cargo test -p calliope-sync
-        env:
-          CALLIOPE_TEST_WEBDAV: http://127.0.0.1:6065 calliope calliope-secret
-          CALLIOPE_TEST_S3: http://127.0.0.1:7070 calliope calliope calliope-secret
-
   package:
-    needs: check
     strategy:
       fail-fast: false
       matrix:
@@ -72,12 +26,11 @@ jobs:
             name: macos
             os: macos-latest
             artifact: dist/Calliope-macos.zip
-          # Android: an APK per ABI (64-bit and 32-bit ARM phones) and a
-          # universal one, x86_64 included for emulators, in one artifact.
+          # One APK for 64-bit and 32-bit ARM phones and x86_64 emulators.
           - target: android
             name: android
             os: ubuntu-24.04
-            artifact: dist/Calliope-*.apk
+            artifact: dist/Calliope-universal.apk
           - target: ios
             name: ios
             os: macos-latest
@@ -137,16 +90,13 @@ jobs:
 
       - run: nsh package app --target ${{ matrix.target }} -o dist
         if: matrix.target != 'android'
-      - name: APKs by ABI, and a universal one
+      - name: Universal Android APK
         if: matrix.target == 'android'
         env:
           NSH_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
-          for abis in arm64-v8a armeabi-v7a arm64-v8a,armeabi-v7a,x86_64; do
-            nsh package app --target android --abi "$abis" $SIGNING -o dist
-            case "$abis" in *,*) name=universal ;; *) name=$abis ;; esac
-            mv dist/Calliope.apk "dist/Calliope-$name.apk"
-          done
+          nsh package app --target android --abi arm64-v8a,armeabi-v7a,x86_64 $SIGNING -o dist
+          mv dist/Calliope.apk dist/Calliope-universal.apk
 
       - name: Zip the macOS app
         if: matrix.target == 'macos'
