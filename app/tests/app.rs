@@ -45,6 +45,9 @@ fn phone_opens_reads_and_creates_notes() {
         button: "Rename".into(),
     });
     app.long_press("text:Journal").unwrap();
+    // The menu slides in from the bottom: on a slower machine (macOS) it
+    // is still coming once the long press settles.
+    app.wait_for("text:Rename").unwrap();
     app.press("text:Rename").unwrap();
     app.wait_for("Diary").unwrap();
     assert!(root.join("Diary").is_dir());
@@ -118,6 +121,7 @@ fn phone_opens_reads_and_creates_notes() {
 
     // The menu's settings button pushes the settings.
     app.press("label:Menu").unwrap();
+    app.wait_for("label:Settings").unwrap();
     app.press("label:Settings").unwrap();
     app.wait_for("Appearance").unwrap();
     // The menu slides away first: a back while it goes is its own.
