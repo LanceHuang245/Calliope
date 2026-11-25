@@ -7,7 +7,7 @@ use nsh_base::{CommandItem, command, dialog, theme};
 use nsh_core::prelude::*;
 
 use crate::{
-    components::{card, desktop_layout, overlay},
+    components::{PALETTE_ITEM, PALETTE_LIST, PALETTE_SEARCH, overlay, palette_panel},
     store, strings,
 };
 
@@ -17,20 +17,13 @@ const NEW: &str = "/";
 pub(crate) fn quick_switcher() -> impl IntoElement {
     let query = signal(String::new());
     let close = || store::set_switching(false);
-    // Leave 16 points on both sides when the mobile viewport is narrow.
-    let panel = card().w_96();
-    let panel = if desktop_layout() {
-        panel
-    } else {
-        panel.max_w(move || px((window().width.0 - 32.0).max(0.0)))
-    };
     dialog()
         .animation(ModalAnimation::Fade)
         .on_cancel(close)
         .flex_1()
         .child(view().absolute().inset_0().bg(overlay).on_press(close))
         .child(
-            panel.mx(auto()).mt_20().max_h_96().p_1().shadow_lg().child(
+            palette_panel().child(
                 command()
                     .items(move || items(query.get().trim()))
                     // The items are matched and ranked here, fuzzily.
@@ -47,8 +40,9 @@ pub(crate) fn quick_switcher() -> impl IntoElement {
                         }
                     })
                     .on_cancel(close)
-                    .search_class("px-3 py-2 text-sm")
-                    .item_class("px-3 py-2 rounded-md text-sm focus:bg-accent")
+                    .search_class(PALETTE_SEARCH)
+                    .item_class(PALETTE_ITEM)
+                    .list_class(PALETTE_LIST)
                     .text_color(move || theme().foreground),
             ),
         )

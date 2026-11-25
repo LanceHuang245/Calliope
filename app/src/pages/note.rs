@@ -4,6 +4,8 @@
 //! Editing uses `nsh-base`'s `Editor`; reading draws the Markdown with its
 //! `TextView` (code highlighted, formulas typeset natively).
 
+use std::time::Duration;
+
 use calliope_core::note;
 use nsh_base::{
     Editor, EditorApi, EditorClasses, EditorCommand, EditorSearch, MarkdownPlugins, TextViewLinks,
@@ -50,6 +52,8 @@ fn note_view() -> impl IntoElement {
     let finding = signal(false);
     let query = signal(String::new());
     let editor = component_ref::<Editor>();
+    // A search hit opens its note at its line.
+    jump_to_line(editor);
     // The source has the focus: a phone's keyboard toolbar shows.
     let editing = signal(false);
     // A note with diagrams: their fonts are found while it is edited.
@@ -101,6 +105,26 @@ fn note_view() -> impl IntoElement {
         .child((!desktop_layout()).then(backlinks_sheet))
         .child((!desktop_layout()).then(phone_toolbar))
         .child((!desktop_layout()).then(|| keyboard_bar(editor, editing)))
+}
+
+/// Scrolls the editor to the line a search hit opened its note at, once
+/// the editor holds the note: it is made a moment after the page.
+fn jump_to_line(editor: ComponentRef<Editor>) {
+    effect(move || {
+        let Some(line) = store::jump_line() else {
+            return;
+        };
+        spawn(async move {
+            for _ in 0..20 {
+                if let Some(api) = editor.api::<EditorApi>() {
+                    api.scroll_to_line(line.saturating_sub(1));
+                    store::clear_jump_line();
+                    return;
+                }
+                timer(Duration::from_millis(25)).await;
+            }
+        });
+    });
 }
 
 fn header() -> impl IntoElement {

@@ -7,7 +7,7 @@ use calliope_core::note;
 use nsh_base::TreeItem;
 use nsh_core::{file_dialog::OpenDialog, platform::Lifecycle};
 
-use super::*;
+use super::{search::reset_search, *};
 
 /// How many days the vault's trash keeps what was deleted.
 const TRASH_DAYS: i64 = 15;
@@ -82,6 +82,7 @@ pub(crate) fn open_vault(root: PathBuf) {
             set(Expanded(Vec::new()));
             set(Route::Home);
             reset_links();
+            reset_search();
             refresh();
             load_sync();
         }

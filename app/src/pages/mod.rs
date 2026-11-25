@@ -8,6 +8,8 @@ pub(crate) mod keyboard_bar;
 pub(crate) mod links;
 pub(crate) mod mermaid;
 pub(crate) mod note;
+pub(crate) mod palette;
+pub(crate) mod search;
 pub(crate) mod settings;
 pub(crate) mod status;
 pub(crate) mod switcher;

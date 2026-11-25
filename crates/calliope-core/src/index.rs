@@ -1,5 +1,6 @@
 //! The vault's link index: each note's links, what they resolve to and the
-//! backlinks of each note, kept up to date as files change.
+//! backlinks of each note, kept up to date as files change. It keeps the
+//! notes' text too, which the full-text search reads ([`Index::search`]).
 
 use std::{
     collections::{BTreeMap, HashMap},
@@ -11,6 +12,7 @@ use std::{
 use crate::{
     link::{self, Link},
     note,
+    search::{self, Hit},
     vault::{Entry, EntryKind, Vault},
 };
 
@@ -19,6 +21,8 @@ struct Note {
     /// The file's modification time and size when its links were read.
     stamp: (SystemTime, u64),
     links: Vec<Link>,
+    /// What the note holds, for the full-text search.
+    text: String,
 }
 
 /// A link to a note from another: the note it is in and its line.
@@ -51,13 +55,15 @@ impl Index {
             let Ok(stamp) = stamp else {
                 continue;
             };
-            // An unchanged note keeps its links; a new or changed one is read.
+            // An unchanged note keeps its links and text; a new or changed
+            // one is read.
             let note = match old.remove(&path) {
                 Some(note) if note.stamp == stamp => note,
                 _ => {
                     changed = true;
-                    let links = link::links(&vault.read(&path).unwrap_or_default());
-                    Arc::new(Note { stamp, links })
+                    let text = vault.read(&path).unwrap_or_default();
+                    let links = link::links(&text);
+                    Arc::new(Note { stamp, links, text })
                 }
             };
             self.notes.insert(path, note);
@@ -122,6 +128,32 @@ impl Index {
     /// The links to `note` from the other notes.
     pub fn backlinks(&self, note: &str) -> Vec<Backlink> {
         self.backlinks.get(note).cloned().unwrap_or_default()
+    }
+
+    /// The lines of the notes that hold `query`, by note path, at most
+    /// `limit` of them.
+    pub fn search(&self, query: &str, limit: usize) -> Vec<Hit> {
+        let query = query.trim().to_lowercase();
+        if query.is_empty() {
+            return Vec::new();
+        }
+        let mut hits = Vec::new();
+        for (path, note) in &self.notes {
+            for (index, line) in note.text.lines().enumerate() {
+                let Some(context) = search::context(line, &query) else {
+                    continue;
+                };
+                hits.push(Hit {
+                    path: path.clone(),
+                    line: index as u32 + 1,
+                    context,
+                });
+                if hits.len() == limit {
+                    return hits;
+                }
+            }
+        }
+        hits
     }
 }
 
@@ -196,5 +228,36 @@ mod tests {
         fs::remove_file(v.abs("C.md")).unwrap();
         assert!(index.sync(&v).unwrap());
         assert!(index.backlinks("B.md").is_empty());
+    }
+
+    #[test]
+    fn finds_the_lines_that_hold_a_query() {
+        let v = vault(
+            "search",
+            &[
+                ("One.md", "# Notes\n\nThe Quick brown fox\n"),
+                ("Folder/Two.md", "第一行\n这里提到链接和别的\n"),
+            ],
+        );
+        let mut index = Index::default();
+        index.sync(&v).unwrap();
+        assert_eq!(
+            index.search("quick", 10),
+            [Hit {
+                path: "One.md".into(),
+                line: 3,
+                context: "The Quick brown fox".into()
+            }]
+        );
+        assert_eq!(index.search(" 链接 ", 10)[0].line, 2);
+        assert_eq!(index.search("链接", 10)[0].path, "Folder/Two.md");
+        assert!(index.search("fox", 1).len() == 1);
+        assert!(index.search("missing", 10).is_empty());
+        assert!(index.search("   ", 10).is_empty());
+
+        // An edited note is read again: its old lines are gone.
+        fs::write(v.abs("One.md"), "nothing to see\n").unwrap();
+        index.sync(&v).unwrap();
+        assert!(index.search("quick", 10).is_empty());
     }
 }

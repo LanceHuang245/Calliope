@@ -115,7 +115,16 @@ pub(crate) const FILTERS: &str = "Filters";
 pub(crate) const ORPHANS: &str = "Orphans";
 pub(crate) const UNCREATED: &str = "Uncreated notes";
 pub(crate) const SEARCH: &str = "Search";
+pub(crate) const SEARCH_NOTES: &str = "Search all notes";
+pub(crate) const NO_HITS: &str = "No note holds that.";
+pub(crate) const TYPE_TO_SEARCH: &str = "Type to search every note.";
 pub(crate) const FIND_NOTE: &str = "Find or create a note";
+pub(crate) const RUN_COMMAND: &str = "Run a command";
+pub(crate) const QUICK_SWITCH: &str = "Quick switch";
+pub(crate) const TOGGLE_READ: &str = "Toggle Edit and Read";
+pub(crate) const TOGGLE_SIDEBAR: &str = "Toggle sidebar";
+pub(crate) const SAVE_COPY: &str = "Save a copy";
+pub(crate) const CYCLE_THEME: &str = "Switch theme";
 
 // Sync.
 pub(crate) const SYNC: &str = "Sync";
@@ -205,4 +214,13 @@ pub(crate) fn version() -> String {
 
 pub(crate) fn saved_copy(path: &str) -> String {
     format!("Your changes were saved to {path}.")
+}
+
+/// The tag of the copy a command writes beside a note
+/// (`Note (copy 2026-11-25 1530).md`).
+pub(crate) fn copy_tag() -> String {
+    format!(
+        "copy {}",
+        jiff::ZonedDateTime::now().strftime("%Y-%m-%d %H%M")
+    )
 }

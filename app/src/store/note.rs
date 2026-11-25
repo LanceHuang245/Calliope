@@ -168,6 +168,21 @@ pub(super) fn save_or_copy() {
     });
 }
 
+/// Writes the open note beside itself, as `Note (copy 2026-11-25 1530).md`,
+/// and says where (the palette's command).
+pub(crate) fn save_as_copy() {
+    untracked(|| {
+        let (Some(vault), Some(path)) = (vault(), note_path()) else {
+            return;
+        };
+        let copy = vault.save_copy(&path, &strings::copy_tag(), text().as_bytes());
+        match copy {
+            Ok(copy) => inform(strings::saved_copy(&copy)),
+            Err(e) => notify(format!("{path}: {e}")),
+        }
+    });
+}
+
 /// Settles a conflict: `keep_mine` writes the user's text over the file,
 /// else the file's text replaces it.
 pub(crate) fn resolve_conflict(keep_mine: bool) {

@@ -27,6 +27,8 @@ use crate::{
         home::home_page,
         links::backlinks_panel,
         note::note_page,
+        palette::command_palette,
+        search::search_page,
         settings::{CATEGORIES, desktop_settings, settings_categories, settings_detail},
         status::status_bar,
         switcher::quick_switcher,
@@ -61,6 +63,7 @@ pub(crate) fn shell() -> impl IntoElement {
         .child(layout)
         .child(dynamic(move || store::renaming().map(rename_dialog)))
         .child(dynamic(move || store::switching().then(quick_switcher)))
+        .child(dynamic(move || store::palette().then(command_palette)))
         // What the desktops ask before deleting or creating.
         .child(dynamic(move || {
             store::asking()
@@ -71,13 +74,17 @@ pub(crate) fn shell() -> impl IntoElement {
 fn desktop() -> impl IntoElement {
     let tablet = !is_desktop();
     if tablet {
-        // A tablet's back (Android) leaves the graph, the settings or the
-        // trash for the note, as their back button does.
+        // A tablet's back (Android) leaves the graph, the settings, the
+        // trash or the search for the note, as their back button does.
         on_back_press(|| {
             let route = untracked(store::route);
             let page = matches!(
                 route,
-                Route::Graph | Route::Settings | Route::SettingsDetail(_) | Route::Trash
+                Route::Graph
+                    | Route::Settings
+                    | Route::SettingsDetail(_)
+                    | Route::Trash
+                    | Route::Search
             );
             if page {
                 store::back_to_note();
@@ -85,11 +92,14 @@ fn desktop() -> impl IntoElement {
             page
         });
     } else {
-        on_key("mod+n", |_| store::new_note());
-        on_key("mod+e", |_| store::toggle_read());
-        on_key("mod+o", |_| store::set_switching(true));
-        on_key("mod+g", |_| store::toggle_graph());
-        on_key("mod+\\", |_| store::toggle_sidebar());
+        // The commands' own table names their keys (MVP phase 6).
+        for command in store::commands() {
+            if let Some(keys) = command.keys {
+                on_key(keys, move |_| store::run_command(command.id));
+            }
+        }
+        on_key("mod+p", |_| store::set_palette(true));
+        on_key("mod+shift+f", |_| store::toggle_search());
         hide_system_title_bar();
     }
     // Keep the settings sidebar mounted when only its selected category changes.
@@ -122,6 +132,7 @@ fn desktop() -> impl IntoElement {
                         (Route::Settings, _) => desktop_settings().into_element(),
                         (Route::Trash, true) => trash_page().into_element(),
                         (Route::Graph, true) => graph_page().into_element(),
+                        (Route::Search, true) => search_page().into_element(),
                         (_, true) => note_page().into_element(),
                         (_, false) => welcome_page().into_element(),
                     })

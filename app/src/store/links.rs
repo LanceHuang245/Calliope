@@ -77,7 +77,11 @@ pub(crate) fn backlinks_shown() -> bool {
     !get::<BacklinksHidden>().0
         && !matches!(
             route(),
-            Route::Settings | Route::SettingsDetail(_) | Route::Trash | Route::Graph
+            Route::Settings
+                | Route::SettingsDetail(_)
+                | Route::Trash
+                | Route::Graph
+                | Route::Search
         )
         && opened().is_some()
 }
@@ -139,6 +143,12 @@ pub(crate) fn create_note(target: &str) {
         }
         Err(e) => notify(format!("{path}: {e}")),
     }
+}
+
+/// The index, for the full-text search: cloned on the UI thread, searched
+/// on another.
+pub(crate) fn search_index() -> Arc<Index> {
+    global::<Links>().with(|links| Arc::clone(&links.0))
 }
 
 /// Every note's path, read untracked.

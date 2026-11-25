@@ -9,6 +9,7 @@ pub mod graph;
 pub mod index;
 pub mod link;
 pub mod note;
+pub mod search;
 pub mod trash;
 pub mod vault;
 #[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]

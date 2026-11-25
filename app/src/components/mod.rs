@@ -287,6 +287,33 @@ pub(crate) fn banner(message: impl IntoReactive<SharedString>) -> View {
         )
 }
 
+/// How a palette's (the quick switcher's, the command palette's) search
+/// field and rows look.
+pub(crate) const PALETTE_SEARCH: &str = "px-3 py-2 text-sm";
+pub(crate) const PALETTE_ITEM: &str = "px-3 py-2 rounded-md text-sm focus:bg-accent";
+/// How tall a palette's rows get before they scroll: more than the window
+/// shows of a long list, and only the rows in view are made.
+pub(crate) const PALETTE_LIST: &str = "max-h-[320px]";
+
+/// The panel a palette opens in, over the dimmed page: both palettes look
+/// and sit alike, and leave 16 points on both sides when the phone's
+/// viewport is narrow.
+pub(crate) fn palette_panel() -> View {
+    let panel = card()
+        .w_96()
+        .mx(auto())
+        .mt_20()
+        .max_h_96()
+        .p_1()
+        .shadow_lg()
+        // Nothing of the rows is drawn past the panel, scrolled or not.
+        .overflow_hidden();
+    match desktop_layout() {
+        true => panel,
+        false => panel.max_w(move || px((window().width.0 - 32.0).max(0.0))),
+    }
+}
+
 /// A raised surface that sets a group apart from what is around it: the
 /// app's background and a light shadow, no border.
 pub(crate) fn card() -> View {

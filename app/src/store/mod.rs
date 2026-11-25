@@ -15,10 +15,12 @@
 //! - [`confirm`]: asking before deleting or creating;
 //! - here: the view (mode, route, theme), notices and the start.
 
+mod commands;
 mod confirm;
 mod files;
 mod links;
 mod note;
+mod search;
 mod sync;
 mod trash;
 mod vault;
@@ -28,14 +30,8 @@ use std::{collections::HashMap, fs, path::PathBuf};
 use calliope_core::vault::{Entry, EntryKind, Vault};
 use nsh_core::{file_dialog::SaveDialog, prelude::*, storage::Storage};
 
-use self::{
-    confirm::{Ask, confirm},
-    links::{reindex, reset_links},
-    note::{load, save_or_copy, start_autosave},
-    sync::{edited, load_sync, start_sync_timers},
-    vault::watch_other_apps,
-};
 pub(crate) use self::{
+    commands::{commands, palette, run_command, set_palette},
     confirm::{answer, asking},
     files::{
         cancel_rename, delete, expanded, new_folder, new_folder_in, new_note, new_note_in, rename,
@@ -43,12 +39,13 @@ pub(crate) use self::{
     },
     links::{
         backlinks, backlinks_shown, create_note, graph, link_exists, note_paths, open_link,
-        set_backlinks_shown, set_switching, switching, toggle_backlinks,
+        search_index, set_backlinks_shown, set_switching, switching, toggle_backlinks,
     },
     note::{
         conflict, edit, image_src, note_path, note_title, opened, preview, resolve_conflict,
-        select, text,
+        save_as_copy, select, text,
     },
+    search::{clear_jump_line, hits, jump_line, open_hit, query, set_query, toggle_search},
     sync::{
         SyncStatus, connecting, create_from_sync, save_sync, secret_in_file, sync_config, sync_now,
         sync_status, test_sync,
@@ -58,6 +55,13 @@ pub(crate) use self::{
         create_vault, has_files, kind_of, open_vault, pick_vault, refresh, tree_items, vault,
         vault_name, vault_path,
     },
+};
+use self::{
+    confirm::{Ask, confirm},
+    links::{reindex, reset_links},
+    note::{load, save_or_copy, start_autosave},
+    sync::{edited, load_sync, start_sync_timers},
+    vault::watch_other_apps,
 };
 use crate::{logging, paths, strings};
 
@@ -94,6 +98,8 @@ pub(crate) enum Route {
     SettingsDetail(SettingsCategory),
     /// The vault's trash, opened from the settings.
     Trash,
+    /// The full-text search's results (the desktops).
+    Search,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Default)]
@@ -278,6 +284,15 @@ pub(crate) fn set_theme(theme: Theme) {
     set_color_scheme(appearance);
     let _ = Storage::set_item(THEME, name);
     set(theme);
+}
+
+/// Light, dark, the system's, and round again: the command palette's.
+fn cycle_theme() {
+    set_theme(match untracked(theme) {
+        Theme::System => Theme::Light,
+        Theme::Light => Theme::Dark,
+        Theme::Dark => Theme::System,
+    });
 }
 
 /// Shows `message`, a problem (an error, a conflict), until the user closes
