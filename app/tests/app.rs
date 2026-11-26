@@ -28,7 +28,8 @@ fn phone_opens_reads_and_creates_notes() {
     // reads it.
     // SAFETY: set before the app starts, read by the app only.
     unsafe { std::env::set_var("CALLIOPE_SANDBOX", root.parent().unwrap()) };
-    let mut config = EngineConfig::new(Root::of::<calliope::App>());
+    let mut config =
+        EngineConfig::new(Root::of::<calliope::App>().translations(calliope::translations()));
     config.environment.os_version = (26, 0);
     let mut app = Headless::start(config).unwrap();
 

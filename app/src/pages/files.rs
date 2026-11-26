@@ -4,18 +4,19 @@
 //! its item. The desktops show it in the sidebar, the phones as a screen.
 
 use calliope_core::vault::EntryKind;
-use nsh_base::{TreeEntry, context_menu, dialog, menu_separator, theme, tree};
+use nsh_base::{TreeEntry, context_menu, menu_separator, theme, tree};
 use nsh_core::prelude::*;
 
 use super::home::sync_button;
+use crate::i18n::t;
+
 use crate::{
     components::{
-        ButtonVariant, button, card, desktop_layout, field, icon_button, icon_toggle,
+        ButtonVariant, button, card, desktop_layout, dialog_card, field, icon_button, icon_toggle,
         icons::{self, icon},
-        menu_entry, menu_popup, overlay,
+        menu_entry, menu_popup, modal, overlay,
     },
     store::{self, Route},
-    strings,
 };
 
 pub(crate) fn files_page() -> impl IntoElement {
@@ -29,9 +30,8 @@ pub(crate) fn files_page() -> impl IntoElement {
                 .p_1()
                 // On a phone the files are the menu, over the page.
                 .child(
-                    (!desktop_layout()).then(|| {
-                        icon_button(icons::X, strings::CLOSE, || store::set_menu_open(false))
-                    }),
+                    (!desktop_layout())
+                        .then(|| icon_button(icons::X, t("close"), || store::set_menu_open(false))),
                 )
                 .child(
                     text(store::vault_name)
@@ -43,19 +43,19 @@ pub(crate) fn files_page() -> impl IntoElement {
                 )
                 .child(icon_button(
                     icons::FILE_PLUS,
-                    strings::NEW_NOTE,
+                    t("new_note"),
                     store::new_note,
                 ))
                 .child(icon_button(
                     icons::FOLDER_PLUS,
-                    strings::NEW_FOLDER,
+                    t("new_folder"),
                     store::new_folder,
                 )),
         )
         .child(card().flex_1().p_1().child(dynamic(move || {
             match store::has_files() {
                 true => files_tree().into_element(),
-                false => text(strings::NO_FILES)
+                false => text(t("no_files"))
                     .p_2()
                     .text_sm()
                     .text_color(move || theme().muted_foreground)
@@ -74,30 +74,30 @@ pub(crate) fn files_page() -> impl IntoElement {
                         .flex_row()
                         .gap_1()
                         .child(sync_button())
-                        .child(icon_button(icons::SEARCH, strings::SEARCH, || {
+                        .child(icon_button(icons::SEARCH, t("search"), || {
                             store::set_switching(true)
                         }))
                         .child(icon_toggle(
                             icons::NETWORK,
-                            strings::GRAPH,
+                            t("graph"),
                             || store::route() == Route::Graph,
                             store::toggle_graph,
                         ))
                         .child(icon_toggle(
                             icons::LINK,
-                            strings::BACKLINKS,
+                            t("backlinks"),
                             store::backlinks_shown,
                             store::toggle_backlinks,
                         ))
                         .child(icon_toggle(
                             icons::TRASH,
-                            strings::TRASH,
+                            t("trash"),
                             || store::route() == Route::Trash,
                             store::toggle_trash,
                         ))
                 }))
                 .child(view().flex_1())
-                .child(icon_button(icons::SETTINGS, strings::SETTINGS, || {
+                .child(icon_button(icons::SETTINGS, t("settings"), || {
                     store::set_route(Route::Settings)
                 })),
         )
@@ -117,7 +117,7 @@ fn files_tree() -> impl IntoElement {
         .selected(tree_selected)
         .on_expanded_change(|expanded: &Vec<SharedString>| store::set_expanded(expanded))
         .on_selected_change(store::select)
-        .accessibility_label(strings::FILES)
+        .accessibility_label(t("files"))
         .flex_1()
         .render_item(|entry: &TreeEntry| {
             let id = entry.id.clone();
@@ -159,13 +159,13 @@ fn item_menu(path: String, kind: Option<EntryKind>, row: View) -> impl IntoEleme
         view()
             .child(menu_entry(
                 icons::FILE_PLUS,
-                strings::NEW_NOTE,
+                t("new_note"),
                 false,
                 move || store::new_note_in(&note_dir),
             ))
             .child(menu_entry(
                 icons::FOLDER_PLUS,
-                strings::NEW_FOLDER,
+                t("new_folder"),
                 false,
                 move || store::new_folder_in(&folder_dir),
             ))
@@ -177,14 +177,11 @@ fn item_menu(path: String, kind: Option<EntryKind>, row: View) -> impl IntoEleme
         .backdrop_style(|s| s.bg(overlay()))
         .trigger(row)
         .child(folder)
-        .child(menu_entry(
-            icons::PENCIL,
-            strings::RENAME,
-            false,
-            move || store::start_rename(rename.clone()),
-        ))
+        .child(menu_entry(icons::PENCIL, t("rename"), false, move || {
+            store::start_rename(rename.clone())
+        }))
         .child(separator())
-        .child(menu_entry(icons::TRASH, strings::DELETE, true, move || {
+        .child(menu_entry(icons::TRASH, t("delete"), true, move || {
             store::delete(delete.clone())
         }))
 }
@@ -203,51 +200,26 @@ pub(crate) fn rename_dialog(path: String) -> impl IntoElement {
     let name = path.rsplit('/').next().unwrap_or(&path);
     let name = name.strip_suffix(".md").unwrap_or(name).to_owned();
     let typed = signal(name.clone());
-    dialog()
-        .animation(ModalAnimation::Fade)
-        .on_cancel(store::cancel_rename)
-        .flex_1()
-        .child(
-            view()
-                .absolute()
-                .inset_0()
-                .bg(overlay)
-                .on_press(store::cancel_rename),
-        )
-        .child(
-            card()
-                .m(auto())
-                .w_80()
-                .gap_3()
-                .p_5()
-                .shadow_lg()
-                .child(
-                    text(strings::RENAME)
-                        .text_lg()
-                        .font_weight(FontWeight::SEMIBOLD)
-                        .text_color(move || theme().foreground),
-                )
-                .child(
-                    field(strings::NAME)
-                        .label(strings::NAME)
-                        .default_value(name)
-                        .auto_focus(true)
-                        .on_change(move |text: &str| typed.set(text.to_owned()))
-                        .on_submit(|text: &str| store::rename(text)),
-                )
-                .child(
-                    view()
-                        .flex_row()
-                        .justify_end()
-                        .gap_2()
-                        .child(button(
-                            ButtonVariant::Secondary,
-                            strings::CANCEL,
-                            store::cancel_rename,
-                        ))
-                        .child(button(ButtonVariant::Primary, strings::RENAME, move || {
-                            store::rename(&typed.get())
-                        })),
-                ),
-        )
+    let field = field(t("name"))
+        .label(t("name"))
+        .default_value(name)
+        .auto_focus(true)
+        .on_change(move |text: &str| typed.set(text.to_owned()))
+        .on_submit(|text: &str| store::rename(text));
+    let buttons = view()
+        .flex_row()
+        .justify_end()
+        .gap_2()
+        .child(button(
+            ButtonVariant::Secondary,
+            t("cancel"),
+            store::cancel_rename,
+        ))
+        .child(button(ButtonVariant::Primary, t("rename"), move || {
+            store::rename(&typed.get())
+        }));
+    modal(
+        store::cancel_rename,
+        dialog_card(t("rename"), Some(field.into_element()), buttons),
+    )
 }

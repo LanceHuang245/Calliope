@@ -12,7 +12,7 @@ use merman_export::{NativeFontContext, NativeFontLimits};
 use nsh_base::{MarkdownExtension, text_view::CustomNode, theme};
 use nsh_core::{element::ImageSrc, prelude::*};
 
-use crate::strings;
+use crate::i18n::t;
 
 /// The name of the custom nodes Mermaid code is read as.
 const MERMAID: &str = "mermaid";
@@ -152,7 +152,7 @@ fn draw(source: &str, dark: bool) -> Drawn {
         let request = RenderRequest::svg(&source, OperationControl::new(), request);
         let output = Renderer::new().render(request).map_err(|e| e.to_string())?;
         let RenderOutput::Svg(Some(svg)) = output else {
-            return Err(strings::NO_DIAGRAM.to_owned());
+            return Err(t("no_diagram").to_owned());
         };
         // nsh draws no SVG text: the labels become paths.
         let mut options = usvg::Options::default();
@@ -160,7 +160,7 @@ fn draw(source: &str, dark: bool) -> Drawn {
         let tree = usvg::Tree::from_str(svg.svg(), &options).map_err(|e| e.to_string())?;
         Ok(tree.to_string(&usvg::WriteOptions::default()))
     })
-    .unwrap_or_else(|_| Err(strings::DIAGRAM_FAILED.to_owned()))
+    .unwrap_or_else(|_| Err(t("diagram_failed").to_owned()))
 }
 
 #[cfg(test)]

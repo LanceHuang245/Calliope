@@ -3,12 +3,14 @@
 //! creates it.
 
 use calliope_core::note;
-use nsh_base::{CommandItem, command, dialog, theme};
+use nsh_base::{CommandItem, command, theme};
 use nsh_core::prelude::*;
 
+use crate::i18n::t;
+
 use crate::{
-    components::{PALETTE_ITEM, PALETTE_LIST, PALETTE_SEARCH, overlay, palette_panel},
-    store, strings,
+    components::{PALETTE_ITEM, PALETTE_LIST, PALETTE_SEARCH, modal, palette_panel},
+    i18n, store,
 };
 
 /// The id of the item creating a note: no path of the vault starts so.
@@ -17,35 +19,29 @@ const NEW: &str = "/";
 pub(crate) fn quick_switcher() -> impl IntoElement {
     let query = signal(String::new());
     let close = || store::set_switching(false);
-    dialog()
-        .animation(ModalAnimation::Fade)
-        .on_cancel(close)
-        .flex_1()
-        .child(view().absolute().inset_0().bg(overlay).on_press(close))
-        .child(
-            palette_panel().child(
-                command()
-                    .items(move || items(query.get().trim()))
-                    // The items are matched and ranked here, fuzzily.
-                    .filterable(false)
-                    .placeholder(strings::FIND_NOTE)
-                    .search_accessibility_label(strings::FIND_NOTE)
-                    .auto_focus(true)
-                    .on_query_change(move |q: &SharedString| query.set(q.to_string()))
-                    .on_select(move |id: &SharedString| {
-                        close();
-                        match id.strip_prefix(NEW) {
-                            Some(name) => store::create_note(name),
-                            None => store::select(id),
-                        }
-                    })
-                    .on_cancel(close)
-                    .search_class(PALETTE_SEARCH)
-                    .item_class(PALETTE_ITEM)
-                    .list_class(PALETTE_LIST)
-                    .text_color(move || theme().foreground),
-            ),
-        )
+    let panel = palette_panel().child(
+        command()
+            .items(move || items(query.get().trim()))
+            // The items are matched and ranked here, fuzzily.
+            .filterable(false)
+            .placeholder(t("find_note"))
+            .search_accessibility_label(t("find_note"))
+            .auto_focus(true)
+            .on_query_change(move |q: &SharedString| query.set(q.to_string()))
+            .on_select(move |id: &SharedString| {
+                close();
+                match id.strip_prefix(NEW) {
+                    Some(name) => store::create_note(name),
+                    None => store::select(id),
+                }
+            })
+            .on_cancel(close)
+            .search_class(PALETTE_SEARCH)
+            .item_class(PALETTE_ITEM)
+            .list_class(PALETTE_LIST)
+            .text_color(move || theme().foreground),
+    );
+    modal(close, panel)
 }
 
 /// The notes whose titles match `query`, best first, then the note a
@@ -62,7 +58,7 @@ fn items(query: &str) -> Vec<CommandItem> {
         .iter()
         .any(|(_, path)| note::title(path).to_lowercase() == lower);
     let new = (!query.is_empty() && !taken)
-        .then(|| CommandItem::new(format!("{NEW}{query}"), strings::create_note(query)));
+        .then(|| CommandItem::new(format!("{NEW}{query}"), i18n::create_note(query)));
     found
         .into_iter()
         .map(|(_, path)| {

@@ -2,13 +2,15 @@
 
 use super::*;
 
+use crate::i18n::t;
+
 pub(crate) fn save_sync(mut config: Config, secret: String, passphrase: String, new: bool) {
     let Some(vault) = untracked(vault) else {
         return;
     };
     let saved = untracked(sync_config);
     if changes_mode(&saved, &config) {
-        return notify(strings::REMOTE_MODE_FIXED);
+        return notify(t("remote_mode_fixed"));
     }
     if untracked(connecting) || RUNNING.get() {
         return;
@@ -21,7 +23,7 @@ pub(crate) fn save_sync(mut config: Config, secret: String, passphrase: String, 
     }
     if config.provider == Provider::Off || (!config.encrypted && !saved.encrypted) {
         if keep_sync(config, &secret) {
-            inform(strings::SYNC_SAVED);
+            inform(t("sync_saved"));
         }
         return;
     }
@@ -38,7 +40,7 @@ pub(crate) fn save_sync(mut config: Config, secret: String, passphrase: String, 
             if checked.encrypted
                 && !secrets::set_passphrase(&crypt_account(&account, &checked), &passphrase)
             {
-                return Err(std::io::Error::other(strings::PASSPHRASE_STORAGE).into());
+                return Err(std::io::Error::other(t("passphrase_storage")).into());
             }
             if new {
                 calliope_sync::prepare(&checked, &secret, &passphrase, true).await?;
@@ -51,7 +53,7 @@ pub(crate) fn save_sync(mut config: Config, secret: String, passphrase: String, 
             && untracked(super::vault).as_ref() == Some(&vault)
             && keep_sync(config, &secret)
         {
-            inform(strings::SYNC_SAVED);
+            inform(t("sync_saved"));
         }
     });
 }
@@ -76,7 +78,7 @@ pub(crate) fn create_from_sync(name: String, config: Config, secret: String, pas
         return;
     };
     if config.encrypted && root.exists() {
-        return notify(strings::SYNC_VAULT_EXISTS);
+        return notify(t("sync_vault_exists"));
     }
     set(Connecting(true));
     let (checked, key, path) = (config.clone(), secret.clone(), root.clone());
@@ -89,7 +91,7 @@ pub(crate) fn create_from_sync(name: String, config: Config, secret: String, pas
                     &passphrase,
                 )
             {
-                return Err(std::io::Error::other(strings::PASSPHRASE_STORAGE).into());
+                return Err(std::io::Error::other(t("passphrase_storage")).into());
             }
             Ok(())
         })
@@ -117,7 +119,7 @@ pub(crate) fn test_sync(config: Config, secret: String, passphrase: String, new:
             calliope_sync::test(&config, &secret, &passphrase, new).await
         });
         if report_check(tested.await) {
-            inform(strings::SYNC_WORKS);
+            inform(t("sync_works"));
         }
     });
 }
@@ -141,7 +143,7 @@ fn report_check<E: std::fmt::Display>(tested: Result<calliope_sync::Result<()>, 
     match tested {
         Ok(Ok(())) => true,
         Ok(Err(e)) => {
-            notify(strings::sync_failed(&e));
+            notify(i18n::sync_error(&e));
             false
         }
         Err(e) => {

@@ -7,6 +7,8 @@ use calliope_core::trash::Trashed;
 
 use super::*;
 
+use crate::i18n::t;
+
 /// The files in the trash, as last read ([`load_trash`]).
 #[derive(Clone, Default)]
 struct Trash(Vec<Trashed>);
@@ -37,7 +39,7 @@ pub(crate) fn toggle_trash() {
 pub(crate) fn restore(item: Trashed) {
     change_trash(|vault| {
         let path = vault.restore(&item)?;
-        inform(strings::restored(&path));
+        inform(i18n::restored(&path));
         refresh();
         Ok(())
     });
@@ -45,7 +47,7 @@ pub(crate) fn restore(item: Trashed) {
 
 /// Asks, then deletes `item` for good.
 pub(crate) fn delete_forever(item: Trashed) {
-    let ask = for_good(strings::DELETE_FOREVER_TITLE);
+    let ask = for_good(t("delete_forever_title"));
     confirm(ask, move || {
         change_trash(|vault| vault.delete_forever(&item))
     });
@@ -53,7 +55,7 @@ pub(crate) fn delete_forever(item: Trashed) {
 
 /// Asks, then deletes everything in the trash.
 pub(crate) fn clear_trash() {
-    let ask = for_good(strings::EMPTY_TRASH_TITLE);
+    let ask = for_good(t("empty_trash_title"));
     confirm(ask, || change_trash(Vault::clear_trash));
 }
 
@@ -68,11 +70,11 @@ fn change_trash(change: impl FnOnce(&Vault) -> io::Result<()>) {
 }
 
 /// Asking `title` before deleting for good, which cannot be undone.
-fn for_good(title: &'static str) -> Ask {
+fn for_good(title: String) -> Ask {
     Ask {
-        title: title.to_owned(),
-        description: Some(strings::CANNOT_UNDO.into()),
-        action: strings::DELETE,
+        title,
+        description: Some(t("cannot_undo").into()),
+        action: t("delete"),
         destructive: true,
     }
 }

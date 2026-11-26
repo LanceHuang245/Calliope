@@ -6,9 +6,11 @@ use calliope_core::{note, search::Hit};
 use nsh_base::{button, theme};
 use nsh_core::prelude::*;
 
+use crate::i18n::t;
+
 use crate::{
     components::{field, muted, page},
-    store, strings,
+    store,
 };
 
 pub(crate) fn search_page() -> impl IntoElement {
@@ -25,8 +27,8 @@ pub(crate) fn search_page() -> impl IntoElement {
                 .border_b_1()
                 .border_color(move || theme().border)
                 .child(
-                    field(strings::SEARCH_NOTES)
-                        .label(strings::SEARCH_NOTES)
+                    field(t("search_notes"))
+                        .label(t("search_notes"))
                         .value(query)
                         .auto_focus(true)
                         .on_change(move |text: &str| store::set_query(text))
@@ -34,7 +36,7 @@ pub(crate) fn search_page() -> impl IntoElement {
                 ),
         )
         .child(scroll().flex_1().child(dynamic(results)));
-    page(strings::SEARCH, store::back_to_note, None, content)
+    page(t("search"), store::back_to_note, None, content)
 }
 
 /// The hits, or what to do before there are any.
@@ -43,10 +45,10 @@ fn results() -> AnyElement {
     let typed = !store::query().trim().is_empty();
     untracked(|| match (hits.is_empty(), typed) {
         (false, _) => list(hits).into_element(),
-        (true, true) => view().p_6().child(muted(strings::NO_HITS)).into_element(),
+        (true, true) => view().p_6().child(muted(t("no_hits"))).into_element(),
         (true, false) => view()
             .p_6()
-            .child(muted(strings::TYPE_TO_SEARCH))
+            .child(muted(t("type_to_search")))
             .into_element(),
     })
 }

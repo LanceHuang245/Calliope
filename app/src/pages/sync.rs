@@ -6,10 +6,12 @@ use nsh_core::prelude::*;
 
 use super::settings::settings_segmented;
 
+use crate::i18n::t;
+
 use crate::{
     components::{ButtonVariant, button, field, labeled, muted, segmented},
+    i18n,
     store::{self, SyncStatus},
-    strings,
 };
 
 pub(crate) fn sync_settings() -> impl IntoElement {
@@ -30,13 +32,13 @@ pub(crate) fn sync_settings() -> impl IntoElement {
         .gap_2()
         .items_start()
         .child(labeled(
-            strings::SYNC_PROVIDER,
+            t("sync_provider"),
             false,
             settings_segmented(
                 vec![
-                    (Provider::Off, strings::OFF),
-                    (Provider::WebDav, strings::WEBDAV),
-                    (Provider::S3, strings::S3),
+                    (Provider::Off, t("off")),
+                    (Provider::WebDav, t("webdav")),
+                    (Provider::S3, t("s3")),
                 ],
                 move || provider.get(),
                 move |p| provider.set(p),
@@ -62,7 +64,7 @@ pub(crate) fn sync_settings() -> impl IntoElement {
                 .items_center()
                 .gap_2()
                 .pt_2()
-                .child(button(ButtonVariant::Primary, strings::SAVE, move || {
+                .child(button(ButtonVariant::Primary, t("save"), move || {
                     let config = edited();
                     if config.provider == Provider::Off {
                         store::save_sync(config, secret.get(), String::new(), false);
@@ -79,7 +81,7 @@ pub(crate) fn sync_settings() -> impl IntoElement {
                             .gap_2()
                             .child(button(
                                 ButtonVariant::Secondary,
-                                strings::TEST_CONNECTION,
+                                t("test_connection"),
                                 move || {
                                     let (passphrase, new) = mode.for_test();
                                     store::test_sync(edited(), secret.get(), passphrase, new);
@@ -87,7 +89,7 @@ pub(crate) fn sync_settings() -> impl IntoElement {
                             ))
                             .child(button(
                                 ButtonVariant::Secondary,
-                                strings::SYNC_NOW,
+                                t("sync_now"),
                                 store::sync_now,
                             ))
                     })
@@ -96,19 +98,19 @@ pub(crate) fn sync_settings() -> impl IntoElement {
         .child(dynamic(move || {
             (provider.get() != Provider::Off).then(|| {
                 muted(move || match store::sync_status() {
-                    SyncStatus::Idle => strings::NOT_SYNCED.to_owned(),
-                    SyncStatus::Running(done, total) => strings::syncing(done, total),
-                    SyncStatus::Done(time, 0) => strings::synced_at(&time),
-                    SyncStatus::Done(time, n) => strings::synced_conflicts(&time, n),
-                    SyncStatus::Failed(error) => strings::sync_failed(&error),
+                    SyncStatus::Idle => t("not_synced").to_owned(),
+                    SyncStatus::Running(done, total) => i18n::syncing(done, total),
+                    SyncStatus::Done(time, 0) => i18n::synced_at(&time),
+                    SyncStatus::Done(time, n) => i18n::synced_conflicts(&time, n),
+                    SyncStatus::Failed(error) => i18n::sync_error(&error),
                 })
             })
         }))
         .child(dynamic(|| {
-            store::connecting().then(|| muted(strings::CONNECTING))
+            store::connecting().then(|| muted(t("connecting")))
         }))
         .child(dynamic(|| {
-            store::secret_in_file().then(|| muted(strings::SECRET_IN_FILE))
+            store::secret_in_file().then(|| muted(t("secret_in_file")))
         }))
 }
 
@@ -123,22 +125,22 @@ pub(crate) fn fields(
 ) -> impl IntoElement {
     let c = draft.get();
     let s3 = provider == Provider::S3;
-    let entry = move |label, required, value: &str, set: fn(&mut Config, String)| {
+    let entry = move |label: String, required, value: &str, set: fn(&mut Config, String)| {
         labeled(
-            label,
+            label.clone(),
             required,
             input(label, value, move |typed| draft.update(|c| set(c, typed))),
         )
     };
     let secret_label = match s3 {
-        true => strings::SECRET_KEY,
-        false => strings::PASSWORD,
+        true => t("secret_key"),
+        false => t("password"),
     };
     // A saved password stays while its field is left empty.
     let kept = untracked(store::sync_config).provider != Provider::Off;
     // Memoize so typing in any field does not rebuild the interval input.
     let show_interval = computed(move || is_desktop() && draft.get().auto);
-    let choices = vec![(true, strings::ON), (false, strings::OFF)];
+    let choices = vec![(true, t("on")), (false, t("off"))];
     let auto = move || draft.get().auto;
     let set_auto = move |on| draft.update(|c| c.auto = on);
     let auto_picker = if in_settings {
@@ -155,47 +157,47 @@ pub(crate) fn fields(
         // or secret key until one is saved. S3's region and where its bucket
         // goes (path or host) are found out from the endpoint (calliope-sync).
         .child(match s3 {
-            true => entry(strings::ENDPOINT, true, &c.endpoint, |c, t| c.endpoint = t),
-            false => entry(strings::SERVER_ADDRESS, true, &c.endpoint, |c, t| {
+            true => entry(t("endpoint"), true, &c.endpoint, |c, t| c.endpoint = t),
+            false => entry(t("server_address"), true, &c.endpoint, |c, t| {
                 c.endpoint = t
             }),
         })
-        .child(s3.then(|| entry(strings::BUCKET, true, &c.bucket, |c, t| c.bucket = t)))
+        .child(s3.then(|| entry(t("bucket"), true, &c.bucket, |c, t| c.bucket = t)))
         .child(match s3 {
-            true => entry(strings::ACCESS_KEY, true, &c.user, |c, t| c.user = t),
-            false => entry(strings::USER_NAME, true, &c.user, |c, t| c.user = t),
+            true => entry(t("access_key"), true, &c.user, |c, t| c.user = t),
+            false => entry(t("user_name"), true, &c.user, |c, t| c.user = t),
         })
         .child(
             labeled(
-                secret_label,
+                secret_label.clone(),
                 !kept,
                 input(secret_label, "", move |typed| secret.set(typed)).masked(true),
             )
-            .child(kept.then(|| muted(strings::SECRET_KEPT))),
+            .child(kept.then(|| muted(t("secret_kept")))),
         )
         .child(match s3 {
-            true => entry(strings::PATH_PREFIX, false, &c.root, |c, t| c.root = t),
-            false => entry(strings::REMOTE_FOLDER, false, &c.root, |c, t| c.root = t),
+            true => entry(t("path_prefix"), false, &c.root, |c, t| c.root = t),
+            false => entry(t("remote_folder"), false, &c.root, |c, t| c.root = t),
         })
         // A server with a certificate of its own (a NAS): trusted by the
         // fingerprint a failed connection shows.
         .child(
-            entry(strings::CERTIFICATE, false, &c.certificate, |c, t| {
+            entry(t("certificate"), false, &c.certificate, |c, t| {
                 c.certificate = t
             })
-            .child(muted(strings::CERTIFICATE_HINT)),
+            .child(muted(t("certificate_hint"))),
         )
-        .child(entry(strings::DEVICE_NAME, false, &c.device, |c, t| {
+        .child(entry(t("device_name"), false, &c.device, |c, t| {
             c.device = t
         }))
-        .child(labeled(strings::AUTO_SYNC, false, auto_picker))
+        .child(labeled(t("auto_sync"), false, auto_picker))
         // The desktops also sync every few minutes while auto-sync is on; 0 never.
         .child(dynamic(move || {
             let show = show_interval.get();
             untracked(|| {
                 show.then(|| {
                     let current = draft.get().interval.to_string();
-                    let minutes = input(strings::SYNC_MINUTES, &current, move |t| {
+                    let minutes = input(t("sync_minutes"), &current, move |t| {
                         let trimmed = t.trim();
                         if trimmed.is_empty() {
                             draft.update(|c| c.interval = 0);
@@ -203,15 +205,20 @@ pub(crate) fn fields(
                             draft.update(|c| c.interval = minutes);
                         }
                     });
-                    labeled(strings::SYNC_MINUTES, false, minutes)
+                    labeled(t("sync_minutes"), false, minutes)
                 })
             })
         }))
 }
 
 /// A field holding `value` at first; `typed` hears each change.
-fn input(label: &'static str, value: &str, typed: impl Fn(String) + 'static) -> nsh_base::Input {
-    field(label)
+fn input(
+    label: impl Into<SharedString>,
+    value: &str,
+    typed: impl Fn(String) + 'static,
+) -> nsh_base::Input {
+    let label: SharedString = label.into();
+    field(label.clone())
         .label(label)
         .default_value(value.to_owned())
         .on_change(move |text: &str| typed(text.to_owned()))
@@ -261,7 +268,7 @@ impl EncryptionFields {
     fn submitted(self) -> Option<(String, bool)> {
         let (passphrase, new) = self.for_test();
         if new && (passphrase.is_empty() || passphrase != self.confirmation.get()) {
-            store::notify(strings::PASSPHRASE_MISMATCH);
+            store::notify(t("passphrase_mismatch"));
             return None;
         }
         Some((passphrase, new))
@@ -270,11 +277,11 @@ impl EncryptionFields {
 
 /// New remotes confirm the passphrase. Joining an existing remote asks once.
 pub(crate) fn encryption_fields(fields: EncryptionFields, allow_new: bool) -> impl IntoElement {
-    let mut modes = vec![(RemoteMode::Plaintext, strings::PLAINTEXT_REMOTE)];
+    let mut modes = vec![(RemoteMode::Plaintext, t("plaintext_remote"))];
     if allow_new {
-        modes.push((RemoteMode::New, strings::NEW_ENCRYPTED_REMOTE));
+        modes.push((RemoteMode::New, t("new_encrypted_remote")));
     }
-    modes.push((RemoteMode::Join, strings::JOIN_ENCRYPTED_REMOTE));
+    modes.push((RemoteMode::Join, t("join_encrypted_remote")));
     let current = move || fields.mode.get();
     let choose = move |mode| {
         fields.passphrase.set(String::new());
@@ -289,7 +296,7 @@ pub(crate) fn encryption_fields(fields: EncryptionFields, allow_new: bool) -> im
     view()
         .gap_2()
         .items_start()
-        .child(muted(strings::REMOTE_MODE))
+        .child(muted(t("remote_mode")))
         .child(picker)
         .child(dynamic(move || {
             let mode = fields.mode.get();
@@ -297,9 +304,9 @@ pub(crate) fn encryption_fields(fields: EncryptionFields, allow_new: bool) -> im
                 view()
                     .gap_2()
                     .child(labeled(
-                        strings::ENCRYPTION_PASSPHRASE,
+                        t("encryption_passphrase"),
                         true,
-                        input(strings::ENCRYPTION_PASSPHRASE, "", move |typed| {
+                        input(t("encryption_passphrase"), "", move |typed| {
                             fields.passphrase.set(typed);
                         })
                         .masked(true),
@@ -307,11 +314,11 @@ pub(crate) fn encryption_fields(fields: EncryptionFields, allow_new: bool) -> im
                     .child((mode == RemoteMode::New).then(|| {
                         view()
                             .gap_2()
-                            .child(muted(strings::PASSPHRASE_LOSS))
+                            .child(muted(t("passphrase_loss")))
                             .child(labeled(
-                                strings::CONFIRM_PASSPHRASE,
+                                t("confirm_passphrase"),
                                 true,
-                                input(strings::CONFIRM_PASSPHRASE, "", move |typed| {
+                                input(t("confirm_passphrase"), "", move |typed| {
                                     fields.confirmation.set(typed);
                                 })
                                 .masked(true),

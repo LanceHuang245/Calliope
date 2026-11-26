@@ -4,6 +4,7 @@
 use std::sync::Arc;
 
 use super::*;
+use crate::i18n::t;
 use calliope_core::{
     graph::Graph,
     index::{Backlink, Index},
@@ -116,9 +117,9 @@ pub(crate) fn open_link(target: String) {
         return select(&path.into());
     }
     let ask = Ask {
-        title: strings::create_note(&target),
+        title: i18n::create_note(&target),
         description: None,
-        action: strings::CREATE,
+        action: t("create"),
         destructive: false,
     };
     confirm(ask, move || create_note(&target));

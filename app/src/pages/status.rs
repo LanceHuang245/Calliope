@@ -6,10 +6,12 @@ use calliope_sync::Provider;
 use nsh_base::{button, theme};
 use nsh_core::prelude::*;
 
+use crate::i18n::t;
+
 use crate::{
     components::icons::{self, icon},
+    i18n,
     store::{self, SyncStatus},
-    strings,
 };
 
 pub(crate) fn status_bar() -> impl IntoElement {
@@ -32,7 +34,7 @@ fn bar() -> impl IntoElement {
         .border_color(move || theme().border)
         .rounded_tl(move || theme().radius)
         .hover(|s| s.bg(theme().accent))
-        .accessibility_label(strings::SYNC_NOW)
+        .accessibility_label(t("sync_now"))
         .on_press(store::sync_now)
         .child(
             icon(icons::REFRESH)
@@ -42,11 +44,11 @@ fn bar() -> impl IntoElement {
         )
         .child(
             text(move || match store::sync_status() {
-                SyncStatus::Idle => strings::NOT_SYNCED.to_owned(),
-                SyncStatus::Running(done, total) => strings::syncing(done, total),
-                SyncStatus::Done(time, 0) => strings::synced_at(&time),
-                SyncStatus::Done(time, n) => strings::synced_conflicts(&time, n),
-                SyncStatus::Failed(_) => strings::SYNC_FAILED.to_owned(),
+                SyncStatus::Idle => t("not_synced").to_owned(),
+                SyncStatus::Running(done, total) => i18n::syncing(done, total),
+                SyncStatus::Done(time, 0) => i18n::synced_at(&time),
+                SyncStatus::Done(time, n) => i18n::synced_conflicts(&time, n),
+                SyncStatus::Failed(_) => t("sync_failed").to_owned(),
             })
             .text_xs()
             .text_color(move || match store::sync_status() {

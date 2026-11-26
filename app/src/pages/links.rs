@@ -8,13 +8,15 @@ use nsh_base::{
 };
 use nsh_core::prelude::*;
 
+use crate::i18n::t;
+
 use crate::{
     components::{
         card,
         icons::{self, icon},
         muted,
     },
-    store, strings,
+    store,
 };
 
 /// The name of the custom nodes wiki links are read as.
@@ -70,7 +72,7 @@ pub(crate) fn backlinks_panel() -> impl IntoElement {
         .gap_2()
         .p_3()
         .child(
-            text(strings::BACKLINKS)
+            text(t("backlinks"))
                 .text_sm()
                 .font_weight(FontWeight::SEMIBOLD)
                 .text_color(move || theme().muted_foreground),
@@ -78,7 +80,7 @@ pub(crate) fn backlinks_panel() -> impl IntoElement {
         .child(scroll().flex_1().child(dynamic(|| {
             let links = store::backlinks();
             match links.is_empty() {
-                true => text(strings::NO_BACKLINKS)
+                true => text(t("no_backlinks"))
                     .text_sm()
                     .text_color(move || theme().muted_foreground)
                     .into_element(),
@@ -122,7 +124,7 @@ pub(crate) fn backlinks_sheet() -> impl IntoElement {
                         .h(px(24.0))
                         .text_color(move || theme().muted_foreground),
                 )
-                .child(muted(strings::NO_BACKLINKS))
+                .child(muted(t("no_backlinks")))
                 .into_element(),
             false => view()
                 .gap_2()
@@ -153,7 +155,7 @@ pub(crate) fn backlinks_sheet() -> impl IntoElement {
                         .flex_row()
                         .items_center()
                         .child(
-                            text(strings::BACKLINKS)
+                            text(t("backlinks"))
                                 .flex_1()
                                 .text_lg()
                                 .font_weight(FontWeight::SEMIBOLD)

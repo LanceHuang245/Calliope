@@ -8,7 +8,7 @@ use super::*;
 pub(crate) struct Command {
     /// What the palette's rows and `on_select` name it by.
     pub id: &'static str,
-    /// What its row says.
+    /// Its key among the texts (`t!`): what its row says.
     pub title: &'static str,
     /// The key that runs it too on the desktops, as nsh's keymap names it
     /// (`mod+n`); `None` for the ones only the palette runs.
@@ -20,79 +20,79 @@ pub(crate) struct Command {
 pub(crate) const COMMANDS: &[Command] = &[
     Command {
         id: "new-note",
-        title: strings::NEW_NOTE,
+        title: "new_note",
         keys: Some("mod+n"),
         run: new_note,
     },
     Command {
         id: "toggle-read",
-        title: strings::TOGGLE_READ,
+        title: "toggle_read",
         keys: Some("mod+e"),
         run: toggle_read,
     },
     Command {
         id: "quick-switch",
-        title: strings::QUICK_SWITCH,
+        title: "quick_switch",
         keys: Some("mod+o"),
         run: quick_switch,
     },
     Command {
         id: "graph",
-        title: strings::GRAPH,
+        title: "graph",
         keys: Some("mod+g"),
         run: toggle_graph,
     },
     Command {
         id: "sidebar",
-        title: strings::TOGGLE_SIDEBAR,
+        title: "toggle_sidebar",
         keys: Some("mod+\\"),
         run: toggle_sidebar,
     },
     Command {
         id: "edit-mode",
-        title: strings::EDIT,
+        title: "edit",
         keys: None,
         run: edit_mode,
     },
     Command {
         id: "split-mode",
-        title: strings::SPLIT,
+        title: "split",
         keys: None,
         run: split_mode,
     },
     Command {
         id: "read-mode",
-        title: strings::READ,
+        title: "read",
         keys: None,
         run: read_mode,
     },
     Command {
         id: "save-copy",
-        title: strings::SAVE_COPY,
+        title: "save_copy",
         keys: None,
         run: save_as_copy,
     },
     Command {
         id: "sync",
-        title: strings::SYNC_NOW,
+        title: "sync_now",
         keys: None,
         run: sync_now,
     },
     Command {
         id: "trash",
-        title: strings::TRASH,
+        title: "trash",
         keys: None,
         run: toggle_trash,
     },
     Command {
         id: "settings",
-        title: strings::SETTINGS,
+        title: "settings",
         keys: None,
         run: settings,
     },
     Command {
         id: "theme",
-        title: strings::CYCLE_THEME,
+        title: "cycle_theme",
         keys: None,
         run: cycle_theme,
     },

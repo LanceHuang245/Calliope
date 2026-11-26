@@ -6,13 +6,15 @@ use calliope_sync::Provider;
 use nsh_base::{progress, theme};
 use nsh_core::{element::NativeEvent, platform::Os, prelude::*};
 
+use crate::i18n::t;
+
 use crate::{
     components::{
         BAR_HEIGHT, ButtonVariant, button, desktop_layout, fab, floating_toolbar, icon_button,
         icons, muted, toolbar_toggle,
     },
+    i18n,
     store::{self, Route, SyncStatus},
-    strings,
 };
 
 #[cfg(target_os = "ios")]
@@ -29,6 +31,7 @@ const GLASS_STRIDE: f32 = GLASS_BUTTON + 4.0;
 struct ToolbarAction {
     icon: &'static str,
     symbol: &'static str,
+    /// Its key among the texts (`t!`), for screen readers.
     label: &'static str,
     selected: Option<fn() -> bool>,
     visible: fn() -> bool,
@@ -38,7 +41,7 @@ struct ToolbarAction {
 const NEW_NOTE_ACTION: ToolbarAction = ToolbarAction {
     icon: icons::PLUS,
     symbol: "plus",
-    label: strings::NEW_NOTE,
+    label: "new_note",
     selected: None,
     visible: || true,
     press: store::new_note,
@@ -58,10 +61,10 @@ pub(crate) fn home_page() -> impl IntoElement {
                     view()
                         .items_center()
                         .gap_4()
-                        .child(text(strings::NO_NOTE).text_color(move || theme().muted_foreground))
+                        .child(text(t("no_note")).text_color(move || theme().muted_foreground))
                         .child(button(
                             ButtonVariant::Primary,
-                            strings::NEW_NOTE,
+                            t("new_note"),
                             store::new_note,
                         ))
                 })),
@@ -94,7 +97,7 @@ fn download_progress() -> impl IntoElement {
         .gap_2()
         .child(muted(move || {
             let (done, total) = counts();
-            strings::syncing(done, total)
+            i18n::syncing(done, total)
         }))
         .child(
             progress()
@@ -117,7 +120,7 @@ pub(crate) fn sync_button() -> impl IntoElement {
         let running = || matches!(store::sync_status(), SyncStatus::Running(..));
         view()
             .opacity(move || if running() { 0.5_f32 } else { 1.0 })
-            .child(icon_button(icons::REFRESH, strings::SYNC, store::sync_now))
+            .child(icon_button(icons::REFRESH, t("sync"), store::sync_now))
     })
 }
 
@@ -126,7 +129,7 @@ pub(crate) fn menu_button() -> impl IntoElement {
     const MENU: ToolbarAction = ToolbarAction {
         icon: icons::MENU,
         symbol: "line.3.horizontal",
-        label: strings::MENU,
+        label: "menu",
         selected: None,
         visible: || true,
         press: || store::set_menu_open(true),
@@ -134,7 +137,7 @@ pub(crate) fn menu_button() -> impl IntoElement {
     if cfg!(target_os = "ios") && os() == Os::Ios {
         glass_toolbar(&[MENU], true).into_element()
     } else {
-        icon_button(MENU.icon, MENU.label, MENU.press).into_element()
+        icon_button(MENU.icon, t!(MENU.label), MENU.press).into_element()
     }
 }
 
@@ -149,7 +152,7 @@ pub(crate) fn phone_toolbar() -> impl IntoElement {
         ToolbarAction {
             icon: icons::REFRESH,
             symbol: "arrow.clockwise",
-            label: strings::SYNC,
+            label: "sync",
             selected: Some(|| matches!(store::sync_status(), SyncStatus::Running(..))),
             visible: sync_enabled,
             press: store::sync_now,
@@ -157,7 +160,7 @@ pub(crate) fn phone_toolbar() -> impl IntoElement {
         ToolbarAction {
             icon: icons::SEARCH,
             symbol: "magnifyingglass",
-            label: strings::SEARCH,
+            label: "search",
             selected: Some(store::switching),
             visible: || true,
             press: || store::set_switching(true),
@@ -165,7 +168,7 @@ pub(crate) fn phone_toolbar() -> impl IntoElement {
         ToolbarAction {
             icon: icons::NETWORK,
             symbol: "point.3.connected.trianglepath.dotted",
-            label: strings::GRAPH,
+            label: "graph",
             selected: Some(|| store::route() == Route::Graph),
             visible: || true,
             press: store::toggle_graph,
@@ -173,7 +176,7 @@ pub(crate) fn phone_toolbar() -> impl IntoElement {
         ToolbarAction {
             icon: icons::LINK,
             symbol: "link",
-            label: strings::BACKLINKS,
+            label: "backlinks",
             selected: Some(store::backlinks_shown),
             visible: || store::opened().is_some(),
             press: store::toggle_backlinks,
@@ -181,7 +184,7 @@ pub(crate) fn phone_toolbar() -> impl IntoElement {
         ToolbarAction {
             icon: icons::TRASH,
             symbol: "trash",
-            label: strings::TRASH,
+            label: "trash",
             selected: Some(|| store::route() == Route::Trash),
             visible: || true,
             press: store::toggle_trash,
@@ -205,14 +208,14 @@ pub(crate) fn phone_toolbar() -> impl IntoElement {
                     when(action.visible, move || {
                         toolbar_toggle(
                             action.icon,
-                            action.label,
+                            t!(action.label),
                             move || action.selected.is_some_and(|selected| selected()),
                             action.press,
                         )
                     })
                 }));
             let add = &NEW_NOTE_ACTION;
-            floating_toolbar(buttons, fab(add.icon, add.label, add.press), false).into_element()
+            floating_toolbar(buttons, fab(add.icon, t!(add.label), add.press), false).into_element()
         },
     )
 }
@@ -235,7 +238,7 @@ fn glass_toolbar(actions: &'static [ToolbarAction], compact: bool) -> impl IntoE
                     .map(|(index, action)| {
                         serde_json::json!({
                             "index": index,
-                            "label": action.label,
+                            "label": t!(action.label),
                             "symbol": action.symbol,
                             "selected": action.selected.map(|selected| selected()),
                         })

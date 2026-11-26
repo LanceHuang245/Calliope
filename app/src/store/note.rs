@@ -162,7 +162,7 @@ pub(super) fn save_or_copy() {
             return;
         };
         match vault.save_copy(&path, "conflict", text().as_bytes()) {
-            Ok(copy) => notify(strings::saved_copy(&copy)),
+            Ok(copy) => notify(i18n::saved_copy(&copy)),
             Err(e) => notify(format!("{path}: {e}")),
         }
     });
@@ -175,9 +175,9 @@ pub(crate) fn save_as_copy() {
         let (Some(vault), Some(path)) = (vault(), note_path()) else {
             return;
         };
-        let copy = vault.save_copy(&path, &strings::copy_tag(), text().as_bytes());
+        let copy = vault.save_copy(&path, &i18n::copy_tag(), text().as_bytes());
         match copy {
-            Ok(copy) => inform(strings::saved_copy(&copy)),
+            Ok(copy) => inform(i18n::saved_copy(&copy)),
             Err(e) => notify(format!("{path}: {e}")),
         }
     });

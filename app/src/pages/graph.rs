@@ -20,9 +20,11 @@ use nsh_core::{
     prelude::*,
 };
 
+use crate::i18n::t;
+
 use crate::{
     components::{icons, page},
-    store, strings,
+    store,
 };
 
 /// The room around the outermost nodes, for their labels.
@@ -61,23 +63,23 @@ pub(crate) fn graph_page() -> impl IntoElement {
         view()
             .flex_row()
             .gap_2()
-            .child(option(strings::ORPHANS, orphans))
-            .child(option(strings::UNCREATED, missing))
+            .child(option(t("orphans"), orphans))
+            .child(option(t("uncreated"), missing))
             .into_element()
     };
     let diagram = dynamic(move || laid.get().map(|laid| untracked(|| diagram(laid))));
-    page(strings::GRAPH, store::back_to_note, Some(options), diagram)
+    page(t("graph"), store::back_to_note, Some(options), diagram)
 }
 
 /// The system menu reads both filters independently each time it opens.
 fn mobile_filters(orphans: Signal<bool>, missing: Signal<bool>) -> impl IntoElement {
     menu_button()
         .test_id("graph-filters")
-        .accessibility_label(strings::FILTERS)
+        .accessibility_label(t("filters"))
         .items(move || {
             vec![
-                MenuButtonItem::new("orphans", strings::ORPHANS).checked(orphans.get()),
-                MenuButtonItem::new("uncreated", strings::UNCREATED).checked(missing.get()),
+                MenuButtonItem::new("orphans", t("orphans")).checked(orphans.get()),
+                MenuButtonItem::new("uncreated", t("uncreated")).checked(missing.get()),
             ]
         })
         .on_select(move |id: &SharedString| match id.as_ref() {
@@ -98,11 +100,12 @@ fn mobile_filters(orphans: Signal<bool>, missing: Signal<bool>) -> impl IntoElem
         )
 }
 
-fn option(label: &'static str, on: Signal<bool>) -> impl IntoElement {
+fn option(label: impl Into<SharedString>, on: Signal<bool>) -> impl IntoElement {
+    let label: SharedString = label.into();
     button()
         .px_2()
         .py_1()
-        .accessibility_label(label)
+        .accessibility_label(label.clone())
         .selected(move || on.get())
         .on_press(move || on.update(|on| *on = !*on))
         .child(text(label).text_sm().text_color(move || theme().foreground))

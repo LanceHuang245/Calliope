@@ -27,12 +27,13 @@ use super::{
     links::{WikiLinks, backlinks_sheet, wiki_links},
     mermaid::{mermaid, mermaid_blocks, warm_up},
 };
+use crate::i18n::t;
+
 use crate::{
     components::{
         TOOLBAR_ROOM, action, banner, desktop_layout, field, icon_button, icons, segmented,
     },
     store::{self, Mode},
-    strings,
 };
 
 /// Below this width, Split shows the editor only.
@@ -78,9 +79,9 @@ fn note_view() -> impl IntoElement {
         .child(header())
         .child(dynamic(move || {
             store::conflict().then(|| {
-                banner(strings::CONFLICT)
-                    .child(action(strings::KEEP_MINE, || store::resolve_conflict(true)))
-                    .child(action(strings::USE_DISK, || store::resolve_conflict(false)))
+                banner(t("conflict"))
+                    .child(action(t("keep_mine"), || store::resolve_conflict(true)))
+                    .child(action(t("use_disk"), || store::resolve_conflict(false)))
             })
         }))
         .child(dynamic(move || {
@@ -130,18 +131,18 @@ fn jump_to_line(editor: ComponentRef<Editor>) {
 fn header() -> impl IntoElement {
     let modes = match desktop_layout() {
         true => vec![
-            (Mode::Edit, strings::EDIT),
-            (Mode::Split, strings::SPLIT),
-            (Mode::Read, strings::READ),
+            (Mode::Edit, t("edit")),
+            (Mode::Split, t("split")),
+            (Mode::Read, t("read")),
         ],
-        false => vec![(Mode::Edit, strings::EDIT), (Mode::Read, strings::READ)],
+        false => vec![(Mode::Edit, t("edit")), (Mode::Read, t("read"))],
     };
     // Use UIKit on an iPhone or narrow iPad, sharing the app's mode state.
     let mode_picker = if cfg!(target_os = "ios") && os() == Os::Ios && !desktop_layout() {
         segmented_control()
             .items(vec![
-                SegmentedControlItem::new(strings::EDIT),
-                SegmentedControlItem::new(strings::READ),
+                SegmentedControlItem::new(t("edit")),
+                SegmentedControlItem::new(t("read")),
             ])
             .selected_index(|| u32::from(store::mode() == Mode::Read))
             .on_change(|index: &u32| {
@@ -172,7 +173,7 @@ fn title() -> impl IntoElement {
     };
     input()
         .value(title)
-        .label(strings::TITLE)
+        .label(t("title"))
         .on_change(move |text: &str| title.set(text.to_owned()))
         .on_submit(move |_: &str| commit())
         .on_blur(commit)
@@ -211,7 +212,7 @@ fn source(
         .value(move || Some(store::text()))
         .on_change(store::edit)
         .language("markdown")
-        .accessibility_label(strings::SOURCE)
+        .accessibility_label(t("source"))
         .soft_wrap(true)
         .line_numbers(false)
         .active_line(false)
@@ -268,7 +269,7 @@ fn find_bar(
         .border_b_1()
         .border_color(move || theme().border)
         .child(
-            field(strings::FIND)
+            field(t("find"))
                 .value(query)
                 .auto_focus(true)
                 .on_change(move |q: &str| query.set(q.to_owned()))
@@ -277,29 +278,29 @@ fn find_bar(
         )
         .child(icon_button(
             icons::CHEVRON_UP,
-            strings::PREVIOUS_MATCH,
+            t("previous_match"),
             move || run(&|api| api.run(EditorCommand::FindPrevious)),
         ))
         .child(icon_button(
             icons::CHEVRON_DOWN,
-            strings::NEXT_MATCH,
+            t("next_match"),
             move || run(&|api| api.run(EditorCommand::FindNext)),
         ))
         .child(
-            field(strings::REPLACE)
+            field(t("replace"))
                 .value(replacement)
                 .on_change(move |r: &str| replacement.set(r.to_owned()))
                 .flex_1(),
         )
-        .child(action(strings::REPLACE, move || {
+        .child(action(t("replace"), move || {
             run(&|api| api.replace(replacement.get()))
         }))
-        .child(action(strings::REPLACE_ALL, move || {
+        .child(action(t("replace_all"), move || {
             run(&|api| {
                 api.replace_all(replacement.get());
             })
         }))
-        .child(icon_button(icons::X, strings::CLOSE, move || {
+        .child(icon_button(icons::X, t("close"), move || {
             finding.set(false);
             query.set(String::new());
         }))
@@ -346,9 +347,7 @@ fn front_matter(yaml: String) -> impl IntoElement {
     let open = signal(false);
     let source = SharedString::from(format!("```yaml\n{yaml}```"));
     view()
-        .child(action(strings::PROPERTIES, move || {
-            open.update(|o| *o = !*o)
-        }))
+        .child(action(t("properties"), move || open.update(|o| *o = !*o)))
         .child(dynamic(move || {
             open.get().then(|| {
                 text_view()

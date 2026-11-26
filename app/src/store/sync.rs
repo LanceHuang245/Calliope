@@ -15,6 +15,8 @@ use nsh_core::{notifications::Notification, platform::Lifecycle};
 use super::{note::save, *};
 use crate::secrets;
 
+use crate::i18n::t;
+
 mod setup;
 pub(crate) use setup::{create_from_sync, save_sync, test_sync};
 
@@ -244,7 +246,7 @@ fn start(confirmed: bool) {
                 let time = jiff::ZonedDateTime::now().strftime("%H:%M").to_string();
                 set(SyncStatus::Done(time, report.conflicts.len()));
                 if !report.conflicts.is_empty() {
-                    notify(strings::sync_conflicts(&report.conflicts));
+                    notify(i18n::conflict_copies(&report.conflicts));
                     spawn_task(notify_system(report.conflicts));
                 }
             }
@@ -253,9 +255,9 @@ fn start(confirmed: bool) {
             Ok(Err(Error::TooManyDeletions(n))) => {
                 set(SyncStatus::Idle);
                 let ask = Ask {
-                    title: strings::DELETE_FILES.to_owned(),
-                    description: Some(strings::deleting(n).into()),
-                    action: strings::DELETE,
+                    title: t("delete_files").to_owned(),
+                    description: Some(i18n::deleting(n).into()),
+                    action: t("delete"),
                     destructive: true,
                 };
                 confirm(ask, || start(true));
@@ -263,7 +265,7 @@ fn start(confirmed: bool) {
             Ok(Err(e)) => {
                 log::warn!("sync failed: {e:?}");
                 set(SyncStatus::Failed(e.to_string()));
-                notify(strings::sync_failed(&e));
+                notify(i18n::sync_error(&e));
             }
             Err(e) => notify(e),
         }
@@ -277,8 +279,8 @@ fn start(confirmed: bool) {
 /// notice in the app is left.
 async fn notify_system(copies: Vec<String>) {
     request_notification_permission().await;
-    let body = strings::sync_conflicts(&copies);
-    let notification = Notification::new("sync-conflicts", strings::SYNC_CONFLICTS, body);
+    let body = i18n::conflict_copies(&copies);
+    let notification = Notification::new("sync-conflicts", t("sync_conflicts"), body);
     show_notification(notification).await;
 }
 

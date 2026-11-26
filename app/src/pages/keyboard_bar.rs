@@ -11,10 +11,9 @@ use nsh_base::{
 };
 use nsh_core::prelude::*;
 
-use crate::{
-    components::icons::{self, icon},
-    strings,
-};
+use crate::i18n::t;
+
+use crate::components::icons::{self, icon};
 
 /// The bar of `editor`, shown while `editing` (the editor has the focus)
 /// and the keyboard is up.
@@ -50,7 +49,7 @@ pub(crate) fn keyboard_bar(
             .bg(move || theme().background)
             .child(key(
                 text("[[").into_element(),
-                strings::LINK,
+                t("link"),
                 // Inserted text is not typed: the notes' titles are asked for.
                 run(|api| {
                     api.insert("[[".into());
@@ -59,22 +58,22 @@ pub(crate) fn keyboard_bar(
             ))
             .child(key(
                 text("#").into_element(),
-                strings::TAG,
+                t("tag"),
                 run(|api| api.insert("#".into())),
             ))
             .child(key(
                 icon(icons::LIST).into_element(),
-                strings::LIST,
+                t("list"),
                 run(|api| prefix_line(api, "- ")),
             ))
             .child(key(
                 icon(icons::SQUARE_CHECK).into_element(),
-                strings::TASK,
+                t("task"),
                 run(|api| prefix_line(api, "- [ ] ")),
             ))
             .child(key(
                 icon(icons::CODE).into_element(),
-                strings::CODE,
+                t("code"),
                 run(|api| wrap(api, "`")),
             ))
     })
@@ -84,9 +83,10 @@ pub(crate) fn keyboard_bar(
 /// focus, so the editor keeps the keyboard.
 fn key(
     content: AnyElement,
-    label: &'static str,
+    label: impl Into<SharedString>,
     on_press: impl Fn() + 'static,
 ) -> impl IntoElement {
+    let label: SharedString = label.into();
     view()
         .focusable(false)
         .role(AccessibilityRole::Button)

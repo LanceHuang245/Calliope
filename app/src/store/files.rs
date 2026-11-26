@@ -6,6 +6,8 @@ use nsh_base::{AlertDialogInput, alert_dialog};
 
 use super::*;
 
+use crate::i18n::t;
+
 pub(crate) fn expanded() -> Vec<SharedString> {
     get::<Expanded>().0
 }
@@ -101,10 +103,10 @@ pub(crate) fn start_rename(path: String) {
         .select_text_on_focus(true)
         .required(true);
     let answer = alert_dialog()
-        .title(strings::RENAME)
+        .title(t("rename"))
         .input(field)
-        .cancel("cancel", strings::CANCEL)
-        .action("rename", strings::RENAME)
+        .cancel("cancel", t("cancel"))
+        .action("rename", t("rename"))
         .show();
     spawn_task(async move {
         if let Ok(answer) = answer.await
@@ -164,15 +166,15 @@ fn rename_item(old: String, name: &str) {
 /// Asks, then moves the item at `path` to the trash.
 pub(crate) fn delete(path: String) {
     let ask = Ask {
-        title: strings::DELETE_TITLE.to_owned(),
+        title: t("delete_title").to_owned(),
         description: Some(
             match is_desktop() {
-                true => strings::DELETE_TO_SYSTEM,
-                false => strings::DELETE_DESCRIPTION,
+                true => i18n::delete_to_system(),
+                false => t("delete_description"),
             }
             .into(),
         ),
-        action: strings::DELETE,
+        action: t("delete"),
         destructive: true,
     };
     confirm(ask, move || spawn_task(trash(path.clone())));

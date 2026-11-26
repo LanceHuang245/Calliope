@@ -16,7 +16,10 @@ fn phone_makes_a_vault_from_sync_only_once_connected() {
     fs::create_dir_all(&sandbox).unwrap();
     // SAFETY: set before the app starts, read by the app only.
     unsafe { std::env::set_var("CALLIOPE_SANDBOX", &sandbox) };
-    let mut app = Headless::start(EngineConfig::new(Root::of::<calliope::App>())).unwrap();
+    let mut app = Headless::start(EngineConfig::new(
+        Root::of::<calliope::App>().translations(calliope::translations()),
+    ))
+    .unwrap();
 
     app.wait_for("text:Create from sync").unwrap();
     app.press("text:Create from sync").unwrap();

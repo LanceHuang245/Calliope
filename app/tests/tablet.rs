@@ -22,7 +22,8 @@ fn tablet_shows_the_desktop_layout_when_wide_enough() {
     fs::write(sandbox.join("Notes/Hello.md"), "# Hello world\n").unwrap();
     // SAFETY: set before the app starts, read by the app only.
     unsafe { std::env::set_var("CALLIOPE_SANDBOX", &sandbox) };
-    let mut config = EngineConfig::new(Root::of::<calliope::App>());
+    let mut config =
+        EngineConfig::new(Root::of::<calliope::App>().translations(calliope::translations()));
     config.environment.os = Os::Android;
     config.environment.idiom = Idiom::Pad;
     config.viewport = size(px(1100.0), px(800.0));
