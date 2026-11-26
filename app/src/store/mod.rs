@@ -32,7 +32,7 @@ use nsh_core::{file_dialog::SaveDialog, prelude::*, storage::Storage};
 
 pub(crate) use self::{
     commands::{commands, palette, run_command, set_palette},
-    confirm::{answer, asking},
+    confirm::{answer, asking, dismiss_message, tell, telling},
     files::{
         cancel_rename, delete, expanded, new_folder, new_folder_in, new_note, new_note_in, rename,
         rename_note, renaming, selected, set_expanded, start_rename,
@@ -63,7 +63,9 @@ use self::{
     sync::{edited, load_sync, start_sync_timers},
     vault::watch_other_apps,
 };
-use crate::{logging, paths, strings};
+use crate::i18n::t;
+
+use crate::{i18n, logging, paths};
 
 /// The last vault opened: its folder on the desktops, its name in the
 /// sandbox on the phones.
@@ -173,6 +175,7 @@ fn spawn_task(task: impl Future<Output = ()> + 'static) {
 /// preview, other apps' changes and sync. Called once by the root.
 pub(crate) fn init() {
     set(Root(Some(Owner::current())));
+    i18n::restore_language();
     let theme = match Storage::get_item(THEME).as_deref() {
         Some("light") => Theme::Light,
         Some("dark") => Theme::Dark,
@@ -335,7 +338,7 @@ pub(crate) fn export_logs() {
     if !is_desktop() {
         // Whether the copy reached the system's clipboard goes unasked.
         drop(set_clipboard(fs::read_to_string(&log).unwrap_or_default()));
-        inform(strings::LOGS_COPIED);
+        inform(t("logs_copied"));
         return;
     }
     let picked = pick_save_path(SaveDialog::new().file_name("calliope.log"));

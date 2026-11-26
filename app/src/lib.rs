@@ -7,17 +7,19 @@
 //! - [`pages`]: one module per page, reading and changing [`store`];
 //! - [`components`]: Calliope's own styled controls, built on `nsh-base`;
 //! - [`store`]: the UI state, over `calliope-core`;
-//! - [`strings`]: every text of the UI, [`paths`], [`logging`] and
-//!   [`secrets`]: the app's own files.
+//! - [`i18n`]: the interface's language and its texts (`locales/`),
+//!   [`paths`], [`logging`] and [`secrets`]: the app's own files.
 
 mod components;
+mod i18n;
 mod logging;
 mod pages;
 mod paths;
 mod secrets;
 mod shell;
 mod store;
-mod strings;
+
+pub use crate::i18n::translations;
 
 use nsh_base::theme;
 use nsh_core::{element::desktop::window as app_window, prelude::*};

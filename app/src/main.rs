@@ -24,6 +24,7 @@ fn main() -> impl std::process::Termination {
         platform::AppSource::Rust(
             platform::Root::of::<calliope::App>()
                 .app_id(APP_ID)
+                .translations(calliope::translations())
                 .main_window(window),
         ),
         platform::AppOptions {

@@ -30,7 +30,8 @@ pub fn vault(name: &str) -> PathBuf {
 /// The desktop layout, in a 1200 × 800 window, on the vault at `root` as
 /// the last one opened.
 pub fn desktop(root: &Path) -> EngineConfig {
-    let mut config = EngineConfig::new(Root::of::<calliope::App>());
+    let mut config =
+        EngineConfig::new(Root::of::<calliope::App>().translations(calliope::translations()));
     config.environment.idiom = Idiom::Desktop;
     config.environment.os = Os::Linux;
     config.viewport = size(px(1200.0), px(800.0));
