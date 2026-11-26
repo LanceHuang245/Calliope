@@ -19,8 +19,13 @@ use nsh_core::{
     prelude::*,
 };
 
+use crate::i18n::t;
+
 use crate::{
-    components::{card, confirm_dialog, desktop_layout, floating_surface, icon_button, icons},
+    components::{
+        card, confirm_dialog, desktop_layout, floating_surface, icon_button, icons, notice_dialog,
+    },
+    i18n,
     pages::{
         files::{files_page, rename_dialog},
         graph::graph_page,
@@ -36,7 +41,6 @@ use crate::{
         welcome::welcome_page,
     },
     store::{self, Mode, Notice, Route},
-    strings,
 };
 
 pub(crate) fn shell() -> impl IntoElement {
@@ -68,6 +72,17 @@ pub(crate) fn shell() -> impl IntoElement {
         .child(dynamic(move || {
             store::asking()
                 .map(|ask| confirm_dialog(ask.title, ask.description, ask.action, store::answer))
+        }))
+        // And what they are told (a saved language shows after a restart).
+        .child(dynamic(move || {
+            store::telling().map(|message| {
+                notice_dialog(
+                    message.title,
+                    message.description,
+                    message.action,
+                    store::dismiss_message,
+                )
+            })
         }))
 }
 
@@ -190,7 +205,7 @@ fn app_title_bar() -> impl IntoElement {
                 .bg(move || theme().sidebar)
                 .window_drag(true)
                 .child(
-                    text(strings::APP_NAME)
+                    text(i18n::APP_NAME)
                         .px_3()
                         .text_sm()
                         .text_color(move || theme().muted_foreground),
@@ -350,5 +365,5 @@ fn toast(notice: Notice) -> impl IntoElement {
                 .text_color(move || theme().popover_foreground)
                 .select_text(),
         )
-        .child(icon_button(icons::X, strings::CLOSE, hide))
+        .child(icon_button(icons::X, t("close"), hide))
 }

@@ -1,6 +1,6 @@
 //! Settings categories share their contents across desktop and mobile.
 
-use nsh_base::theme;
+use nsh_base::{MenuButtonItem, menu_button, theme};
 use nsh_core::{
     element::AnyElement,
     mobile::{SegmentedControlItem, segmented_control},
@@ -9,10 +9,12 @@ use nsh_core::{
 };
 
 use super::sync::sync_settings;
+use crate::i18n::t;
+
 use crate::{
     components::{action, icons, labeled, muted, page, scroll_page, section, segmented},
+    i18n::{self, Language},
     store::{self, Route, SettingsCategory, Theme},
-    strings,
 };
 
 pub(crate) const CATEGORIES: [SettingsCategory; 3] = [
@@ -22,11 +24,11 @@ pub(crate) const CATEGORIES: [SettingsCategory; 3] = [
 ];
 
 impl SettingsCategory {
-    fn title(self) -> &'static str {
+    fn title(self) -> String {
         match self {
-            Self::Appearance => strings::APPEARANCE,
-            Self::Sync => strings::SYNC,
-            Self::About => strings::ABOUT,
+            Self::Appearance => t("appearance"),
+            Self::Sync => t("sync"),
+            Self::About => t("about"),
         }
     }
 
@@ -65,12 +67,12 @@ pub(crate) fn desktop_settings() -> impl IntoElement {
             let category = selected_category();
             untracked(|| scroll().flex_1().child(category_content(category)))
         })));
-    page(strings::SETTINGS, store::back_to_note, None, body)
+    page(t("settings"), store::back_to_note, None, body)
 }
 
 pub(crate) fn settings_categories() -> impl IntoElement {
     scroll_page(
-        strings::SETTINGS,
+        t("settings"),
         store::back_to_note,
         view()
             .p_6()
@@ -117,48 +119,186 @@ fn category_button(category: SettingsCategory, desktop: bool) -> impl IntoElemen
 
 fn category_content(category: SettingsCategory) -> impl IntoElement {
     let content: AnyElement = match category {
-        SettingsCategory::Appearance => labeled(
-            strings::THEME,
-            false,
-            settings_segmented(
-                vec![
-                    (Theme::System, strings::SYSTEM),
-                    (Theme::Light, strings::LIGHT),
-                    (Theme::Dark, strings::DARK),
-                ],
-                store::theme,
-                store::set_theme,
-            ),
-        )
-        .into_element(),
+        SettingsCategory::Appearance => appearance_settings().into_element(),
         SettingsCategory::Sync => view()
             .w_full()
             .gap_2()
-            .child(section(strings::VAULT))
+            .child(section(t("vault")))
             .child(muted(store::vault_path))
             // Phones keep their vault in the app's sandbox.
             .child(is_desktop().then(|| {
                 view()
                     .flex_row()
-                    .child(action(strings::OPEN_FOLDER, || store::pick_vault(false)))
-                    .child(action(strings::NEW_VAULT, || store::pick_vault(true)))
+                    .child(action(t("open_folder"), || store::pick_vault(false)))
+                    .child(action(t("new_vault"), || store::pick_vault(true)))
             }))
             .child(sync_settings())
             .into_element(),
         SettingsCategory::About => view()
             .gap_2()
             .items_start()
-            .child(muted(strings::version()))
-            .child(muted(strings::LICENSE))
-            .child(action(strings::EXPORT_LOGS, store::export_logs))
+            .child(muted(i18n::version()))
+            .child(muted(t("license")))
+            .child(action(t("export_logs"), store::export_logs))
             .into_element(),
     };
     view().p_6().gap_2().items_start().child(content)
 }
 
+/// The theme, and the interface's language: a pick is kept at once, and
+/// speaks from the next start on.
+fn appearance_settings() -> impl IntoElement {
+    view()
+        .w_full()
+        .gap_3()
+        .items_start()
+        .child(labeled(
+            t("theme"),
+            false,
+            settings_segmented(
+                vec![
+                    (Theme::System, t("system")),
+                    (Theme::Light, t("light")),
+                    (Theme::Dark, t("dark")),
+                ],
+                store::theme,
+                store::set_theme,
+            ),
+        ))
+        .child(labeled(t("interface_language"), false, language_list()))
+}
+
+/// Keeps `language` on this device, and says what shows it: the pages
+/// showing were made with the old texts.
+fn choose_language(language: Language) {
+    // Said in the language showing, which the pages keep until the restart.
+    let title = t("language_saved_title");
+    let description = t("language_saved_description");
+    let action = t("ok");
+    i18n::set_language(language);
+    store::tell(title, description, action);
+}
+
+/// The languages, each in its own language and the chosen one marked.
+/// UIKit's own list on iOS (a pull-down menu); on Android, as on the
+/// desktops, a list unfolding under the row.
+fn language_list() -> AnyElement {
+    if cfg!(target_os = "ios") && os() == Os::Ios {
+        native_language_list().into_element()
+    } else {
+        unfolding_language_list().into_element()
+    }
+}
+
+/// The row showing the choice, and the languages under it once it is
+/// pressed; a pick is kept and folds the list back.
+fn unfolding_language_list() -> impl IntoElement {
+    let open = signal(false);
+    view()
+        .w(px(220.0))
+        .gap_1()
+        .child(
+            nsh_base::button()
+                .flex_row()
+                .items_center()
+                .gap_2()
+                .px_2()
+                .py_1()
+                .border_1()
+                .border_color(move || theme().input)
+                .rounded(move || theme().radius)
+                .accessibility_label(t("interface_language"))
+                .on_press(move || open.update(|open| *open = !*open))
+                .child(dynamic(|| {
+                    text(i18n::language().title())
+                        .flex_1()
+                        .text_sm()
+                        .text_color(move || theme().foreground)
+                }))
+                .child(
+                    icons::icon(icons::CHEVRON_DOWN).text_color(move || theme().muted_foreground),
+                ),
+        )
+        .child(dynamic(move || {
+            open.get().then(|| {
+                view()
+                    .p_1()
+                    .gap(px(2.0))
+                    .border_1()
+                    .border_color(move || theme().border)
+                    .rounded(move || theme().radius)
+                    .child(Language::ALL.map(|language| language_row(language, open)))
+                    .into_element()
+            })
+        }))
+}
+
+/// A language of the unfolding list: its own name, the chosen one on the
+/// theme's accent as the settings' categories are.
+fn language_row(language: Language, open: Signal<bool>) -> impl IntoElement {
+    let on = move || i18n::language() == language;
+    nsh_base::button()
+        .flex_row()
+        .items_center()
+        .px_2()
+        .py_1()
+        .rounded(move || theme().radius)
+        .accessibility_label(language.title())
+        .selected(on)
+        .hover(|s| s.bg(theme().accent))
+        .active(|s| s.bg(theme().accent))
+        .style_when(on, |s| s.bg(theme().accent))
+        .on_press(move || {
+            choose_language(language);
+            open.set(false);
+        })
+        .child(
+            text(language.title())
+                .text_sm()
+                .text_color(move || theme().foreground),
+        )
+}
+
+/// The same choice in the system's list: UIKit's `UIMenu` on iOS, a check
+/// mark on the chosen one.
+fn native_language_list() -> impl IntoElement {
+    menu_button()
+        .accessibility_label(t("interface_language"))
+        .items(move || {
+            Language::ALL
+                .into_iter()
+                .map(|language| {
+                    MenuButtonItem::new(language.code(), language.title())
+                        .checked(language == i18n::language())
+                })
+                .collect::<Vec<_>>()
+        })
+        .on_select(move |code: &SharedString| {
+            if let Some(language) = Language::from_code(code) {
+                choose_language(language);
+            }
+        })
+        .w(px(220.0))
+        .flex_row()
+        .items_center()
+        .gap_2()
+        .px_2()
+        .py_1()
+        .border_1()
+        .border_color(move || theme().input)
+        .rounded(move || theme().radius)
+        .child(dynamic(|| {
+            text(i18n::language().title())
+                .flex_1()
+                .text_sm()
+                .text_color(move || theme().foreground)
+        }))
+        .child(icons::icon(icons::CHEVRON_DOWN).text_color(move || theme().muted_foreground))
+}
+
 // UIKit owns the selection appearance; each settings field still owns its value.
 pub(crate) fn settings_segmented<T: Copy + PartialEq + 'static>(
-    options: Vec<(T, &'static str)>,
+    options: Vec<(T, String)>,
     current: impl Fn() -> T + Copy + 'static,
     choose: impl Fn(T) + Copy + 'static,
 ) -> AnyElement {
@@ -168,7 +308,7 @@ pub(crate) fn settings_segmented<T: Copy + PartialEq + 'static>(
             .items(
                 options
                     .iter()
-                    .map(|(_, title)| SegmentedControlItem::new(*title))
+                    .map(|(_, title)| SegmentedControlItem::new(title.clone()))
                     .collect::<Vec<_>>(),
             )
             .selected_index(move || {
