@@ -3,10 +3,11 @@
 //! theme's tokens (`theme.json`). Pages use these instead of styling
 //! `nsh-base` themselves.
 
+mod dialog;
 pub(crate) mod icons;
 mod page;
 
-use nsh_base::{ButtonElement, dialog, input, menu_item, tab, tabs, theme};
+use nsh_base::{ButtonElement, input, menu_item, tab, tabs, theme};
 use nsh_core::{
     GlassEffect,
     element::{AnyElement, StyleRefinement},
@@ -14,12 +15,12 @@ use nsh_core::{
     prelude::*,
 };
 
+pub(crate) use self::dialog::{confirm_dialog, dialog_card, modal, notice_dialog, overlay};
 use self::icons::icon;
 pub(crate) use self::page::{
     BAR_HEIGHT, TOOLBAR_ROOM, desktop_layout, fab, floating_surface, floating_toolbar, page,
     scroll_page,
 };
-use crate::strings;
 
 /// A quiet text button: no surface until hovered or pressed.
 pub(crate) fn action(
@@ -54,9 +55,10 @@ pub(crate) enum ButtonVariant {
 /// every variant is the same size, so a row of them lines up.
 pub(crate) fn button(
     variant: ButtonVariant,
-    label: &'static str,
+    label: impl Into<SharedString>,
     on_press: impl Fn() + 'static,
 ) -> impl IntoElement {
+    let label: SharedString = label.into();
     let fill = move || match variant {
         ButtonVariant::Primary => theme().primary,
         ButtonVariant::Secondary => theme().muted,
@@ -80,7 +82,7 @@ pub(crate) fn button(
 /// tooltip on the desktops.
 pub(crate) fn icon_button(
     paths: &'static str,
-    label: &'static str,
+    label: impl Into<SharedString>,
     on_press: impl Fn() + 'static,
 ) -> impl IntoElement {
     icon_toggle(paths, label, || false, on_press)
@@ -90,11 +92,12 @@ pub(crate) fn icon_button(
 /// in the foreground, and selected to screen readers while `on`.
 pub(crate) fn icon_toggle(
     paths: &'static str,
-    label: &'static str,
+    label: impl Into<SharedString>,
     on: impl Fn() -> bool + Copy + 'static,
     on_press: impl Fn() + 'static,
 ) -> impl IntoElement {
-    view().tooltip(tooltip(label)).child(
+    let label: SharedString = label.into();
+    view().tooltip(tooltip(label.clone())).child(
         toggle(paths, label, on, on_press, 16.0)
             .active(|s| s.bg(theme().accent))
             .p(px(6.0))
@@ -106,7 +109,7 @@ pub(crate) fn icon_toggle(
 /// (44 points, the least both systems ask for), round.
 pub(crate) fn toolbar_toggle(
     paths: &'static str,
-    label: &'static str,
+    label: impl Into<SharedString>,
     on: impl Fn() -> bool + Copy + 'static,
     on_press: impl Fn() + 'static,
 ) -> impl IntoElement {
@@ -138,11 +141,12 @@ fn ios_glass_press(button: ButtonElement) -> ButtonElement {
 /// `on`.
 fn toggle(
     paths: &'static str,
-    label: &'static str,
+    label: impl Into<SharedString>,
     on: impl Fn() -> bool + Copy + 'static,
     on_press: impl Fn() + 'static,
     size: f32,
 ) -> ButtonElement {
+    let label: SharedString = label.into();
     nsh_base::button()
         .hover(|s| s.bg(theme().accent))
         .style_when(on, |s| s.bg(theme().accent))
@@ -160,7 +164,8 @@ fn toggle(
         )
 }
 
-fn tooltip(label: &'static str) -> AnyElement {
+fn tooltip(label: impl Into<SharedString>) -> AnyElement {
+    let label: SharedString = label.into();
     view()
         .px_2()
         .py_1()
@@ -180,10 +185,11 @@ fn tooltip(label: &'static str) -> AnyElement {
 /// color for it.
 pub(crate) fn menu_entry(
     paths: &'static str,
-    label: &'static str,
+    label: impl Into<SharedString>,
     destructive: bool,
     on_select: impl Fn() + 'static,
 ) -> impl IntoElement {
+    let label: SharedString = label.into();
     let color = move || match destructive {
         true => theme().destructive,
         false => theme().popover_foreground,
@@ -222,7 +228,7 @@ pub(crate) fn menu_popup(s: StyleRefinement) -> StyleRefinement {
 /// A row of options, the current one highlighted (the view mode, the
 /// theme).
 pub(crate) fn segmented<T: Copy + PartialEq + 'static>(
-    options: Vec<(T, &'static str)>,
+    options: Vec<(T, String)>,
     current: impl Fn() -> T + Copy + 'static,
     choose: impl Fn(T) + Copy + 'static,
 ) -> impl IntoElement {
@@ -257,7 +263,8 @@ pub(crate) fn segmented<T: Copy + PartialEq + 'static>(
     view().flex_row().child(tabs)
 }
 
-pub(crate) fn field(placeholder: &'static str) -> nsh_base::Input {
+pub(crate) fn field(placeholder: impl Into<SharedString>) -> nsh_base::Input {
+    let placeholder = placeholder.into().to_string();
     input()
         .placeholder(placeholder)
         .text_sm()
@@ -323,55 +330,6 @@ pub(crate) fn card() -> View {
         .shadow_sm()
 }
 
-/// A dialog asking before something is done, as the Rename dialog looks:
-/// `title`, what it means (`description`, if any), Cancel and `action`.
-/// `answer` hears whether the user goes on; Escape and the backdrop cancel.
-pub(crate) fn confirm_dialog(
-    title: impl Into<SharedString>,
-    description: Option<SharedString>,
-    action: &'static str,
-    answer: impl Fn(bool) + Copy + 'static,
-) -> impl IntoElement {
-    let cancel = move || answer(false);
-    dialog()
-        .animation(ModalAnimation::Fade)
-        .on_cancel(cancel)
-        .flex_1()
-        .child(view().absolute().inset_0().bg(overlay).on_press(cancel))
-        .child(
-            card()
-                .m(auto())
-                .w_80()
-                .gap_3()
-                .p_5()
-                .shadow_lg()
-                .child(
-                    text(title.into())
-                        .text_lg()
-                        .font_weight(FontWeight::SEMIBOLD)
-                        .text_color(move || theme().foreground),
-                )
-                .child(description.map(muted))
-                .child(
-                    view()
-                        .flex_row()
-                        .justify_end()
-                        .gap_2()
-                        .child(button(ButtonVariant::Secondary, strings::CANCEL, cancel))
-                        .child(button(ButtonVariant::Primary, action, move || answer(true))),
-                ),
-        )
-}
-
-/// The dimming behind dialogs and menu sheets: the theme's `overlay`
-/// (`theme.json`), the foreground faded where a theme has none.
-pub(crate) fn overlay() -> AdaptiveColor {
-    let theme = theme();
-    theme
-        .color("overlay")
-        .unwrap_or_else(|| theme.foreground.opacity(0.4))
-}
-
 /// Quiet text: a hint, a state, a field's label.
 pub(crate) fn muted(content: impl IntoReactive<SharedString>) -> impl IntoElement {
     text(content)
@@ -381,7 +339,12 @@ pub(crate) fn muted(content: impl IntoReactive<SharedString>) -> impl IntoElemen
 
 /// A form's field: `content` (an input, a switch) under its `label`, which
 /// a red `*` comes before when the field is `required`.
-pub(crate) fn labeled(label: &'static str, required: bool, content: impl IntoElement) -> View {
+pub(crate) fn labeled(
+    label: impl Into<SharedString>,
+    required: bool,
+    content: impl IntoElement,
+) -> View {
+    let label: SharedString = label.into();
     let star = text("*").text_sm().text_color(move || theme().destructive);
     view()
         .w_full()
@@ -397,7 +360,8 @@ pub(crate) fn labeled(label: &'static str, required: bool, content: impl IntoEle
         .child(content)
 }
 
-pub(crate) fn section(title: &'static str) -> impl IntoElement {
+pub(crate) fn section(title: impl Into<SharedString>) -> impl IntoElement {
+    let title: SharedString = title.into();
     text(title)
         .text_sm()
         .font_weight(FontWeight::SEMIBOLD)

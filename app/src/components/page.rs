@@ -10,7 +10,7 @@ use nsh_core::{
 };
 
 use super::{icon_button, icons, ios_glass_press};
-use crate::strings;
+use crate::i18n::t;
 
 /// How wide a tablet takes the desktops' layout (MVP phase 4).
 const TABLET_DESKTOP_WIDTH: f32 = 900.0;
@@ -29,11 +29,12 @@ pub(crate) fn desktop_layout() -> bool {
 /// whose back (the header's, a swipe, the system's) pops it and goes
 /// `back`.
 pub(crate) fn page(
-    title: &'static str,
+    title: impl Into<SharedString>,
     back: impl Fn() + 'static,
     actions: Option<AnyElement>,
     content: impl IntoElement,
 ) -> AnyElement {
+    let title: SharedString = title.into();
     if desktop_layout() {
         let bar = page_bar(title, back).child(actions);
         return view().flex_1().child(bar).child(content).into_element();
@@ -52,10 +53,11 @@ pub(crate) fn page(
 /// title's content out under the header everywhere, and only UIKit moves
 /// it clear.
 pub(crate) fn scroll_page(
-    title: &'static str,
+    title: impl Into<SharedString>,
     back: impl Fn() + 'static,
     content: impl IntoElement,
 ) -> AnyElement {
+    let title: SharedString = title.into();
     let content = scroll().flex_1().child(content);
     if desktop_layout() {
         return page(title, back, None, content);
@@ -69,14 +71,14 @@ pub(crate) fn scroll_page(
 
 /// A page's top bar, as the note's: the button that goes `back`, then the
 /// `title` taking the room left; a page adds its own buttons after it.
-fn page_bar(title: &'static str, back: impl Fn() + 'static) -> View {
+fn page_bar(title: SharedString, back: impl Fn() + 'static) -> View {
     view()
         .flex_row()
         .items_center()
         .gap_2()
         .px_4()
         .py_2()
-        .child(icon_button(icons::CHEVRON_LEFT, strings::BACK, back))
+        .child(icon_button(icons::CHEVRON_LEFT, t("back"), back))
         .child(
             text(title)
                 .flex_1()
@@ -146,9 +148,10 @@ pub(crate) fn floating_toolbar(
 /// A separate round action as tall as the toolbar, using each platform's surface.
 pub(crate) fn fab(
     paths: &'static str,
-    label: &'static str,
+    label: impl Into<SharedString>,
     on_press: impl Fn() + 'static,
 ) -> impl IntoElement {
+    let label: SharedString = label.into();
     let button = nsh_base::button()
         .w(px(BAR_HEIGHT))
         .h(px(BAR_HEIGHT))
