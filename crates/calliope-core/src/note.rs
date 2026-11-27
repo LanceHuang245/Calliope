@@ -28,6 +28,50 @@ pub fn split_front_matter(text: &str) -> (Option<&str>, &str) {
     (None, text)
 }
 
+/// A heading of a note's Markdown: its level (1 for `#`), its text and the
+/// line it is on (from 1).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Heading {
+    pub level: u8,
+    pub text: String,
+    pub line: usize,
+}
+
+/// The headings of a note's Markdown, in order: `#` to `######` with a space
+/// after them, outside the front matter and the code.
+pub fn outline(text: &str) -> Vec<Heading> {
+    let (front, body) = split_front_matter(text);
+    // The body starts after the `---` lines the front matter is between.
+    let offset = front.map_or(0, |front| front.lines().count() + 2);
+    let mut headings = Vec::new();
+    let mut fenced = false;
+    for (index, line) in body.lines().enumerate() {
+        let line = line.trim_end();
+        if line.starts_with("```") || line.starts_with("~~~") {
+            fenced = !fenced;
+            continue;
+        }
+        let level = line.chars().take_while(|c| *c == '#').count();
+        // Seven are no heading, and one starts in the first column.
+        if fenced || level == 0 || level > 6 {
+            continue;
+        }
+        let Some(text) = line[level..].strip_prefix(' ') else {
+            continue;
+        };
+        // A closing run of `#` marks the end, as in `## Title ##`.
+        let text = text.trim_end_matches('#').trim();
+        if !text.is_empty() {
+            headings.push(Heading {
+                level: level as u8,
+                text: text.to_owned(),
+                line: offset + index + 1,
+            });
+        }
+    }
+    headings
+}
+
 /// The file a note's link or image `src` points at, relative to the
 /// folder of the note at `note` (absolute): URL-escaped (`my%20image.png`)
 /// or not (`my image.png`, `图片.png`). `None` for a URL with a scheme
@@ -67,6 +111,33 @@ mod tests {
             Some(dir.parent().unwrap().join("b.png"))
         );
         assert_eq!(resolve_file(&note, "https://example.com/a.png"), None);
+    }
+
+    #[test]
+    fn lists_headings_with_their_levels_and_lines() {
+        let text = "---\ntags: [a]\n---\n# One\n\ntext\n## Two ##\n###\n####### Seven\n```\n# Code\n```\n#NoSpace\n# 中文标题\n";
+        assert_eq!(
+            outline(text),
+            [
+                Heading {
+                    level: 1,
+                    text: "One".to_owned(),
+                    line: 4
+                },
+                Heading {
+                    level: 2,
+                    text: "Two".to_owned(),
+                    line: 7
+                },
+                Heading {
+                    level: 1,
+                    text: "中文标题".to_owned(),
+                    line: 14
+                },
+            ]
+        );
+        // A note without front matter counts from its first line.
+        assert_eq!(outline("# Hi\n")[0].line, 1);
     }
 
     #[test]

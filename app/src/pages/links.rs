@@ -1,8 +1,12 @@
-//! Links between notes: the wiki links of the rendered note and the
-//! backlinks of the open note (a panel on the desktops, a sheet on the
-//! phones).
+//! Links between notes: the wiki links of the rendered note and the note's
+//! panels — its backlinks, its outline and its outlinks (beside the note on
+//! the desktops, a sheet on the phones).
 
-use calliope_core::{index::Backlink, link, note};
+use calliope_core::{
+    index::Backlink,
+    link,
+    note::{self, Heading},
+};
 use nsh_base::{
     MarkdownExtension, MarkdownPlugin, SheetDetent, SheetEvent, sheet, text_view::CustomNode, theme,
 };
@@ -12,15 +16,18 @@ use crate::i18n::t;
 
 use crate::{
     components::{
-        card,
+        desktop_layout, icon_button,
         icons::{self, icon},
         muted,
     },
-    store,
+    store::{self, Outlink, Panel},
 };
 
 /// The name of the custom nodes wiki links are read as.
 const WIKI_LINK: &str = "wikilink";
+
+/// The phones' sheet of panels, as the tests find it.
+const SHEET: &str = "panels";
 
 /// Reads `[[…]]` in a note's text as a wiki link, outside code.
 pub(crate) fn wiki_links() -> MarkdownExtension {
@@ -64,79 +71,62 @@ fn wiki_link(node: &CustomNode) -> AnyElement {
         .into_element()
 }
 
-/// The notes linking to the open one, each with the line of its link; a
-/// press opens it.
-pub(crate) fn backlinks_panel() -> impl IntoElement {
+/// Closes the phones' sheet, which covers the note a row asks for; the
+/// desktops' panels stay beside it.
+fn leave_sheet() {
+    if !desktop_layout() {
+        store::close_panels();
+    }
+}
+
+/// A panel beside the note (the desktops): its title, a button folding it
+/// away, and what it lists.
+pub(crate) fn panel_card(panel: Panel) -> impl IntoElement {
     view()
         .flex_1()
+        .test_id(panel.test_id())
         .gap_2()
         .p_3()
         .child(
-            text(t("backlinks"))
-                .text_sm()
-                .font_weight(FontWeight::SEMIBOLD)
-                .text_color(move || theme().muted_foreground),
-        )
-        .child(scroll().flex_1().child(dynamic(|| {
-            let links = store::backlinks();
-            match links.is_empty() {
-                true => text(t("no_backlinks"))
-                    .text_sm()
-                    .text_color(move || theme().muted_foreground)
-                    .into_element(),
-                false => view()
-                    .gap_1()
-                    .child(links.into_iter().map(backlink))
-                    .into_element(),
-            }
-        })))
-}
-
-fn backlink(link: Backlink) -> impl IntoElement {
-    let title = note::title(&link.source).to_owned();
-    view()
-        .p_2()
-        .rounded(move || theme().radius)
-        .hover(|s| s.bg(theme().accent))
-        .on_press(move || store::select(&link.source.clone().into()))
-        .child(text(title).text_sm().text_color(move || theme().foreground))
-        .child(
-            text(link.context)
-                .text_xs()
-                .text_color(move || theme().muted_foreground),
-        )
-}
-
-/// The phones' backlinks: a sheet over the note, at half its height and
-/// dragged up to all of it, each note linking here a card with the line of
-/// its link; a press opens that note.
-pub(crate) fn backlinks_sheet() -> impl IntoElement {
-    let list = dynamic(|| {
-        let links = store::backlinks();
-        match links.is_empty() {
-            true => view()
+            view()
+                .flex_row()
                 .items_center()
-                .gap_2()
-                .py_8()
                 .child(
-                    icon(icons::LINK)
-                        .w(px(24.0))
-                        .h(px(24.0))
+                    text(t(panel.title()))
+                        .flex_1()
+                        .text_sm()
+                        .font_weight(FontWeight::SEMIBOLD)
                         .text_color(move || theme().muted_foreground),
                 )
-                .child(muted(t("no_backlinks")))
-                .into_element(),
-            false => view()
-                .gap_2()
-                .child(links.into_iter().map(link_card))
-                .into_element(),
+                .child(icon_button(icons::X, t("close"), move || {
+                    store::set_panel_shown(panel, false)
+                })),
+        )
+        .child(scroll().flex_1().child(dynamic(move || panel_body(panel))))
+}
+
+/// The phones' panels: a sheet over the note, at half its height and dragged
+/// up to all of it, showing the one asked for.
+pub(crate) fn panel_sheet() -> impl IntoElement {
+    // The panel last shown: the sheet keeps its content while it slides away.
+    let showing = signal(Panel::Backlinks);
+    effect(move || {
+        if let Some(panel) = store::open_panel() {
+            showing.set(panel);
         }
     });
+    let title = text(move || t(showing.get().title()))
+        .flex_1()
+        .text_lg()
+        .font_weight(FontWeight::SEMIBOLD)
+        .text_color(move || theme().foreground);
     sheet()
-        .open(move || Some(store::backlinks_shown()))
+        .open(move || Some(store::open_panel().is_some()))
         .on_open_change(|e: &SheetEvent| {
-            if let SheetEvent::OpenChange(open, _) = e {
-                store::set_backlinks_shown(*open);
+            if let SheetEvent::OpenChange(open, _) = e
+                && !*open
+            {
+                store::close_panels();
             }
         })
         .detents(vec![SheetDetent::Medium, SheetDetent::Large])
@@ -146,81 +136,136 @@ pub(crate) fn backlinks_sheet() -> impl IntoElement {
         .popup_style(|s| s.w_full().rounded_t(px(24.0)).bg(theme().sidebar))
         .child(
             view()
+                .test_id(SHEET)
                 .flex_1()
                 .px_4()
                 .pb_safe_area()
                 .gap_3()
+                .child(view().flex_row().items_center().child(title))
                 .child(
-                    view()
-                        .flex_row()
-                        .items_center()
-                        .child(
-                            text(t("backlinks"))
-                                .flex_1()
-                                .text_lg()
-                                .font_weight(FontWeight::SEMIBOLD)
-                                .text_color(move || theme().foreground),
-                        )
-                        .child(muted(|| store::backlinks().len().to_string())),
-                )
-                .child(scroll().flex_1().child(list)),
+                    scroll()
+                        .flex_1()
+                        .child(dynamic(move || panel_body(showing.get()))),
+                ),
         )
 }
 
-/// A note linking to the open one, on a card: its title, and the line of
-/// its link with the wiki links in the theme's `primary`.
-fn link_card(link: Backlink) -> impl IntoElement {
-    let title = note::title(&link.source).to_owned();
-    let source = link.source.clone();
-    card()
-        .flex_row()
+/// What `panel` lists, a row each; its icon and a word while there is
+/// nothing.
+fn panel_body(panel: Panel) -> AnyElement {
+    match panel {
+        Panel::Backlinks => match store::backlinks().is_empty() {
+            true => nothing(panel, t("no_backlinks")),
+            false => view()
+                .gap_1()
+                .child(store::backlinks().into_iter().map(backlink))
+                .into_element(),
+        },
+        Panel::Outline => match store::outline().is_empty() {
+            true => nothing(panel, t("no_outline")),
+            false => view()
+                .gap_1()
+                .child(store::outline().into_iter().map(heading_row))
+                .into_element(),
+        },
+        Panel::Outlinks => match store::outlinks().is_empty() {
+            true => nothing(panel, t("no_outlinks")),
+            false => view()
+                .gap_1()
+                .child(store::outlinks().into_iter().map(outlink_row))
+                .into_element(),
+        },
+    }
+}
+
+pub(crate) fn panel_icon(panel: Panel) -> &'static str {
+    match panel {
+        Panel::Backlinks => icons::LINK,
+        Panel::Outline => icons::LIST,
+        Panel::Outlinks => icons::EXTERNAL_LINK,
+    }
+}
+
+fn nothing(panel: Panel, message: String) -> AnyElement {
+    view()
         .items_center()
-        .gap_3()
-        .p_3()
-        .active(|s| s.opacity(0.7))
+        .gap_2()
+        .py_8()
+        .child(
+            icon(panel_icon(panel))
+                .w(px(24.0))
+                .h(px(24.0))
+                .text_color(move || theme().muted_foreground),
+        )
+        .child(muted(message))
+        .into_element()
+}
+
+/// A note linking to the open one, with the line of its link; a press opens
+/// it.
+fn backlink(link: Backlink) -> impl IntoElement {
+    let title = note::title(&link.source).to_owned();
+    view()
+        .p_2()
+        .rounded(move || theme().radius)
+        .hover(|s| s.bg(theme().accent))
         .on_press(move || {
-            store::set_backlinks_shown(false);
-            store::select(&source.clone().into());
+            leave_sheet();
+            store::select(&link.source.clone().into());
+        })
+        .child(text(title).text_sm().text_color(move || theme().foreground))
+        .child(
+            text(link.context)
+                .text_xs()
+                .text_color(move || theme().muted_foreground),
+        )
+}
+
+/// A heading of the open note: as deep as its level; a press shows the note
+/// in the source, scrolled to it.
+fn heading_row(heading: Heading) -> impl IntoElement {
+    let line = heading.line as u32;
+    let indent = 8.0 + f32::from(heading.level.saturating_sub(1)) * 12.0;
+    view()
+        .py_1()
+        .pr_2()
+        .pl(px(indent))
+        .rounded(move || theme().radius)
+        .hover(|s| s.bg(theme().accent))
+        .on_press(move || {
+            leave_sheet();
+            store::jump_to(line);
         })
         .child(
-            view()
-                .flex_1()
-                .gap_1()
-                .child(
-                    text(title)
-                        .font_weight(FontWeight::SEMIBOLD)
-                        .text_color(move || theme().foreground),
-                )
-                .child(highlighted(&link.context)),
+            text(heading.text)
+                .text_sm()
+                .text_color(move || theme().foreground),
         )
-        .child(icon(icons::CHEVRON_RIGHT).text_color(move || theme().muted_foreground))
 }
 
-/// `line` in muted text, its `[[wiki links]]` in the theme's `primary`.
-fn highlighted(line: &str) -> impl IntoElement {
-    let mut spans = Vec::new();
-    let mut rest = line;
-    while let Some(start) = rest.find("[[") {
-        let Some(end) = rest[start..].find("]]").map(|e| start + e + 2) else {
-            break;
-        };
-        spans.push((rest[..start].to_owned(), false));
-        spans.push((rest[start..end].to_owned(), true));
-        rest = &rest[end..];
-    }
-    spans.push((rest.to_owned(), false));
-    text("")
-        .text_sm()
-        .text_color(move || theme().muted_foreground)
-        .children(
-            spans
-                .into_iter()
-                .filter(|(t, _)| !t.is_empty())
-                .map(|(t, link)| {
-                    text(t).text_color(move || match link {
-                        true => theme().primary,
-                        false => theme().muted_foreground,
-                    })
-                }),
+/// A note the open note links to: muted while no note has that name, and
+/// saying so; a press opens it, or asks to create it.
+fn outlink_row(outlink: Outlink) -> impl IntoElement {
+    let exists = outlink.exists;
+    let target = outlink.target;
+    let pressed = target.clone();
+    view()
+        .p_2()
+        .rounded(move || theme().radius)
+        .hover(|s| s.bg(theme().accent))
+        .on_press(move || {
+            leave_sheet();
+            store::open_link(pressed.clone());
+        })
+        .child(text(target).text_sm().text_color(move || match exists {
+            true => theme().foreground,
+            false => theme().muted_foreground,
+        }))
+        .child(
+            (!exists).then_some(
+                text(t("missing_note"))
+                    .text_xs()
+                    .text_color(move || theme().muted_foreground),
+            ),
         )
 }

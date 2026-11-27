@@ -67,7 +67,10 @@ fn desktop_runs_commands_from_the_palette() {
     // shows and run the last command (the theme, kept on the device).
     app.press_key("mod+p").unwrap();
     app.wait_for("label:Run a command").unwrap();
-    for _ in 0..13 {
+    // The palette lists 16 commands here (the grammar check's is hidden in
+    // the settings): a step per row from the first reaches the last, the
+    // theme's, past the rows the panel shows.
+    for _ in 0..15 {
         app.press_key("down").unwrap();
     }
     app.press_key("enter").unwrap();

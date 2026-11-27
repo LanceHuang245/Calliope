@@ -83,12 +83,6 @@ pub(crate) fn files_page() -> impl IntoElement {
                             || store::route() == Route::Graph,
                             store::toggle_graph,
                         ))
-                        .child(icon_toggle(
-                            icons::LINK,
-                            t("backlinks"),
-                            store::backlinks_shown,
-                            store::toggle_backlinks,
-                        ))
                         // The commands, where the phones' toolbar has them.
                         .child(icon_button(icons::COMMAND, t("command_palette"), || {
                             store::set_palette(true)

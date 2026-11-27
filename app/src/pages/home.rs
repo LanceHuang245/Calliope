@@ -14,7 +14,7 @@ use crate::{
         icon_button, icons, muted, toolbar_toggle,
     },
     i18n,
-    store::{self, Route, SyncStatus},
+    store::{self, Panel, Route, SyncStatus},
 };
 
 #[cfg(target_os = "ios")]
@@ -143,10 +143,10 @@ pub(crate) fn menu_button() -> impl IntoElement {
 
 /// The phones' floating toolbar, over the home page and the note (the
 /// desktops have these under the files): sync (filled while it runs), the
-/// quick switcher, the graph, the note's backlinks (with a note open), the
-/// commands (`mod+p` on the desktops) and the trash, with the new note
-/// button beside them. The ones a narrow phone has no room for go into its
-/// [`filter_menu`], the menu the system draws.
+/// quick switcher, the graph, the note's backlinks, outline and outlinks
+/// (with a note open), the commands (`mod+p` on the desktops) and the
+/// trash, with the new note button beside them. The ones a narrow phone has
+/// no room for go into its [`filter_menu`], the menu the system draws.
 /// Gone while the keyboard is up, the text taking the room.
 pub(crate) fn phone_toolbar() -> impl IntoElement {
     // Native buttons and the fallback both use the same visibility, state and
@@ -181,9 +181,9 @@ pub(crate) fn phone_toolbar() -> impl IntoElement {
             icon: icons::LINK,
             symbol: "link",
             label: "backlinks",
-            selected: Some(store::backlinks_shown),
+            selected: Some(|| store::panel_shown(Panel::Backlinks)),
             visible: || store::opened().is_some(),
-            press: store::toggle_backlinks,
+            press: || store::toggle_panel(Panel::Backlinks),
         },
         ToolbarAction {
             icon: icons::COMMAND,
@@ -200,6 +200,24 @@ pub(crate) fn phone_toolbar() -> impl IntoElement {
             selected: Some(|| store::route() == Route::Trash),
             visible: || true,
             press: store::toggle_trash,
+        },
+        // The note's panels, after the buttons that were on the bar before
+        // them: a narrow phone keeps those and puts these in its menu.
+        ToolbarAction {
+            icon: icons::LIST,
+            symbol: "list.bullet",
+            label: "outline",
+            selected: Some(|| store::panel_shown(Panel::Outline)),
+            visible: || store::opened().is_some(),
+            press: || store::toggle_panel(Panel::Outline),
+        },
+        ToolbarAction {
+            icon: icons::EXTERNAL_LINK,
+            symbol: "arrow.up.forward.square",
+            label: "outlinks",
+            selected: Some(|| store::panel_shown(Panel::Outlinks)),
+            visible: || store::opened().is_some(),
+            press: || store::toggle_panel(Panel::Outlinks),
         },
     ];
     when(

@@ -10,6 +10,7 @@
 //! - [`note`]: the open note, autosave and conflicts;
 //! - [`files`]: creating, renaming and deleting files and folders;
 //! - [`links`]: the link index, backlinks and following a link;
+//! - [`panels`]: the note's backlinks, outline and outlinks panels;
 //! - [`sync`]: syncing the vault with WebDAV or S3;
 //! - [`trash`]: the vault's trash, restoring and deleting for good;
 //! - [`confirm`]: asking before deleting or creating;
@@ -21,6 +22,7 @@ mod files;
 pub(crate) mod grammar;
 mod links;
 mod note;
+mod panels;
 mod search;
 mod sync;
 mod trash;
@@ -40,15 +42,20 @@ pub(crate) use self::{
         start_rename,
     },
     links::{
-        backlinks, backlinks_shown, create_note, graph, link_exists, note_paths, open_link,
-        search_index, set_backlinks_shown, set_switching, switching, toggle_backlinks,
+        backlinks, create_note, graph, link_exists, note_paths, open_link, search_index,
+        set_switching, switching,
     },
     note::{
         conflict, edit, image_src, note_path, note_title, opened, preview, resolve_conflict,
         save_as_copy, select, text,
     },
+    panels::{
+        Outlink, Panel, close_panels, open_panel, outline, outlinks, panel_shown, reset_panels,
+        set_panel_shown, toggle_panel,
+    },
     search::{
-        clear_jump_line, jump_line, open_hit, query, search_results, set_query, toggle_search,
+        clear_jump_line, jump_line, jump_to, open_hit, query, search_results, set_query,
+        toggle_search,
     },
     sync::{
         SyncStatus, connecting, create_from_sync, save_sync, secret_in_file, sync_config, sync_now,

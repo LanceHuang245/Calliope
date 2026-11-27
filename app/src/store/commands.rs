@@ -49,6 +49,18 @@ pub(crate) const COMMANDS: &[Command] = &[
         run: quick_switch,
     },
     Command {
+        id: "outline",
+        title: "outline",
+        keys: None,
+        run: || toggle_panel(Panel::Outline),
+    },
+    Command {
+        id: "outlinks",
+        title: "outlinks",
+        keys: None,
+        run: || toggle_panel(Panel::Outlinks),
+    },
+    Command {
         id: "graph",
         title: "graph",
         keys: Some("mod+g"),
@@ -116,10 +128,12 @@ pub(crate) fn commands() -> &'static [Command] {
 }
 
 pub(crate) fn command_available(command: &Command) -> bool {
-    if command.id == "check-grammar" {
-        return grammar::available();
+    match command.id {
+        "check-grammar" => grammar::available(),
+        // The note's panels list what it holds: none without a note open.
+        "outline" | "outlinks" => opened().is_some(),
+        _ => true,
     }
-    true
 }
 
 /// Runs the command `id` names; an id no command has does nothing.

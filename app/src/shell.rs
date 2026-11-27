@@ -3,7 +3,8 @@
 //! - Desktop (Windows, macOS, Linux; tablets from 900 points wide): the
 //!   app's own title bar over a sidebar (the files and the app's actions)
 //!   beside the workspace (the note, or the settings) and the open note's
-//!   backlinks, with the app's shortcuts and a status bar in the bottom
+//!   panels (its backlinks, outline and outlinks), with the app's
+//!   shortcuts and a status bar in the bottom
 //!   right corner. A tablet keeps the system's status bar and back, and
 //!   has no title bar or shortcuts.
 //! - Phone (iOS, Android): one screen at a time, the files, a note or the
@@ -30,7 +31,7 @@ use crate::{
         files::{files_page, rename_dialog},
         graph::graph_page,
         home::home_page,
-        links::backlinks_panel,
+        links::panel_card,
         note::note_page,
         palette::command_palette,
         search::search_page,
@@ -40,7 +41,7 @@ use crate::{
         trash::trash_page,
         welcome::welcome_page,
     },
-    store::{self, Mode, Notice, Route},
+    store::{self, Mode, Notice, Panel, Route},
 };
 
 pub(crate) fn shell() -> impl IntoElement {
@@ -49,10 +50,10 @@ pub(crate) fn shell() -> impl IntoElement {
     let layout = dynamic(move || {
         let wide = wide.get();
         untracked(|| {
-            // Each layout starts with its own backlinks: the desktops' beside
+            // Each layout starts with its own panels: the desktops' beside
             // the note, the phones' sheet only when asked. The phones' has
             // no Split: a tablet turned from it edits.
-            store::set_backlinks_shown(wide);
+            store::reset_panels(wide);
             if !wide && store::mode() == Mode::Split {
                 store::set_mode(Mode::Edit);
             }
@@ -154,9 +155,20 @@ fn desktop() -> impl IntoElement {
                 }))
                 .child(notices()),
         )
-        // The open note's backlinks, on the right.
+        // The open note's panels, on the right: the ones asked for, each as
+        // tall a share of the column (the backlinks at first).
         .child(dynamic(move || {
-            store::backlinks_shown().then(|| card().w(px(260.0)).child(backlinks_panel()))
+            let shown: Vec<Panel> = Panel::ALL
+                .into_iter()
+                .filter(|panel| store::panel_shown(*panel))
+                .collect();
+            (!shown.is_empty()).then(|| {
+                view().w(px(260.0)).gap_2().child(
+                    shown
+                        .into_iter()
+                        .map(|panel| card().flex_1().child(panel_card(panel))),
+                )
+            })
         }));
     let layout = view()
         .flex_1()

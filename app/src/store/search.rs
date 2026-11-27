@@ -117,6 +117,18 @@ pub(crate) fn open_hit(path: &SharedString, line: u32) {
     }
 }
 
+/// Scrolls the open note to `line` (the outline's headings): shown in the
+/// source, which is what a line is scrolled to.
+pub(crate) fn jump_to(line: u32) {
+    let Some(path) = note_path() else {
+        return;
+    };
+    set(Jump(Some((path.into(), line))));
+    if mode() == Mode::Read {
+        set_mode(Mode::Edit);
+    }
+}
+
 /// The line the open note shows, until its editor scrolled there.
 pub(crate) fn jump_line() -> Option<u32> {
     match get::<Jump>().0 {

@@ -20,16 +20,17 @@ use nsh_system_controls::{SegmentedControlItem, segmented_control};
 use super::{
     home::{home_page, menu_button, phone_toolbar},
     keyboard_bar::keyboard_bar,
-    links::{WikiLinks, backlinks_sheet, wiki_links},
+    links::{WikiLinks, panel_icon, panel_sheet, wiki_links},
     mermaid::{mermaid, mermaid_blocks, warm_up},
 };
 use crate::i18n::t;
 
 use crate::{
     components::{
-        TOOLBAR_ROOM, action, banner, desktop_layout, field, icon_button, icons, segmented,
+        TOOLBAR_ROOM, action, banner, desktop_layout, field, icon_button, icon_toggle, icons,
+        segmented,
     },
-    store::{self, Mode},
+    store::{self, Mode, Panel},
 };
 
 /// Below this width, Split shows the editor only.
@@ -98,8 +99,8 @@ fn note_view() -> impl IntoElement {
                     .into_element(),
             })
         }))
-        // A phone shows the backlinks in a sheet when asked.
-        .child((!desktop_layout()).then(backlinks_sheet))
+        // A phone shows the note's panels in a sheet when asked.
+        .child((!desktop_layout()).then(panel_sheet))
         .child((!desktop_layout()).then(phone_toolbar))
         .child((!desktop_layout()).then(|| keyboard_bar(editor, editing)));
     // The grammar issue of the word under the pointer, or of the one a
@@ -158,8 +159,25 @@ fn header() -> impl IntoElement {
         .px_4()
         .py_2()
         .child((!desktop_layout()).then(menu_button))
+        // The note's panels, beside it on the desktops (the phones' toolbar
+        // opens their sheet); on the header's fixed side, so opening one
+        // does not move the buttons of the others.
+        .child(desktop_layout().then(panel_toggles))
         .child(title())
         .child(mode_picker)
+}
+
+/// A button per panel of the note: what it shows beside the note, and folds
+/// away (the phones' toolbar does the same with its sheet).
+fn panel_toggles() -> impl IntoElement {
+    view().flex_row().gap_1().child(Panel::ALL.map(|panel| {
+        icon_toggle(
+            panel_icon(panel),
+            t(panel.title()),
+            move || store::panel_shown(panel),
+            move || store::toggle_panel(panel),
+        )
+    }))
 }
 
 /// The note's title, edited in place: Return or leaving it renames the

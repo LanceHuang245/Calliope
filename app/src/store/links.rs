@@ -15,16 +15,6 @@ struct Links(Arc<Index>);
 /// Counts the indexing runs: only the last one's result is kept.
 #[derive(Clone, Default)]
 struct Reindexing(u64);
-#[derive(Clone)]
-struct BacklinksHidden(bool);
-
-/// The desktops show the backlinks at first; the phones only when asked,
-/// as they take the note's room.
-impl Default for BacklinksHidden {
-    fn default() -> Self {
-        Self(!is_desktop())
-    }
-}
 /// The quick switcher is open.
 #[derive(Clone, Default)]
 struct Switching(bool);
@@ -74,30 +64,6 @@ pub(crate) fn backlinks() -> Vec<Backlink> {
 /// The vault's graph; `orphans` and `missing` as [`Graph::of`] takes them.
 pub(crate) fn graph(orphans: bool, missing: bool) -> Graph {
     Graph::of(&get::<Links>().0, orphans, missing)
-}
-
-/// Whether the backlinks panel shows: on, beside an open note (not the
-/// settings, the trash or the graph).
-pub(crate) fn backlinks_shown() -> bool {
-    !get::<BacklinksHidden>().0
-        && !matches!(
-            route(),
-            Route::Settings
-                | Route::SettingsDetail(_)
-                | Route::Trash
-                | Route::Graph
-                | Route::Search
-        )
-        && opened().is_some()
-}
-
-pub(crate) fn toggle_backlinks() {
-    global::<BacklinksHidden>().update(|h| h.0 = !h.0);
-}
-
-/// Shows the backlinks or not (the phones' sheet, closed by a swipe).
-pub(crate) fn set_backlinks_shown(shown: bool) {
-    set(BacklinksHidden(!shown));
 }
 
 pub(crate) fn switching() -> bool {
