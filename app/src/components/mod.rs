@@ -281,6 +281,10 @@ pub(crate) fn field(placeholder: impl Into<SharedString>) -> nsh_base::Input {
         .border_color(move || theme().input)
         .rounded(move || theme().radius)
         .text_color(move || theme().foreground)
+        // The hint takes the theme's quiet text, named instead of left to
+        // the platform: Android's own default is the platform theme's hint
+        // color (near-black), which vanishes in the dark on an empty field.
+        .app_class("placeholder:text-muted-foreground")
 }
 
 pub(crate) fn banner(message: impl IntoReactive<SharedString>) -> View {
@@ -302,8 +306,9 @@ pub(crate) fn banner(message: impl IntoReactive<SharedString>) -> View {
 }
 
 /// How a palette's (the quick switcher's, the command palette's) search
-/// field and rows look.
-pub(crate) const PALETTE_SEARCH: &str = "px-3 py-2 text-sm";
+/// field and rows look. The hint's color is named for the same reason as
+/// [`field`]'s.
+pub(crate) const PALETTE_SEARCH: &str = "px-3 py-2 text-sm placeholder:text-muted-foreground";
 pub(crate) const PALETTE_ITEM: &str = "px-3 py-2 rounded-md text-sm focus:bg-accent";
 /// How tall a palette's rows get before they scroll: more than the window
 /// shows of a long list, and only the rows in view are made.
