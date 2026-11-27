@@ -4,7 +4,7 @@
 use nsh_base::{nav_page, theme, toolbar};
 use nsh_core::{
     GlassEffect,
-    element::AnyElement,
+    element::{AnyElement, Screen},
     platform::{Idiom, Os},
     prelude::*,
 };
@@ -39,19 +39,47 @@ pub(crate) fn page(
         let bar = page_bar(title, back).child(actions);
         return view().flex_1().child(bar).child(content).into_element();
     }
-    let content = view().flex_1().pb_safe_area().child(content);
-    let page = nav_page().title(title).on_dismiss(back).child(content);
+    let content = body(content);
+    let page = phone_page(title, back).child(content);
     match actions {
         Some(actions) => page.header_right(actions).into_element(),
         None => page.into_element(),
     }
 }
 
+/// The page's body: `content` with the safe areas' room, in the app's own
+/// colors. nsh's native page keeps the platform theme's background (light
+/// on Android while the app follows the system's appearance), so the page
+/// paints its own.
+fn body(content: impl IntoElement) -> View {
+    view()
+        .flex_1()
+        .pb_safe_area()
+        .bg(move || theme().background)
+        .child(content)
+}
+
+/// A page of the phone's navigation stack. Android's native header takes
+/// the platform theme's colors, which stay the light ones while the app
+/// follows the system's appearance (`nsh.json`'s `"appearance"`): the page
+/// colors its header, and its title with it. iOS's bars follow the
+/// appearance themselves.
+fn phone_page(title: SharedString, back: impl Fn() + 'static) -> Screen {
+    let page = nav_page().title(title).on_dismiss(back);
+    match os() == Os::Android {
+        true => page.header_style_with(|s| {
+            s.bg(theme().background)
+                .text_color(theme().foreground)
+                .tint_color(theme().foreground)
+        }),
+        false => page,
+    }
+}
+
 /// A [`page`] whose `content` scrolls: on iOS its title is large and
-/// shrinks into the header as the content scrolls (MVP 5.4), which takes
-/// the scroll view straight in the page. Only iOS: nsh lays a large
-/// title's content out under the header everywhere, and only UIKit moves
-/// it clear.
+/// shrinks into the header as the content scrolls (MVP 5.4). Only iOS:
+/// nsh lays a large title's content out under the header everywhere, and
+/// only UIKit moves it clear.
 pub(crate) fn scroll_page(
     title: impl Into<SharedString>,
     back: impl Fn() + 'static,
@@ -62,10 +90,9 @@ pub(crate) fn scroll_page(
     if desktop_layout() {
         return page(title, back, None, content);
     }
-    (nav_page().title(title).header_large_title(os() == Os::Ios))
-        .pb_safe_area()
-        .on_dismiss(back)
-        .child(content)
+    phone_page(title, back)
+        .header_large_title(os() == Os::Ios)
+        .child(body(content))
         .into_element()
 }
 

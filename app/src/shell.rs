@@ -275,7 +275,16 @@ fn stack() -> impl IntoElement {
         .child(
             nav_page()
                 .header_visible(false)
-                .child(view().flex_1().p_safe_area().child(main)),
+                // The page's own colors: nsh's native page keeps the
+                // platform theme's background (light on Android while the
+                // app follows the system's appearance).
+                .child(
+                    view()
+                        .flex_1()
+                        .p_safe_area()
+                        .bg(move || theme().background)
+                        .child(main),
+                ),
         )
         .child(when(shown(Route::Graph), graph_page))
         // Keep the category list under its detail page for the native back gesture.
