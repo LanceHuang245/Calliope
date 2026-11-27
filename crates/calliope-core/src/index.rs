@@ -4,7 +4,7 @@
 
 use std::{
     collections::{BTreeMap, HashMap},
-    fs, io,
+    io::{self, BufReader, Read},
     sync::Arc,
     time::SystemTime,
 };
@@ -12,9 +12,12 @@ use std::{
 use crate::{
     link::{self, Link},
     note,
-    search::{self, Hit},
-    vault::{Entry, EntryKind, Vault},
+    search::{self, Hit, Search},
+    vault::{Entry, EntryKind, Vault, open_regular},
 };
+
+/// Keep ordinary vaults searchable from memory; read uncached notes as needed.
+const TEXT_BUDGET: usize = 16 * 1024 * 1024;
 
 #[derive(Debug, Clone)]
 struct Note {
@@ -22,7 +25,7 @@ struct Note {
     stamp: (SystemTime, u64),
     links: Vec<Link>,
     /// What the note holds, for the full-text search.
-    text: String,
+    text: Option<Box<str>>,
 }
 
 /// A link to a note from another: the note it is in and its line.
@@ -34,6 +37,7 @@ pub struct Backlink {
 
 #[derive(Debug, Clone, Default)]
 pub struct Index {
+    vault: Option<Vault>,
     /// The notes by path (`Arc`-wrapped so cloning the index is cheap).
     notes: BTreeMap<String, Arc<Note>>,
     /// The paths of the notes of each title.
@@ -46,28 +50,66 @@ impl Index {
     /// Brings the index up to date with the vault's files, reading only
     /// the notes that are new or changed; whether anything changed.
     pub fn sync(&mut self, vault: &Vault) -> io::Result<bool> {
+        let root = vault.directory();
         let mut paths = Vec::new();
         note_paths(&vault.scan()?, &mut paths);
+        let mut remaining = TEXT_BUDGET;
         let mut old = std::mem::take(&mut self.notes);
         let mut changed = false;
+        if self
+            .vault
+            .as_ref()
+            .is_some_and(|previous| !std::ptr::eq(previous.directory(), root))
+        {
+            changed = !old.is_empty();
+            old.clear();
+        }
         for path in paths {
-            let stamp = fs::metadata(vault.abs(&path)).and_then(|m| Ok((m.modified()?, m.len())));
-            let Ok(stamp) = stamp else {
+            let Ok(metadata) = root.symlink_metadata(&path) else {
                 continue;
             };
-            // An unchanged note keeps its links and text; a new or changed
-            // one is read.
+            let Ok(modified) = metadata.modified() else {
+                continue;
+            };
+            if !metadata.is_file() {
+                continue;
+            }
+            let stamp = (modified.into_std(), metadata.len());
             let note = match old.remove(&path) {
-                Some(note) if note.stamp == stamp => note,
-                _ => {
+                Some(note) if note.stamp == stamp => {
+                    if note
+                        .text
+                        .as_ref()
+                        .is_some_and(|text| text.len() > remaining)
+                    {
+                        Arc::new(Note {
+                            stamp,
+                            links: note.links.clone(),
+                            text: None,
+                        })
+                    } else {
+                        note
+                    }
+                }
+                previous => {
+                    let mut text = String::new();
+                    if open_regular(root, &path)
+                        .and_then(|mut file| file.read_to_string(&mut text))
+                        .is_err()
+                    {
+                        changed |= previous.is_some();
+                        continue;
+                    }
                     changed = true;
-                    let text = vault.read(&path).unwrap_or_default();
                     let links = link::links(&text);
+                    let text = (text.len() <= remaining).then(|| text.into_boxed_str());
                     Arc::new(Note { stamp, links, text })
                 }
             };
+            remaining -= note.text.as_ref().map_or(0, |text| text.len());
             self.notes.insert(path, note);
         }
+        self.vault = Some(vault.clone());
         // What is left of the old notes was deleted.
         changed |= !old.is_empty();
         if changed {
@@ -133,27 +175,51 @@ impl Index {
     /// The lines of the notes that hold `query`, by note path, at most
     /// `limit` of them.
     pub fn search(&self, query: &str, limit: usize) -> Vec<Hit> {
-        let query = query.trim().to_lowercase();
-        if query.is_empty() {
+        self.search_until(query, limit, || false)
+    }
+
+    /// Searches a snapshot, stopping early if the caller no longer needs it.
+    pub fn search_until(
+        &self,
+        query: &str,
+        limit: usize,
+        cancelled: impl Fn() -> bool,
+    ) -> Vec<Hit> {
+        let (Some(mut search), Some(vault)) = (Search::new(query, limit), &self.vault) else {
             return Vec::new();
-        }
-        let mut hits = Vec::new();
+        };
+        let mut line = Vec::new();
         for (path, note) in &self.notes {
-            for (index, line) in note.text.lines().enumerate() {
-                let Some(context) = search::context(line, &query) else {
+            if cancelled() {
+                break;
+            }
+            if let Some(text) = &note.text {
+                if !search.may_match(text) {
                     continue;
-                };
-                hits.push(Hit {
-                    path: path.clone(),
-                    line: index as u32 + 1,
-                    context,
-                });
-                if hits.len() == limit {
-                    return hits;
+                }
+                for (index, line) in text.lines().enumerate() {
+                    if cancelled() || search.add(path, index as u32 + 1, line) {
+                        return search.hits;
+                    }
+                }
+            } else if let Ok(file) = open_regular(vault.directory(), path) {
+                let mut reader = BufReader::new(file);
+                let mut number = 1;
+                // Reuse the capped line buffer for notes outside the cache.
+                while !cancelled()
+                    && search::read_line(&mut reader, &mut line).is_ok_and(|len| len > 0)
+                {
+                    if let Ok(line) = str::from_utf8(&line)
+                        && let Some(text) = line.lines().next()
+                        && search.add(path, number, text)
+                    {
+                        return search.hits;
+                    }
+                    number += 1;
                 }
             }
         }
-        hits
+        search.hits
     }
 }
 
@@ -170,6 +236,7 @@ fn note_paths(entries: &[Entry], paths: &mut Vec<String>) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
 
     fn vault(name: &str, notes: &[(&str, &str)]) -> Vault {
         let root =
@@ -259,5 +326,37 @@ mod tests {
         fs::write(v.abs("One.md"), "nothing to see\n").unwrap();
         index.sync(&v).unwrap();
         assert!(index.search("quick", 10).is_empty());
+    }
+    #[test]
+    fn searches_notes_that_do_not_fit_in_the_cache() {
+        let text = format!("{}\nNeedle\n", "x".repeat(TEXT_BUDGET));
+        let vault = vault("uncached", &[("Large.md", &text)]);
+        let mut index = Index::default();
+        index.sync(&vault).unwrap();
+
+        assert!(index.notes["Large.md"].text.is_none());
+        assert_eq!(index.search("needle", 1)[0].line, 2);
+        assert!(index.search("needle", 0).is_empty());
+        assert!(index.search_until("needle", 1, || true).is_empty());
+        drop(index);
+        let root = vault.root().to_owned();
+        drop(vault);
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn excludes_file_symlinks_from_the_index() {
+        let target = vault("linked-target", &[("Target.md", "only in the other vault")]);
+        let vault = vault("linked-file", &[("Own.md", "local note")]);
+        std::os::unix::fs::symlink(target.abs("Target.md"), vault.abs("Linked.md")).unwrap();
+        let mut index = Index::default();
+        index.sync(&vault).unwrap();
+
+        assert_eq!(index.notes().collect::<Vec<_>>(), ["Own.md"]);
+        assert!(index.search("other vault", 1).is_empty());
+        assert!(vault.read("Linked.md").is_err());
+        fs::remove_dir_all(vault.root()).unwrap();
+        fs::remove_dir_all(target.root()).unwrap();
     }
 }
