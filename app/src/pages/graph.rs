@@ -1,34 +1,27 @@
 //! The graph of the vault: a node for each note, an edge for each link,
-//! drawn on a canvas. A drag moves it and a pinch zooms it, natively; on
-//! the desktops a mouse's wheel (or Ctrl + wheel) zooms it around the
-//! pointer and two fingers on a touchpad move it. A press on a node opens
-//! its note, and a pointer over one highlights its neighbors.
-//!
-//! Every node is drawn once, for each layout: moving and zooming draw
-//! nothing again, and a hovered node dims them and draws itself, its
-//! neighbors and their edges on a small canvas over them.
+//! drawn on a canvas (`paint`). A drag moves it and a pinch zooms it,
+//! natively; on the desktops a mouse's wheel (or Ctrl + wheel) zooms it
+//! around the pointer and two fingers on a touchpad move it, a drag that
+//! starts on a node moves that node (kept on this device, in the store) and
+//! a typed name keeps the nodes it matches (`filter`). A press on a node
+//! opens its note, and a pointer over one highlights its neighbors.
 
-use std::{cell::Cell, collections::HashSet, f32::consts::TAU, rc::Rc};
+use std::{cell::Cell, rc::Rc};
 
-use calliope_core::graph::Graph;
-use nsh_base::{MenuButtonItem, button, menu_button, theme};
-use nsh_core::{
-    canvas::{CanvasNode, CanvasTextAlign},
-    color::Hsla,
-    element::AdaptiveColor,
-    platform::Os,
-    prelude::*,
-};
+use nsh_core::{TouchEvent, platform::Os, prelude::*};
 
 use crate::i18n::t;
 
-use crate::{
-    components::{icons, page},
-    store,
+use crate::{components::page, store};
+
+mod filter;
+mod paint;
+
+use self::{
+    filter::{mobile_filters, name_filter, named, option},
+    paint::{Dragged, Laid, MARGIN, every_node, neighbors, placed_at, radius},
 };
 
-/// The room around the outermost nodes, for their labels.
-const MARGIN: f32 = 80.0;
 /// How near a node's middle a pointer counts as on it, beyond its radius.
 const REACH: f32 = 4.0;
 /// A mouse wheel's line, in points (as Windows counts it).
@@ -36,17 +29,16 @@ const LINE: f32 = 16.0;
 /// How far a wheel zooms: twice as near (or far) for each this many points.
 const ZOOM: f32 = 200.0;
 
-/// A graph and where the layout put its nodes.
-type Laid = Rc<(Graph, Vec<(f32, f32)>)>;
-
 pub(crate) fn graph_page() -> impl IntoElement {
     let mobile = matches!(os(), Os::Ios | Os::Android);
     let orphans = signal(mobile);
     let missing = signal(mobile);
-    // Laid out off the UI thread, again when the links or the options change.
+    let typed = signal(String::new());
+    let dragged: Dragged = signal(store::node_positions());
+    // Laid out off the UI thread, again when the links or the filters change.
     let laid = signal(None::<Laid>);
     effect(move || {
-        let graph = store::graph(orphans.get(), missing.get());
+        let graph = named(store::graph(orphans.get(), missing.get()), &typed.get());
         spawn(async move {
             let done = blocking(move || {
                 let at = graph.layout();
@@ -57,67 +49,45 @@ pub(crate) fn graph_page() -> impl IntoElement {
             }
         });
     });
-    let options = if mobile {
-        mobile_filters(orphans, missing).into_element()
-    } else {
-        view()
+    let diagram = dynamic(move || laid.get().map(|laid| untracked(|| diagram(laid, dragged))));
+    if !mobile {
+        let options = view()
             .flex_row()
             .gap_2()
+            .child(name_filter(typed, false))
             .child(option(t("orphans"), orphans))
-            .child(option(t("uncreated"), missing))
-            .into_element()
-    };
-    let diagram = dynamic(move || laid.get().map(|laid| untracked(|| diagram(laid))));
-    page(t("graph"), store::back_to_note, Some(options), diagram)
+            .child(option(t("uncreated"), missing));
+        return page(
+            t("graph"),
+            store::back_to_note,
+            Some(options.into_element()),
+            diagram,
+        );
+    }
+    // The phones' header keeps the filters in its menu; the field that
+    // names the nodes goes under it, over the graph.
+    let filters = mobile_filters(orphans, missing).into_element();
+    let field = view()
+        .flex_row()
+        .px_3()
+        .py_2()
+        .child(name_filter(typed, true));
+    page(
+        t("graph"),
+        store::back_to_note,
+        Some(filters),
+        view().flex_1().child(field).child(diagram),
+    )
 }
 
-/// The system menu reads both filters independently each time it opens.
-fn mobile_filters(orphans: Signal<bool>, missing: Signal<bool>) -> impl IntoElement {
-    menu_button()
-        .test_id("graph-filters")
-        .accessibility_label(t("filters"))
-        .items(move || {
-            vec![
-                MenuButtonItem::new("orphans", t("orphans")).checked(orphans.get()),
-                MenuButtonItem::new("uncreated", t("uncreated")).checked(missing.get()),
-            ]
-        })
-        .on_select(move |id: &SharedString| match id.as_ref() {
-            "orphans" => orphans.update(|on| *on = !*on),
-            "uncreated" => missing.update(|on| *on = !*on),
-            _ => {}
-        })
-        .w(px(44.0))
-        .h(px(44.0))
-        .items_center()
-        .justify_center()
-        .child(
-            icons::icon(icons::FILTER)
-                .w(px(20.0))
-                .h(px(20.0))
-                .pointer_events(PointerEvents::None)
-                .text_color(move || theme().foreground),
-        )
-}
-
-fn option(label: impl Into<SharedString>, on: Signal<bool>) -> impl IntoElement {
-    let label: SharedString = label.into();
-    button()
-        .px_2()
-        .py_1()
-        .accessibility_label(label.clone())
-        .selected(move || on.get())
-        .on_press(move || on.update(|on| *on = !*on))
-        .child(text(label).text_sm().text_color(move || theme().foreground))
-        .rounded(move || theme().radius)
-        .hover(|s| s.bg(theme().accent))
-        .style_when(move || on.get(), |s| s.bg(theme().accent))
-}
-
-fn diagram(laid: Laid) -> impl IntoElement {
-    // The canvas: a square around the origin that holds every node.
+fn diagram(laid: Laid, dragged: Dragged) -> impl IntoElement {
+    // The canvas: a square around the origin that holds every node, with
+    // room for its labels, and at least the window's short side, so that a
+    // node can be dragged anywhere in view.
     let reach = |m: f32, p: &(f32, f32)| m.max(p.0.abs()).max(p.1.abs());
-    let half = laid.1.iter().fold(0.0, reach) + MARGIN;
+    let room = laid.1.iter().chain(dragged.get().values()).fold(0.0, reach) + MARGIN;
+    let least = window().width.0.min(window().height.0) / 2.0;
+    let half = room.max(least);
     let (x, y, scale) = (
         animated_value(0.0),
         animated_value(0.0),
@@ -134,15 +104,38 @@ fn diagram(laid: Laid) -> impl IntoElement {
         scale.set(at.2);
         placed.set(at);
     };
+    // The node under a point of the canvas, if there is one.
     let node_at = {
         let laid = laid.clone();
         move |point: Point<Points>| {
             let (px, py) = (point.x.0 - half, point.y.0 - half);
-            (laid.0.nodes.iter().zip(&laid.1))
-                .position(|(node, at)| (at.0 - px).hypot(at.1 - py) <= radius(node.degree) + REACH)
+            let at = placed_at(&laid, &dragged.get_untracked());
+            (0..laid.0.nodes.len()).find(|&i| {
+                (at[i].0 - px).hypot(at[i].1 - py) <= radius(laid.0.nodes[i].degree) + REACH
+            })
+        }
+    };
+    // The node a drag holds, where it was and where the finger landed; and
+    // whether it moved, which is what the end keeps for the next graph.
+    let held = signal(None::<(usize, (f32, f32), Point<Points>)>);
+    let moved = signal(false);
+    let end_drag = move || {
+        if held.get_untracked().is_some() {
+            held.set(None);
+            if moved.get_untracked() {
+                moved.set(false);
+                store::save_node_positions(dragged.get_untracked());
+            }
         }
     };
     let (over, pressed, all, near) = (node_at.clone(), node_at, laid.clone(), laid.clone());
+    // A drag that starts on a node is the node's, not the graph's pan: the
+    // press says which node, and the claim takes the touches as it moves.
+    let claim = move |request: &ClaimRequest| {
+        if held.get_untracked().is_some() {
+            request.claim();
+        }
+    };
     view()
         .flex_1()
         .overflow_hidden()
@@ -157,6 +150,11 @@ fn diagram(laid: Laid) -> impl IntoElement {
             }
         })
         .on_pan_end(move |e: &PanEvent| {
+            // A pan a node's drag took the touches over from leaves the
+            // graph where the pan found it: the finger moves the node.
+            if held.get_untracked().is_some() {
+                return place(placed.get_untracked());
+            }
             if let (Some(x), Some(y)) = (e.value_x, e.value_y) {
                 placed.update(|at| (at.0, at.1) = (x, y));
             }
@@ -172,7 +170,7 @@ fn diagram(laid: Laid) -> impl IntoElement {
                 .bind_translate_y(&y)
                 .bind_scale(&scale)
                 .child(
-                    canvas(move || every_node(&all, half))
+                    canvas(move || every_node(&all, half, dragged))
                         .absolute()
                         .inset_0()
                         .opacity(move || match hovered.get() {
@@ -184,19 +182,65 @@ fn diagram(laid: Laid) -> impl IntoElement {
                     let laid = near.clone();
                     hovered
                         .get()
-                        .map(|i| untracked(|| neighbors(laid, half, i)))
+                        .map(|i| untracked(|| neighbors(laid, half, i, dragged)))
                 }))
+                // Hearing the touches (on the way to the claim) is what
+                // puts the view on the responders' path: the claim below
+                // is asked only of the views that do.
+                .on_touch(|_: &TouchEvent| {})
+                .claim_touches(TouchClaim::on_move().ask(claim))
+                // The node follows the finger from where it held it; the
+                // graph's own pan is not asked, the claim took the touches.
+                .on_responder_move({
+                    let laid = laid.clone();
+                    move |e: &ResponderEvent| {
+                        let Some((i, start, from)) = held.get_untracked() else {
+                            return;
+                        };
+                        let scale = placed.get_untracked().2.max(0.05);
+                        let (dx, dy) = (
+                            (e.page.x.0 - from.x.0) / scale,
+                            (e.page.y.0 - from.y.0) / scale,
+                        );
+                        let at = (
+                            (start.0 + dx).clamp(-room, room),
+                            (start.1 + dy).clamp(-room, room),
+                        );
+                        let id = laid.0.nodes[i].id.clone();
+                        moved.set(true);
+                        dragged.update(|dragged| {
+                            dragged.insert(id, at);
+                        });
+                    }
+                })
+                .on_responder_release(move |_: &ResponderEvent| end_drag())
+                .on_responder_terminate(move |_: &ResponderEvent| end_drag())
                 // Only when the pointer goes to another node, or off one, and
                 // not while a drag moves the graph (it lags behind the
                 // pointer, which would seem to go back and forth).
-                .on_mouse_move(move |e: &MouseEvent| {
-                    let node = over(e.position);
-                    if e.pressed_button.is_none() && hovered.get_untracked() != node {
-                        hovered.set(node);
+                .on_mouse_move({
+                    let over = over.clone();
+                    move |e: &MouseEvent| {
+                        let node = over(e.position);
+                        if e.pressed_button.is_none() && hovered.get_untracked() != node {
+                            hovered.set(node);
+                        }
+                    }
+                })
+                // The press says which node a drag would move, and from
+                // where: its place now, and the point the finger landed on.
+                .on_press_down({
+                    let laid = laid.clone();
+                    move |e: &PressEvent| {
+                        let node = over(e.position)
+                            .map(|i| (i, placed_at(&laid, &dragged.get_untracked())[i]));
+                        held.set(node.map(|(i, at)| (i, at, e.page_position)));
+                        moved.set(false);
                     }
                 })
                 .on_mouse_leave(move |_: &MouseEvent| hovered.set(None))
                 .on_press(move |e: &PressEvent| {
+                    end_drag();
                     if let Some(node) = pressed(e.position).map(|i| &laid.0.nodes[i]) {
                         match node.exists {
                             true => store::select(&node.id.clone().into()),
@@ -205,62 +249,6 @@ fn diagram(laid: Laid) -> impl IntoElement {
                     }
                 }),
         )
-}
-
-/// Every node, edge and title, on a canvas of `half` × 2 points square
-/// around the origin. Each node is an element of its own to screen readers
-/// and tests.
-fn every_node(laid: &Laid, half: f32) -> Painter {
-    let edges = theme().muted_foreground.opacity(0.4);
-    let mut p = paint(laid, (half, half), |_, _| true, |_| true, edges);
-    for (node, at) in laid.0.nodes.iter().zip(&laid.1) {
-        let r = radius(node.degree);
-        let corner = point(px(half + at.0 - r), px(half + at.1 - r));
-        let area = Bounds::new(corner, size(px(r * 2.0), px(r * 2.0)));
-        let button = CanvasNode::new(area, AccessibilityRole::Button, node.label.as_str());
-        p = p.node(button.test_id(node.id.as_str()));
-    }
-    p
-}
-
-/// The `hovered` node, its neighbors and their edges, on a canvas just
-/// around them (and their titles) over the dimmed graph: quick to draw
-/// again as the pointer moves, whatever the graph's size.
-fn neighbors(laid: Laid, half: f32, hovered: usize) -> impl IntoElement {
-    let touches = move |a: usize, b: usize| a == hovered || b == hovered;
-    let near: HashSet<usize> = (laid.0.edges.iter().filter(|&&(a, b)| touches(a, b)))
-        .flat_map(|&(a, b)| [a, b])
-        .chain([hovered])
-        .collect();
-    let at = &laid.1;
-    let (x0, y0, x1, y1) = near.iter().fold(
-        (f32::MAX, f32::MAX, f32::MIN, f32::MIN),
-        |(x0, y0, x1, y1), &i| {
-            (
-                x0.min(at[i].0),
-                y0.min(at[i].1),
-                x1.max(at[i].0),
-                y1.max(at[i].1),
-            )
-        },
-    );
-    // Its corner on the graph's canvas.
-    let (left, top) = (half + x0 - MARGIN, half + y0 - MARGIN);
-    canvas(move || {
-        let shift = (half - left, half - top);
-        paint(
-            &laid,
-            shift,
-            touches,
-            |i| near.contains(&i),
-            theme().primary,
-        )
-    })
-    .absolute()
-    .left(px(left))
-    .top(px(top))
-    .w(px(x1 - x0 + MARGIN * 2.0))
-    .h(px(y1 - y0 + MARGIN * 2.0))
 }
 
 /// Where the wheel `e` puts the graph at `(x, y, s)` (its translation and
@@ -277,60 +265,6 @@ fn wheeled((x, y, s): (f32, f32, f32), half: f32, e: &WheelEvent) -> (f32, f32, 
     let k = 2.0_f32.powf(-d.y.0 / ZOOM);
     let (qx, qy) = (e.position.x.0 - half, e.position.y.0 - half);
     (qx - k * (qx - x), qy - k * (qy - y), s * k)
-}
-
-/// A node's radius: larger with more links.
-fn radius(degree: usize) -> f32 {
-    3.0 + (degree as f32).sqrt() * 1.5
-}
-
-/// The edges `edge` keeps in `stroke`, then the nodes `node` keeps with
-/// their titles, `shift` from the layout's origin.
-fn paint(
-    laid: &Laid,
-    shift: (f32, f32),
-    edge: impl Fn(usize, usize) -> bool,
-    node: impl Fn(usize) -> bool,
-    stroke: AdaptiveColor,
-) -> Painter {
-    let (graph, at) = (&laid.0, &laid.1);
-    let (theme, dark) = (theme(), dark());
-    let color = |c: AdaptiveColor| -> Hsla {
-        match dark {
-            true => c.dark,
-            false => c.light,
-        }
-    };
-    let mut p = Painter::new()
-        .translate(shift.0, shift.1)
-        .line_width(1.0)
-        .stroke_color(color(stroke))
-        .begin_path();
-    for &(a, b) in graph.edges.iter().filter(|&&(a, b)| edge(a, b)) {
-        p = p.move_to(at[a].0, at[a].1).line_to(at[b].0, at[b].1);
-    }
-    p = p.stroke();
-    // The nodes of each color in one path: notes, and notes not yet created.
-    for (fill, exists) in [(theme.primary, true), (theme.muted_foreground, false)] {
-        p = p.fill_color(color(fill)).begin_path();
-        for (i, n) in graph.nodes.iter().enumerate() {
-            if n.exists == exists && node(i) {
-                let r = radius(n.degree);
-                p = p
-                    .move_to(at[i].0 + r, at[i].1)
-                    .arc(at[i].0, at[i].1, r, 0.0, TAU);
-            }
-        }
-        p = p.fill();
-    }
-    p = p
-        .font("11px sans-serif")
-        .text_align(CanvasTextAlign::Center)
-        .fill_color(color(theme.foreground));
-    for (i, n) in graph.nodes.iter().enumerate().filter(|(i, _)| node(*i)) {
-        p = p.fill_text(&n.label, at[i].0, at[i].1 + radius(n.degree) + 12.0);
-    }
-    p
 }
 
 #[cfg(test)]

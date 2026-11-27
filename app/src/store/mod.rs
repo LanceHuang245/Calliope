@@ -20,6 +20,7 @@ mod commands;
 mod confirm;
 mod files;
 pub(crate) mod grammar;
+mod graph;
 mod links;
 mod note;
 mod panels;
@@ -37,10 +38,11 @@ pub(crate) use self::{
     commands::{command_available, commands, palette, run_command, set_palette},
     confirm::{answer, asking, dismiss_message, tell, telling},
     files::{
-        cancel_rename, delete, expanded, new_folder, new_folder_in, new_note, new_note_in, rename,
-        rename_note, renaming, row_menu_open, selected, set_expanded, set_row_menu_open,
-        start_rename,
+        cancel_rename, delete, expanded, new_folder, new_folder_in, new_note, new_note_in,
+        open_externally, rename, rename_note, renaming, row_menu_open, selected, set_expanded,
+        set_row_menu_open, start_rename,
     },
+    graph::{node_positions, save_node_positions},
     links::{
         backlinks, create_note, graph, link_exists, note_paths, open_link, search_index,
         set_switching, switching,

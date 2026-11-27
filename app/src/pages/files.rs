@@ -162,7 +162,8 @@ fn files_tree() -> impl IntoElement {
 }
 
 /// What a right click on a row (a held finger on a phone) offers: in a
-/// folder, new items in it; for every item, renaming and deleting it.
+/// folder, new items in it; for a file that is no note, the system's own
+/// program for it; for every item, renaming and deleting it.
 fn item_menu(path: String, kind: Option<EntryKind>, row: View) -> impl IntoElement {
     let folder = (kind == Some(EntryKind::Folder)).then(|| {
         let (note_dir, folder_dir) = (path.clone(), path.clone());
@@ -181,6 +182,21 @@ fn item_menu(path: String, kind: Option<EntryKind>, row: View) -> impl IntoEleme
             ))
             .child(separator())
     });
+    // A note opens in Calliope, a folder has no program of its own: the
+    // rest (a PDF, an image, an archive) goes to the system's app.
+    let opens =
+        is_desktop() && kind.is_some_and(|k| !matches!(k, EntryKind::Note | EntryKind::Folder));
+    let external = opens.then(|| {
+        let file = path.clone();
+        view()
+            .child(menu_entry(
+                icons::EXTERNAL_LINK,
+                t("open_with_default"),
+                false,
+                move || store::open_externally(file.clone()),
+            ))
+            .child(separator())
+    });
     let (rename, delete) = (path.clone(), path);
     context_menu()
         .popup_style(menu_popup)
@@ -194,6 +210,7 @@ fn item_menu(path: String, kind: Option<EntryKind>, row: View) -> impl IntoEleme
         })
         .trigger(row)
         .child(folder)
+        .child(external)
         .child(menu_entry(icons::PENCIL, t("rename"), false, move || {
             store::start_rename(rename.clone())
         }))

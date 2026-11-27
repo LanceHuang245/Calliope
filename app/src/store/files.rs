@@ -101,6 +101,28 @@ pub(crate) fn new_folder_in(dir: &str) {
     }
 }
 
+/// Opens the item at `path` in the system's own program for it (a PDF in
+/// its viewer, a ZIP in its archiver), on the desktops only: the phones
+/// keep the vault to their sandbox, where no other app reads it. The
+/// opener takes the file, never a note: notes stay in Calliope, and
+/// nothing is written to the vault.
+pub(crate) fn open_externally(path: String) {
+    let Some(file) = untracked(vault).map(|vault| vault.abs(&path)) else {
+        return;
+    };
+    // Each desktop's own opener, given the path as one argument: no shell
+    // reads it, so a name with a space or a `&` is still one name.
+    let opener = match (cfg!(target_os = "windows"), cfg!(target_os = "macos")) {
+        (true, _) => "explorer",
+        (false, true) => "open",
+        (false, false) => "xdg-open",
+    };
+    if let Err(e) = std::process::Command::new(opener).arg(&file).spawn() {
+        return notify(e);
+    }
+    log::info!("opened {} in the system's program", file.display());
+}
+
 /// Asks for the new name of the item at `path`: in Calliope's dialog on
 /// the desktops, which the shell shows while [`renaming`]; in the system's
 /// alert with a text field on the phones (MVP 5.4).
