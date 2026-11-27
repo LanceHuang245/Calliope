@@ -3,15 +3,15 @@
 //! menu at the top and the floating toolbar at the bottom.
 
 use calliope_sync::Provider;
-use nsh_base::{progress, theme};
+use nsh_base::{MenuButtonItem, progress, theme};
 use nsh_core::{element::NativeEvent, platform::Os, prelude::*};
 
 use crate::i18n::t;
 
 use crate::{
     components::{
-        BAR_HEIGHT, ButtonVariant, button, desktop_layout, fab, floating_toolbar, icon_button,
-        icons, muted, toolbar_toggle,
+        BAR_HEIGHT, ButtonVariant, TOOLBAR_BUTTON, button, desktop_layout, fab, floating_toolbar,
+        icon_button, icons, muted, toolbar_toggle,
     },
     i18n,
     store::{self, Route, SyncStatus},
@@ -145,11 +145,14 @@ pub(crate) fn menu_button() -> impl IntoElement {
 /// desktops have these under the files): sync (filled while it runs), the
 /// quick switcher, the graph, the note's backlinks (with a note open), the
 /// commands (`mod+p` on the desktops) and the trash, with the new note
-/// button beside them.
+/// button beside them. The ones a narrow phone has no room for go into its
+/// [`filter_menu`], the menu the system draws.
 /// Gone while the keyboard is up, the text taking the room.
 pub(crate) fn phone_toolbar() -> impl IntoElement {
-    // Native buttons and the fallback both use the same visibility, state and actions.
-    static ACTIONS: [ToolbarAction; 6] = [
+    // Native buttons and the fallback both use the same visibility, state and
+    // actions; the ones the bar's width leaves no room for go into its menu,
+    // so a new action is a new entry here and nothing else.
+    static ACTIONS: &[ToolbarAction] = &[
         ToolbarAction {
             icon: icons::REFRESH,
             symbol: "arrow.clockwise",
@@ -202,31 +205,131 @@ pub(crate) fn phone_toolbar() -> impl IntoElement {
     when(
         || keyboard_height() <= px(0.0),
         || {
-            if cfg!(target_os = "ios") && os() == Os::Ios && os_version().0 >= 26 {
-                return floating_toolbar(
-                    glass_toolbar(&ACTIONS, false),
-                    glass_toolbar(&[NEW_NOTE_ACTION], false),
-                    true,
-                )
-                .into_element();
-            }
-            let buttons = view()
-                .flex_row()
-                .gap_1()
-                .child(ACTIONS.iter().map(|action| {
-                    when(action.visible, move || {
-                        toolbar_toggle(
-                            action.icon,
-                            t!(action.label),
-                            move || action.selected.is_some_and(|selected| selected()),
-                            action.press,
-                        )
-                    })
-                }));
-            let add = &NEW_NOTE_ACTION;
-            floating_toolbar(buttons, fab(add.icon, t!(add.label), add.press), false).into_element()
+            // Which buttons the bar keeps follows its width: the ones it has
+            // no room for go into its filter menu, so another action shortens
+            // the row instead of widening it past the screen.
+            dynamic(|| {
+                let cut = filter_from(ACTIONS, window().width.0).unwrap_or(ACTIONS.len());
+                let (kept, filtered) = ACTIONS.split_at(cut);
+                if native_bar() {
+                    return floating_toolbar(
+                        glass_toolbar(kept, false),
+                        view()
+                            .flex_row()
+                            .items_center()
+                            .gap_3()
+                            .child(filter_menu(filtered))
+                            .child(glass_toolbar(&[NEW_NOTE_ACTION], false)),
+                        true,
+                    )
+                    .into_element();
+                }
+                let buttons = view()
+                    .flex_row()
+                    .gap_1()
+                    .child(kept.iter().map(|action| {
+                        when(action.visible, move || {
+                            toolbar_toggle(
+                                action.icon,
+                                t!(action.label),
+                                move || action.selected.is_some_and(|selected| selected()),
+                                action.press,
+                            )
+                        })
+                    }))
+                    .child(filter_menu(filtered));
+                let add = &NEW_NOTE_ACTION;
+                floating_toolbar(buttons, fab(add.icon, t!(add.label), add.press), false)
+                    .into_element()
+            })
         },
     )
+}
+
+/// The filter menu's test id.
+const FILTER_MENU: &str = "toolbar-filters";
+
+/// One button and the 4 points after it.
+const BUTTON_SLOT: f32 = TOOLBAR_BUTTON + 4.0;
+
+/// What the bar's buttons share their row with: 4 points of padding a side,
+/// the gap and the [`fab`] (as tall as the bar).
+const BAR_ROOM: f32 = 8.0 + 12.0 + BAR_HEIGHT;
+
+/// Whether the bar is UIKit's glass capsule (`ios_toolbar`) rather than the
+/// buttons the app draws.
+fn native_bar() -> bool {
+    cfg!(target_os = "ios") && os() == Os::Ios && os_version().0 >= 26
+}
+
+/// How many of the bar's buttons a `width`-point window holds:
+/// [`TOOLBAR_BUTTON`] each, 4 apart, beside the fab and — with `filtered` —
+/// the filter menu, which sits in the bar or beside the native one.
+fn buttons_that_fit(width: f32, filtered: bool) -> usize {
+    let filter = match (filtered, native_bar()) {
+        (false, _) => 0.0,
+        (true, true) => TOOLBAR_BUTTON + 12.0,
+        (true, false) => BUTTON_SLOT,
+    };
+    let room = width - BAR_ROOM - filter;
+    (((room + 4.0) / BUTTON_SLOT).floor() as usize).max(1)
+}
+
+/// Where the buttons the bar keeps stop in `actions`: the index of the first
+/// its filter menu holds, `None` while every visible one fits.
+fn filter_from(actions: &'static [ToolbarAction], width: f32) -> Option<usize> {
+    let shown = actions.iter().filter(|action| (action.visible)()).count();
+    if shown <= buttons_that_fit(width, false) {
+        return None;
+    }
+    actions
+        .iter()
+        .enumerate()
+        .filter(|(_, action)| (action.visible)())
+        .nth(buttons_that_fit(width, true))
+        .map(|(index, _)| index)
+}
+
+/// The buttons the bar has no room for, in the system's own menu (UIKit's on
+/// iOS, the framework's on Android), each with the state it is in; nothing
+/// while they all fit.
+fn filter_menu(actions: &'static [ToolbarAction]) -> Option<impl IntoElement> {
+    actions.iter().any(|action| (action.visible)()).then(|| {
+        nsh_base::menu_button()
+            .test_id(FILTER_MENU)
+            .accessibility_label(t("more_actions"))
+            .items(move || {
+                actions
+                    .iter()
+                    .filter(|action| (action.visible)())
+                    .map(|action| {
+                        let item =
+                            MenuButtonItem::new(action.label, t!(action.label)).icon(action.symbol);
+                        match action.selected {
+                            Some(selected) => item.checked(selected()),
+                            None => item,
+                        }
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .on_select(move |id: &SharedString| {
+                if let Some(action) = actions.iter().find(|action| action.label == id.as_ref()) {
+                    (action.press)();
+                }
+            })
+            .w(px(TOOLBAR_BUTTON))
+            .h(px(TOOLBAR_BUTTON))
+            .items_center()
+            .justify_center()
+            .rounded_full()
+            .child(
+                icons::icon(icons::FILTER)
+                    .w(px(20.0))
+                    .h(px(20.0))
+                    .pointer_events(PointerEvents::None)
+                    .text_color(move || theme().muted_foreground),
+            )
+    })
 }
 
 fn glass_toolbar(actions: &'static [ToolbarAction], compact: bool) -> impl IntoElement {

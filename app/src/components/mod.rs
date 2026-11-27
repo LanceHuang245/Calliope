@@ -105,15 +105,22 @@ pub(crate) fn icon_toggle(
     )
 }
 
+/// The icon in a [`toolbar_toggle`], inside 12 points of padding a side.
+const TOOLBAR_ICON: f32 = 20.0;
+
+/// How wide and tall a [`toolbar_toggle`] is: the least both systems ask a
+/// finger to hit. The [`floating_toolbar`] counts on it to fit a phone.
+pub(crate) const TOOLBAR_BUTTON: f32 = TOOLBAR_ICON + 24.0;
+
 /// A button of a [`floating_toolbar`]: an [`icon_toggle`] a finger hits
-/// (44 points, the least both systems ask for), round.
+/// ([`TOOLBAR_BUTTON`] points), round.
 pub(crate) fn toolbar_toggle(
     paths: &'static str,
     label: impl Into<SharedString>,
     on: impl Fn() -> bool + Copy + 'static,
     on_press: impl Fn() + 'static,
 ) -> impl IntoElement {
-    let button = toggle(paths, label, on, on_press, 20.0)
+    let button = toggle(paths, label, on, on_press, TOOLBAR_ICON)
         .p(px(12.0))
         .rounded_full();
     if os() == Os::Ios {
