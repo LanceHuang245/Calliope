@@ -6,8 +6,15 @@
 //! the same on every platform, and usable as ids by the UI.
 
 use std::{
-    fs, io,
+    fs,
+    io::{self, Read},
     path::{Path, PathBuf},
+    sync::Arc,
+};
+
+use cap_std::{
+    ambient_authority,
+    fs::{Dir, File, OpenOptions},
 };
 
 const IMAGE_EXTENSIONS: &[&str] = &["png", "jpg", "jpeg", "gif", "webp", "svg"];
@@ -47,10 +54,19 @@ pub struct Entry {
     pub children: Vec<Entry>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub struct Vault {
     root: PathBuf,
+    directory: Arc<Dir>,
 }
+
+impl PartialEq for Vault {
+    fn eq(&self, other: &Self) -> bool {
+        self.root == other.root
+    }
+}
+
+impl Eq for Vault {}
 
 impl Vault {
     /// Opens the folder at `root` as a vault, creating it when missing:
@@ -58,7 +74,9 @@ impl Vault {
     pub fn open(root: impl Into<PathBuf>) -> io::Result<Self> {
         let root = root.into();
         fs::create_dir_all(&root)?;
-        Ok(Self { root })
+        // Keep the opened directory as the boundary for all vault reads.
+        let directory = Arc::new(Dir::open_ambient_dir(&root, ambient_authority())?);
+        Ok(Self { root, directory })
     }
 
     pub fn root(&self) -> &Path {
@@ -80,13 +98,19 @@ impl Vault {
     }
 
     /// Every file and folder, folders first then by name; names starting
-    /// with `.` (`.git/`, `.calliope/`, `.trash/`) are left out.
+    /// with `.` and entries other than regular files or folders are left out.
     pub fn scan(&self) -> io::Result<Vec<Entry>> {
-        scan_dir(&self.root, "")
+        scan_dir(self.directory(), "")
+    }
+
+    pub(crate) fn directory(&self) -> &Dir {
+        &self.directory
     }
 
     pub fn read(&self, rel: &str) -> io::Result<String> {
-        fs::read_to_string(self.abs(rel))
+        let mut text = String::new();
+        open_regular(self.directory(), rel)?.read_to_string(&mut text)?;
+        Ok(text)
     }
 
     /// Writes `text` to `rel`, as [`Self::write_bytes`] does.
@@ -205,29 +229,51 @@ fn stem_ext(name: &str) -> (&str, &str) {
     }
 }
 
-fn scan_dir(dir: &Path, rel: &str) -> io::Result<Vec<Entry>> {
+/// Open relative to the vault handle so a changed path cannot escape it.
+pub(crate) fn open_regular(root: &Dir, path: &str) -> io::Result<File> {
+    let mut options = OpenOptions::new();
+    options.read(true);
+    // Opening a pipe must return promptly so its type can be rejected.
+    #[cfg(unix)]
+    options._cap_fs_ext_nonblock(true);
+    let file = root.open_with(path, &options)?;
+    if !file.metadata()?.is_file() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "not a regular vault file",
+        ));
+    }
+    Ok(file)
+}
+
+fn scan_dir(dir: &Dir, rel: &str) -> io::Result<Vec<Entry>> {
     let mut entries = Vec::new();
-    for item in fs::read_dir(dir)? {
+    for item in dir.entries()? {
         let item = item?;
-        let name = item.file_name().to_string_lossy().into_owned();
+        let Ok(name) = item.file_name().into_string() else {
+            continue;
+        };
         if name.starts_with('.') {
             continue;
         }
         let path = join(rel, &name);
-        let entry = if item.file_type()?.is_dir() {
+        let kind = item.file_type()?;
+        let entry = if kind.is_dir() {
             Entry {
-                children: scan_dir(&item.path(), &path)?,
+                children: scan_dir(&item.open_dir()?, &path)?,
                 kind: EntryKind::Folder,
                 path,
                 name,
             }
-        } else {
+        } else if kind.is_file() {
             Entry {
                 kind: EntryKind::of_file(&path),
                 children: Vec::new(),
                 path,
                 name,
             }
+        } else {
+            continue;
         };
         entries.push(entry);
     }
