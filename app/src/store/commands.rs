@@ -18,14 +18,12 @@ pub(crate) struct Command {
 
 /// Every command, in the order the palette lists them.
 pub(crate) const COMMANDS: &[Command] = &[
-    #[cfg(any(target_os = "windows", target_os = "android", target_os = "ios"))]
     Command {
         id: "check-grammar",
         title: "check_current_note",
         keys: None,
         run: grammar::check_current,
     },
-    #[cfg(any(target_os = "windows", target_os = "android", target_os = "ios"))]
     Command {
         id: "toggle-grammar",
         title: "toggle_grammar",
@@ -118,11 +116,9 @@ pub(crate) fn commands() -> &'static [Command] {
 }
 
 pub(crate) fn command_available(command: &Command) -> bool {
-    #[cfg(any(target_os = "windows", target_os = "android", target_os = "ios"))]
     if command.id == "check-grammar" {
         return grammar::available();
     }
-    let _ = command;
     true
 }
 

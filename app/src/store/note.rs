@@ -83,7 +83,6 @@ fn open_note(path: String) {
 }
 
 pub(super) fn load(text: String) {
-    #[cfg(any(target_os = "windows", target_os = "android", target_os = "ios"))]
     grammar::changed();
     let shared = SharedString::from(text.clone());
     set(NoteText(shared.clone()));
@@ -92,7 +91,6 @@ pub(super) fn load(text: String) {
 }
 
 pub(crate) fn edit(text: &SharedString) {
-    #[cfg(any(target_os = "windows", target_os = "android", target_os = "ios"))]
     grammar::changed();
     set(NoteText(text.clone()));
 }

@@ -82,6 +82,25 @@ fn desktop_runs_commands_from_the_palette() {
     let _ = fs::remove_dir_all(&root);
 }
 
+/// The files' command button opens the palette as `mod+p` does, without a
+/// key.
+#[test]
+fn desktop_opens_the_palette_from_the_files_actions() {
+    let root = vault("palette-button");
+    let mut app = Headless::start(desktop(&root)).unwrap();
+    app.wait_for("Hello").unwrap();
+
+    // The button stands beside the files' actions: it opens the palette,
+    // where the query narrows the rows and Return runs the one chosen.
+    app.press("label:Command palette").unwrap();
+    app.wait_for("label:Run a command").unwrap();
+    app.type_text("label:Run a command", "sidebar").unwrap();
+    app.press_key("enter").unwrap();
+    app.wait_for_gone("label:Settings", Duration::from_secs(2))
+        .unwrap();
+    let _ = fs::remove_dir_all(&root);
+}
+
 /// The results stay inside the page: a search with more hits than fit
 /// scrolls under the field.
 #[test]

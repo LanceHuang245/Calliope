@@ -107,8 +107,7 @@ fn note_view() -> impl IntoElement {
         .child((!desktop_layout()).then(phone_toolbar))
         .child((!desktop_layout()).then(|| keyboard_bar(editor, editing)));
     // The grammar issue of the word under the pointer, or of the one a
-    // finger pressed (where Harper is built: the desktops and the phones).
-    #[cfg(any(target_os = "windows", target_os = "android", target_os = "ios"))]
+    // finger pressed.
     let page = page.child(store::grammar::hover_card(editor));
     page
 }
@@ -214,7 +213,6 @@ fn source(
         classes.completion_menu = Some("min-w-[240px]".into());
     }
     let source = nsh_base::editor();
-    #[cfg(any(target_os = "windows", target_os = "android", target_os = "ios"))]
     let source = store::grammar::hooks(source, editor);
     source
         .value(move || Some(store::text()))

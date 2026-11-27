@@ -90,6 +90,7 @@
   "type_to_search": "输入以搜索所有笔记。",
   "find_note": "查找或新建笔记",
   "run_command": "运行命令",
+  "command_palette": "命令面板",
   "quick_switch": "快速切换",
   "toggle_read": "在编辑与阅读之间切换",
   "toggle_sidebar": "收起或展开侧栏",

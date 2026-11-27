@@ -19,17 +19,10 @@ use crate::{
 
 /// The categories in the order the lists show them: the phones' list, and
 /// the desktops' sidebar. The editor's settings (where grammar checking
-/// is) come before Sync, and only where the build checks grammar.
-#[cfg(any(target_os = "windows", target_os = "android", target_os = "ios"))]
+/// is) come before Sync.
 pub(crate) const CATEGORIES: [SettingsCategory; 4] = [
     SettingsCategory::Appearance,
     SettingsCategory::Editor,
-    SettingsCategory::Sync,
-    SettingsCategory::About,
-];
-#[cfg(not(any(target_os = "windows", target_os = "android", target_os = "ios")))]
-pub(crate) const CATEGORIES: [SettingsCategory; 3] = [
-    SettingsCategory::Appearance,
     SettingsCategory::Sync,
     SettingsCategory::About,
 ];
@@ -38,7 +31,6 @@ impl SettingsCategory {
     fn title(self) -> String {
         match self {
             Self::Appearance => t("appearance"),
-            #[cfg(any(target_os = "windows", target_os = "android", target_os = "ios"))]
             Self::Editor => t("editor_settings"),
             Self::Sync => t("sync"),
             Self::About => t("about"),
@@ -48,7 +40,6 @@ impl SettingsCategory {
     fn icon(self) -> &'static str {
         match self {
             Self::Appearance => icons::SUN,
-            #[cfg(any(target_os = "windows", target_os = "android", target_os = "ios"))]
             Self::Editor => icons::PENCIL,
             Self::Sync => icons::REFRESH,
             Self::About => icons::INFO,
@@ -135,7 +126,6 @@ fn category_button(category: SettingsCategory, desktop: bool) -> impl IntoElemen
 fn category_content(category: SettingsCategory) -> impl IntoElement {
     let content: AnyElement = match category {
         SettingsCategory::Appearance => appearance_settings().into_element(),
-        #[cfg(any(target_os = "windows", target_os = "android", target_os = "ios"))]
         SettingsCategory::Editor => live_grammar_setting(),
         SettingsCategory::Sync => view()
             .w_full()
@@ -188,7 +178,6 @@ fn appearance_settings() -> impl IntoElement {
 /// Grammar checking's setting: UIKit's own switch (`UISwitch`) under the
 /// setting's name on iOS, the app's styled switch with the name in it on
 /// the other platforms (their dialogs and pages have one look).
-#[cfg(any(target_os = "windows", target_os = "android", target_os = "ios"))]
 fn live_grammar_setting() -> AnyElement {
     if cfg!(target_os = "ios") && os() == Os::Ios {
         return view()

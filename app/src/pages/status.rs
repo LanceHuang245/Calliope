@@ -16,13 +16,10 @@ use crate::{
 
 pub(crate) fn status_bar() -> impl IntoElement {
     let syncing = || store::sync_config().provider != Provider::Off;
-    #[cfg(any(target_os = "windows", target_os = "android", target_os = "ios"))]
     let grammar_count = {
         let count = computed(store::grammar::count);
         move || count.get()
     };
-    #[cfg(not(any(target_os = "windows", target_os = "android", target_os = "ios")))]
-    let grammar_count = || None::<usize>;
     dynamic(move || {
         let sync = syncing();
         let count = grammar_count();

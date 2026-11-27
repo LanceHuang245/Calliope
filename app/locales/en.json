@@ -90,6 +90,7 @@
   "type_to_search": "Type to search every note.",
   "find_note": "Find or create a note",
   "run_command": "Run a command",
+  "command_palette": "Command palette",
   "quick_switch": "Quick switch",
   "toggle_read": "Toggle Edit and Read",
   "toggle_sidebar": "Toggle sidebar",

@@ -1,8 +1,6 @@
 //! Grammar checking: the desktops' status bar, its `mod+.` menu and the
 //! card the pointer rests on, and the phones' tap on a marked word.
 
-#![cfg(any(target_os = "windows", target_os = "android", target_os = "ios"))]
-
 mod common;
 
 use std::{fs, time::Duration};
@@ -69,6 +67,8 @@ fn checks_unsaved_text_with_sync_off_and_undoes_a_fix() {
     app.wait_for_gone(COUNT, Duration::from_secs(2)).unwrap();
     app.press_key("mod+p").unwrap();
     assert!(!app.shows(CHECK));
+    // The check's setting is a command of the desktops' palette too.
+    app.wait_for(TOGGLE_GRAMMAR).unwrap();
     let _ = fs::remove_dir_all(&root);
 }
 

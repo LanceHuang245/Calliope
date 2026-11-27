@@ -1,9 +1,10 @@
 //! Sample the input method on the Windows UI thread before checking or editing.
 //!
-//! The phones need none of this: the editor keeps an input method's
-//! uncommitted text to itself (nsh holds it until the commit), so the
-//! buffer never carries half-composed text, and nsh reports no running
-//! composition.
+//! The other platforms sample nothing yet: `composing` answers false there,
+//! so a check may run over half-composed text. On the phones the editor
+//! keeps an input method's uncommitted text to itself (nsh holds it until
+//! the commit), which is why they answer false safely; the Linux and macOS
+//! input methods need their own sampling before it is as safe there.
 
 #[cfg(target_os = "windows")]
 use std::{ffi::c_void, ptr::null_mut};
@@ -56,7 +57,7 @@ pub(super) fn composing() -> bool {
     }
 }
 
-/// The phones' answer: their buffer holds committed text only.
+/// What the platforms without sampling answer: not composing.
 #[cfg(not(target_os = "windows"))]
 pub(super) fn composing() -> bool {
     false

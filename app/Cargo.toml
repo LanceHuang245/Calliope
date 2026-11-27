@@ -8,6 +8,8 @@ publish.workspace = true
 [dependencies]
 calliope-core.workspace = true
 calliope-sync.workspace = true
+# Harper checks a note's grammar (src/store/grammar), on every platform.
+harper-core = { version = "0.42", default-features = false, features = ["concurrent"] }
 jiff.workspace = true
 keyring-core.workspace = true
 log.workspace = true
@@ -15,6 +17,7 @@ merman.workspace = true
 merman-export.workspace = true
 nsh-base.workspace = true
 nsh-core.workspace = true
+pulldown-cmark = { version = "0.13", default-features = false }
 serde_json.workspace = true
 usvg.workspace = true
 
@@ -28,12 +31,6 @@ zbus-secret-service-keyring-store.workspace = true
 [target.'cfg(target_os = "macos")'.dependencies]
 nsh-platform-macos.workspace = true
 apple-native-keyring-store = { workspace = true, features = ["keychain"] }
-
-# Harper checks a note's grammar (src/store/grammar) on this machine's
-# desktops and on the phones.
-[target.'cfg(any(target_os = "windows", target_os = "android", target_os = "ios"))'.dependencies]
-harper-core = { version = "0.42", default-features = false, features = ["concurrent"] }
-pulldown-cmark = { version = "0.13", default-features = false }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 nsh-platform-windows.workspace = true
