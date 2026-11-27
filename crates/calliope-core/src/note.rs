@@ -72,6 +72,14 @@ pub fn outline(text: &str) -> Vec<Heading> {
     headings
 }
 
+/// How many characters a note holds, as the status bar counts them: its
+/// body (the front matter is not text the reader sees), whitespace aside —
+/// a space and a line break are no character of either language's text.
+pub fn characters(text: &str) -> usize {
+    let (_, body) = split_front_matter(text);
+    body.chars().filter(|c| !c.is_whitespace()).count()
+}
+
 /// The file a note's link or image `src` points at, relative to the
 /// folder of the note at `note` (absolute): URL-escaped (`my%20image.png`)
 /// or not (`my image.png`, `图片.png`). `None` for a URL with a scheme
@@ -138,6 +146,16 @@ mod tests {
         );
         // A note without front matter counts from its first line.
         assert_eq!(outline("# Hi\n")[0].line, 1);
+    }
+
+    #[test]
+    fn counts_characters_of_both_languages() {
+        // A Chinese character, a Latin letter and an emoji are one each.
+        assert_eq!(characters("中文😀 abc"), 6);
+        // Spaces, tabs and line breaks are none, and the front matter is not
+        // the note's text.
+        assert_eq!(characters("---\ntags: [a]\n---\none\ttwo\nthree\n"), 11);
+        assert_eq!(characters(""), 0);
     }
 
     #[test]

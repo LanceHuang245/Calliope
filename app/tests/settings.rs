@@ -5,7 +5,12 @@ mod common;
 use std::{collections::BTreeMap, fs, sync::Arc, time::Duration};
 
 use common::{desktop, vault};
-use nsh_core::storage::{StorageBackend, StorageChange};
+use nsh_core::{
+    platform::{Idiom, Os},
+    prelude::{px, size},
+    storage::{StorageBackend, StorageChange},
+};
+use nsh_engine::{EngineConfig, Root};
 use nsh_testing::{Headless, MemoryStorage};
 
 /// Sync in the settings: the toolbar shortcut follows the saved provider.
@@ -133,6 +138,44 @@ fn desktop_keeps_the_chosen_language() {
     app.wait_for("外观").unwrap();
     assert!(app.shows("语言"));
     let _ = fs::remove_dir_all(&root);
+}
+
+/// A phone's count sits under the note's title, on the left; the Editor's
+/// switch keeps it away, on that device.
+#[test]
+fn a_phone_counts_the_note_under_its_title() {
+    let sandbox = std::env::temp_dir().join(format!("calliope-count-phone-{}", std::process::id()));
+    let _ = fs::remove_dir_all(&sandbox);
+    fs::create_dir_all(sandbox.join("Notes")).unwrap();
+    fs::write(sandbox.join("Notes/Hello.md"), "# Hi\n\n中文 abc\n").unwrap();
+    // SAFETY: set before the app starts, read by the app only.
+    unsafe { std::env::set_var("CALLIOPE_SANDBOX", &sandbox) };
+    let stored = MemoryStorage::new([("vault".to_owned(), "Notes".to_owned())]);
+    let mut config =
+        EngineConfig::new(Root::of::<calliope::App>().translations(calliope::translations()));
+    config.environment.os = Os::Android;
+    config.environment.idiom = Idiom::Phone;
+    config.viewport = size(px(430.0), px(800.0));
+    config.storage = Some(stored.clone() as Arc<dyn StorageBackend>);
+    let mut app = Headless::start(config).unwrap();
+
+    // The note's own characters, the whitespace aside.
+    app.wait_for("Select a note, or create one.").unwrap();
+    app.press("label:Menu").unwrap();
+    app.press("Hello").unwrap();
+    app.wait_for("8 characters").unwrap();
+
+    // The editor's setting keeps it away.
+    app.press("label:Menu").unwrap();
+    app.press("label:Settings").unwrap();
+    app.wait_for("label:Editor").unwrap();
+    app.press("label:Editor").unwrap();
+    app.press("label:Character count").unwrap();
+    assert_eq!(stored.entries()["characters"], "off");
+    app.back().unwrap();
+    app.wait_for_gone("text:8 characters", Duration::from_secs(2))
+        .unwrap();
+    let _ = fs::remove_dir_all(&sandbox);
 }
 
 #[test]

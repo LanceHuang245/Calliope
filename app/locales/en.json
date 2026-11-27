@@ -157,6 +157,10 @@
   "toggle_grammar": "Toggle live grammar checking",
   "grammar_issue_one": "%{count} grammar issue",
   "grammar_issue_many": "%{count} grammar issues",
+  "character_one": "%{count} character",
+  "character_many": "%{count} characters",
+  "show_characters": "Character count",
+  "characters_setting_failed": "Could not save the character count setting.",
   "grammar_setting_failed": "Could not save the grammar checking setting.",
   "grammar_check_failed": "Could not check this note."
 }

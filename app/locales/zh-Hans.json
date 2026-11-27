@@ -157,6 +157,10 @@
   "toggle_grammar": "开启或关闭实时语法检查",
   "grammar_issue_one": "%{count} 个语法问题",
   "grammar_issue_many": "%{count} 个语法问题",
+  "character_one": "%{count} 个字符",
+  "character_many": "%{count} 个字符",
+  "show_characters": "字数统计",
+  "characters_setting_failed": "无法保存字数统计设置。",
   "grammar_setting_failed": "无法保存语法检查设置。",
   "grammar_check_failed": "无法检查当前笔记。"
 }

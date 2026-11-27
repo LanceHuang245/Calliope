@@ -122,7 +122,7 @@ fn category_button(category: SettingsCategory, desktop: bool) -> impl IntoElemen
 fn category_content(category: SettingsCategory) -> impl IntoElement {
     let content: AnyElement = match category {
         SettingsCategory::Appearance => appearance_settings().into_element(),
-        SettingsCategory::Editor => live_grammar_setting(),
+        SettingsCategory::Editor => editor_settings().into_element(),
         SettingsCategory::Sync => view()
             .w_full()
             .gap_2()
@@ -171,10 +171,28 @@ fn appearance_settings() -> impl IntoElement {
         .child(labeled(t("interface_language"), false, language_list()))
 }
 
-/// Grammar checking's setting: UIKit's own switch (`UISwitch`) under the
+/// The editor's settings.
+fn editor_settings() -> impl IntoElement {
+    view()
+        .w_full()
+        .gap_4()
+        .items_start()
+        .child(switch_setting(
+            "live_grammar",
+            store::grammar::live,
+            store::grammar::set_live,
+        ))
+        .child(switch_setting(
+            "show_characters",
+            store::characters_shown,
+            store::set_characters_shown,
+        ))
+}
+
+/// A setting switched on or off: UIKit's own switch (`UISwitch`) under the
 /// setting's name on iOS, the app's styled switch with the name in it on
 /// the other platforms (their dialogs and pages have one look).
-fn live_grammar_setting() -> AnyElement {
+fn switch_setting(label: &'static str, checked: fn() -> bool, on_change: fn(&bool)) -> AnyElement {
     if cfg!(target_os = "ios") && os() == Os::Ios {
         return view()
             .w_full()
@@ -182,19 +200,19 @@ fn live_grammar_setting() -> AnyElement {
             .flex_row()
             .items_center()
             .gap_2()
-            .child(text(t("live_grammar")).flex_1().text_sm())
+            .child(text(t(label)).flex_1().text_sm())
             .child(
                 nsh_system_controls::switch()
-                    .accessibility_label(t("live_grammar"))
-                    .checked(store::grammar::live)
-                    .on_change(store::grammar::set_live),
+                    .accessibility_label(t(label))
+                    .checked(checked)
+                    .on_change(on_change),
             )
             .into_element();
     }
     nsh_base::switch()
-        .accessibility_label(t("live_grammar"))
-        .checked(store::grammar::live)
-        .on_change(store::grammar::set_live)
+        .accessibility_label(t(label))
+        .checked(checked)
+        .on_change(on_change)
         .flex_row()
         .items_center()
         .gap_2()
@@ -211,7 +229,7 @@ fn live_grammar_setting() -> AnyElement {
                 .bg(theme().foreground)
                 .checked(|s| s.translate_x(px(14.0)).bg(theme().primary_foreground))
         })
-        .child(text(t("live_grammar")))
+        .child(text(t(label)))
         .into_element()
 }
 

@@ -125,6 +125,16 @@ pub(crate) fn grammar_issues(count: usize) -> String {
     translate(key, &[("count", &count)])
 }
 
+/// How many characters the open note holds.
+pub(crate) fn characters(count: usize) -> String {
+    let key = if count == 1 {
+        "character_one"
+    } else {
+        "character_many"
+    };
+    translate(key, &[("count", &count)])
+}
+
 /// What the desktops do with a file the user deletes: each names its own
 /// place for them.
 pub(crate) fn delete_to_system() -> String {

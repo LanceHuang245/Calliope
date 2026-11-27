@@ -1,6 +1,6 @@
 //! The desktops' status bar (MVP 5.2), floating in the window's bottom
-//! right corner: the grammar issue count and the sync state when enabled.
-//! The sync button also starts a sync.
+//! right corner: the open note's characters, its grammar issue count and the
+//! sync state when enabled. The sync button also starts a sync.
 
 use calliope_sync::Provider;
 use nsh_base::{button, theme};
@@ -20,10 +20,16 @@ pub(crate) fn status_bar() -> impl IntoElement {
         let count = computed(store::grammar::count);
         move || count.get()
     };
+    // Counted once per change of the text, not once per read of the bar.
+    let characters = {
+        let count = computed(store::characters);
+        move || count.get()
+    };
     dynamic(move || {
         let sync = syncing();
         let count = grammar_count();
-        (sync || count.is_some()).then(|| {
+        let note = store::opened().is_some() && store::characters_shown();
+        (sync || count.is_some() || note).then(|| {
             view()
                 .absolute()
                 .bottom_0()
@@ -36,6 +42,13 @@ pub(crate) fn status_bar() -> impl IntoElement {
                 .border_color(move || theme().border)
                 .rounded_tl(move || theme().radius)
                 .overflow_hidden()
+                .child(note.then(|| {
+                    text(i18n::characters(characters()))
+                        .px_2()
+                        .py_1()
+                        .text_xs()
+                        .text_color(move || theme().muted_foreground)
+                }))
                 .child(count.map(|count| {
                     text(i18n::grammar_issues(count))
                         .px_2()

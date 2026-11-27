@@ -30,6 +30,7 @@ use crate::{
         TOOLBAR_ROOM, action, banner, desktop_layout, field, icon_button, icon_toggle, icons,
         segmented,
     },
+    i18n,
     store::{self, Mode, Panel},
 };
 
@@ -61,6 +62,11 @@ fn note_view() -> impl IntoElement {
     // Whether Split fits: a memo, so resizing the window rebuilds nothing
     // until it crosses the width.
     let wide = computed(move || window().width >= px(SPLIT_MIN_WIDTH));
+    // What the note holds, counted once per change of its text.
+    let characters = {
+        let count = computed(store::characters);
+        move || count.get()
+    };
     on_key_with(
         "mod+f",
         KeyOptions {
@@ -74,6 +80,17 @@ fn note_view() -> impl IntoElement {
         .flex_1()
         .on_press(dismiss_keyboard)
         .child(header())
+        // A phone's count sits under the title, on the left (the desktops
+        // keep it in their status bar).
+        .child(dynamic(move || {
+            (!desktop_layout() && store::characters_shown()).then(|| {
+                text(i18n::characters(characters()))
+                    .px_4()
+                    .pb_1()
+                    .text_xs()
+                    .text_color(move || theme().muted_foreground)
+            })
+        }))
         .child(dynamic(move || {
             store::conflict().then(|| {
                 banner(t("conflict"))

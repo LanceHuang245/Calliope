@@ -5,6 +5,7 @@ mod common;
 
 use std::{
     fs,
+    sync::Arc,
     time::{Duration, SystemTime},
 };
 
@@ -16,7 +17,7 @@ use nsh_core::{
     time::Clock,
 };
 use nsh_engine::{EngineConfig, Root};
-use nsh_testing::{DialogAnswer, Headless};
+use nsh_testing::{DialogAnswer, Headless, MemoryStorage};
 
 /// The phone layout `EngineConfig::new` gives (iOS's): creating the vault,
 /// the home page, the files in the menu, renaming in the system's alert, a
@@ -252,6 +253,53 @@ fn desktop_autosaves_and_keeps_both_sides_of_a_conflict() {
     // Headless records the request to the system's trash, and moves nothing.
     let trash = FileRequest::MoveToTrash(root.join("Greeting.md"));
     assert!(app.screen().file_requests().contains(&trash));
+    let _ = fs::remove_dir_all(&root);
+}
+
+/// The status bar counts the open note's characters, both languages' by the
+/// character: the front matter and the whitespace aside, an emoji one.
+#[test]
+fn desktop_counts_the_note_s_characters() {
+    let root = vault("characters");
+    fs::write(root.join("Plain.md"), "# Hi\n\n中文 abc\n").unwrap();
+    let stored = MemoryStorage::new([("vault".to_owned(), root.display().to_string())]);
+    let mut config = desktop(&root);
+    config.storage = Some(stored.clone() as Arc<dyn nsh_core::storage::StorageBackend>);
+    let mut app = Headless::start(config).unwrap();
+    app.wait_for("Hello").unwrap();
+    // No note, no count: the bar shows only what it has to say.
+    assert!(!app.shows("text:/characters$/"));
+
+    // `# Hello world` and `Some **bold** text.`, their 28 characters; the
+    // front matter above them is no text of the note's.
+    app.press("Hello").unwrap();
+    app.wait_for("label:Markdown source").unwrap();
+    app.wait_for("28 characters").unwrap();
+
+    // The same rule in Chinese, an emoji counting once, and the typing
+    // moving the count.
+    app.press("Plain").unwrap();
+    app.wait_for("8 characters").unwrap();
+    app.type_text("label:Markdown source", "😀").unwrap();
+    app.wait_for("9 characters").unwrap();
+
+    // The editor's setting keeps the count away, on this device; switched
+    // back on, it returns (the note stays open under the settings).
+    app.press("label:Settings").unwrap();
+    app.press("label:Editor").unwrap();
+    app.press("label:Character count").unwrap();
+    assert_eq!(
+        stored.entries().get("characters").map(String::as_str),
+        Some("off")
+    );
+    app.wait_for_gone("9 characters", Duration::from_secs(2))
+        .unwrap();
+    app.press("label:Character count").unwrap();
+    assert_eq!(
+        stored.entries().get("characters").map(String::as_str),
+        Some("on")
+    );
+    app.wait_for("9 characters").unwrap();
     let _ = fs::remove_dir_all(&root);
 }
 

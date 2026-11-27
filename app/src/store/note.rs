@@ -8,6 +8,9 @@ use nsh_core::platform::Lifecycle;
 
 use super::*;
 
+/// The item of the device's storage the count's setting is kept in.
+const CHARACTERS: &str = "characters";
+
 pub(crate) fn note_path() -> Option<String> {
     get::<NotePath>().0
 }
@@ -28,6 +31,37 @@ pub(crate) fn note_title() -> String {
 
 pub(crate) fn text() -> SharedString {
     get::<NoteText>().0
+}
+
+/// The open note's characters, as the status bar counts them.
+pub(crate) fn characters() -> usize {
+    note::characters(&text())
+}
+
+/// Whether the count shows (the desktops' status bar, the phones' row under
+/// the title).
+pub(crate) fn characters_shown() -> bool {
+    get::<CharactersShown>().0
+}
+
+/// Keeps the setting on this device.
+pub(crate) fn set_characters_shown(value: &bool) {
+    let kept = match *value {
+        true => "on",
+        false => "off",
+    };
+    if Storage::set_item(CHARACTERS, kept).is_err() {
+        notify(t("characters_setting_failed"));
+        return;
+    }
+    set(CharactersShown(*value));
+}
+
+/// Reads the setting saved on this device: called once, at start.
+pub(super) fn restore_characters() {
+    set(CharactersShown(
+        Storage::get_item(CHARACTERS).as_deref() != Some("off"),
+    ));
 }
 
 pub(crate) fn preview() -> SharedString {

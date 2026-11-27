@@ -46,8 +46,8 @@ pub(crate) use self::{
         set_switching, switching,
     },
     note::{
-        conflict, edit, image_src, note_path, note_title, opened, preview, resolve_conflict,
-        save_as_copy, select, text,
+        characters, characters_shown, conflict, edit, image_src, note_path, note_title, opened,
+        preview, resolve_conflict, save_as_copy, select, set_characters_shown, text,
     },
     panels::{
         Outlink, Panel, close_panels, open_panel, outline, outlinks, panel_shown, reset_panels,
@@ -70,7 +70,7 @@ pub(crate) use self::{
 use self::{
     confirm::{Ask, confirm},
     links::{reindex, reset_links},
-    note::{load, save_or_copy, start_autosave},
+    note::{load, restore_characters, save_or_copy, start_autosave},
     sync::{edited, load_sync, start_sync_timers},
     vault::watch_other_apps,
 };
@@ -145,6 +145,18 @@ struct NotePath(Option<String>);
 struct Opened(u64);
 #[derive(Clone, Default)]
 struct NoteText(SharedString);
+/// Shows the note's count of characters.
+#[derive(Clone)]
+struct CharactersShown(bool);
+
+/// The count shows at first: it is what the status bar (the desktops) and
+/// the row under the title (the phones) say of the note.
+impl Default for CharactersShown {
+    fn default() -> Self {
+        Self(true)
+    }
+}
+
 #[derive(Clone, Default)]
 struct Preview(SharedString);
 /// What the note's file holds, as last read or written.
@@ -209,6 +221,7 @@ pub(crate) fn init() {
         open_vault(root);
     }
 
+    restore_characters();
     grammar::start();
     start_autosave();
     watch_other_apps();
