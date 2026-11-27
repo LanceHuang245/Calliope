@@ -28,6 +28,9 @@ const GLASS_INSET: f32 = 4.0;
 const GLASS_BUTTON: f32 = 44.0;
 const GLASS_STRIDE: f32 = GLASS_BUTTON + 4.0;
 
+/// The filter's symbol in the capsule, where UIKit draws the icons.
+const FILTER_SYMBOL: &str = "line.3.horizontal.decrease";
+
 struct ToolbarAction {
     icon: &'static str,
     symbol: &'static str,
@@ -135,7 +138,7 @@ pub(crate) fn menu_button() -> impl IntoElement {
         press: || store::set_menu_open(true),
     };
     if cfg!(target_os = "ios") && os() == Os::Ios {
-        glass_toolbar(&[MENU], true).into_element()
+        glass_toolbar(&[MENU], &[], true).into_element()
     } else {
         icon_button(MENU.icon, t!(MENU.label), MENU.press).into_element()
     }
@@ -146,8 +149,9 @@ pub(crate) fn menu_button() -> impl IntoElement {
 /// quick switcher, the graph, the note's backlinks, outline and outlinks
 /// (with a note open), the commands (`mod+p` on the desktops) and the
 /// trash, with the new note button beside them. The ones a narrow phone has
-/// no room for go into its [`filter_menu`], the menu the system draws.
-/// Gone while the keyboard is up, the text taking the room.
+/// no room for go into the filter button at the bar's end: UIKit's own menu
+/// on the capsule, [`filter_menu`] on the buttons the app draws. Gone while
+/// the keyboard is up, the text taking the room.
 pub(crate) fn phone_toolbar() -> impl IntoElement {
     // Native buttons and the fallback both use the same visibility, state and
     // actions; the ones the bar's width leaves no room for go into its menu,
@@ -230,14 +234,11 @@ pub(crate) fn phone_toolbar() -> impl IntoElement {
                 let cut = filter_from(ACTIONS, window().width.0).unwrap_or(ACTIONS.len());
                 let (kept, filtered) = ACTIONS.split_at(cut);
                 if native_bar() {
+                    // What the bar has no room for goes inside the capsule:
+                    // UIKit's own menu button at its end shows it.
                     return floating_toolbar(
-                        glass_toolbar(kept, false),
-                        view()
-                            .flex_row()
-                            .items_center()
-                            .gap_3()
-                            .child(filter_menu(filtered))
-                            .child(glass_toolbar(&[NEW_NOTE_ACTION], false)),
+                        glass_toolbar(kept, filtered, false),
+                        glass_toolbar(&[NEW_NOTE_ACTION], &[], false),
                         true,
                     )
                     .into_element();
@@ -282,7 +283,7 @@ fn native_bar() -> bool {
 
 /// How many of the bar's buttons a `width`-point window holds:
 /// [`TOOLBAR_BUTTON`] each, 4 apart, beside the fab and — with `filtered` —
-/// the filter menu, which sits in the bar or beside the native one.
+/// the filter button, which the bar ends with.
 fn buttons_that_fit(width: f32, filtered: bool) -> usize {
     let filter = match (filtered, native_bar()) {
         (false, _) => 0.0,
@@ -308,11 +309,11 @@ fn filter_from(actions: &'static [ToolbarAction], width: f32) -> Option<usize> {
         .map(|(index, _)| index)
 }
 
-/// The buttons the bar has no room for, in the system's own menu (UIKit's on
-/// iOS, the framework's on Android), each with the state it is in; nothing
-/// while they all fit.
+/// The buttons the bar has no room for, in the app's own menu, each with the
+/// state it is in; nothing while they all fit. The UIKit capsule shows them
+/// in a menu of its own at the bar's end instead ([`glass_toolbar`]).
 fn filter_menu(actions: &'static [ToolbarAction]) -> Option<impl IntoElement> {
-    actions.iter().any(|action| (action.visible)()).then(|| {
+    any_visible(actions).then(|| {
         nsh_base::menu_button()
             .test_id(FILTER_MENU)
             .accessibility_label(t("more_actions"))
@@ -350,12 +351,23 @@ fn filter_menu(actions: &'static [ToolbarAction]) -> Option<impl IntoElement> {
     })
 }
 
-fn glass_toolbar(actions: &'static [ToolbarAction], compact: bool) -> impl IntoElement {
+/// Whether any of `actions` shows: the filter button shows for one, and a
+/// capsule counts a slot for it.
+fn any_visible(actions: &'static [ToolbarAction]) -> bool {
+    actions.iter().any(|action| (action.visible)())
+}
+
+fn glass_toolbar(
+    actions: &'static [ToolbarAction],
+    filtered: &'static [ToolbarAction],
+    compact: bool,
+) -> impl IntoElement {
     // The standalone menu drops the capsule's padding and keeps its 44-point touch target.
     let inset = if compact { 0.0 } else { GLASS_INSET };
     native(if compact { GLASS_MENU } else { GLASS_TOOLBAR })
         .w(move || {
-            let shown = actions.iter().filter(|action| (action.visible)()).count();
+            let shown = actions.iter().filter(|action| (action.visible)()).count()
+                + usize::from(any_visible(filtered));
             px(shown as f32 * GLASS_STRIDE - (GLASS_STRIDE - GLASS_BUTTON) + 2.0 * inset)
         })
         .h(px(if compact { GLASS_BUTTON } else { BAR_HEIGHT }))
@@ -376,13 +388,40 @@ fn glass_toolbar(actions: &'static [ToolbarAction], compact: bool) -> impl IntoE
                     .collect(),
             )
         })
-        .on_native_event(move |event: &NativeEvent| {
-            if &*event.name == "press"
-                && let Some(index) = event.data.as_u64()
-                && let Some(action) = actions.get(index as usize)
-                && (action.visible)()
-            {
-                (action.press)();
+        // The filter is the capsule's last button, with the actions the bar
+        // has no room for in its menu.
+        .prop("filter", move || {
+            serde_json::json!({
+                "label": t("more_actions"),
+                "symbol": FILTER_SYMBOL,
+                "rows": filtered
+                    .iter()
+                    .filter(|action| (action.visible)())
+                    .map(|action| serde_json::json!({
+                        "id": action.label,
+                        "label": t!(action.label),
+                        "symbol": action.symbol,
+                        "checked": action.selected.map(|selected| selected()),
+                    }))
+                    .collect::<Vec<_>>(),
+            })
+        })
+        .on_native_event(move |event: &NativeEvent| match &*event.name {
+            "press" => {
+                if let Some(index) = event.data.as_u64()
+                    && let Some(action) = actions.get(index as usize)
+                    && (action.visible)()
+                {
+                    (action.press)();
+                }
             }
+            "choose" => {
+                if let Some(id) = event.data.as_str()
+                    && let Some(action) = filtered.iter().find(|action| action.label == id)
+                {
+                    (action.press)();
+                }
+            }
+            _ => {}
         })
 }

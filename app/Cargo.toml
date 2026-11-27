@@ -49,12 +49,12 @@ block2 = "0.6.2"
 nsh-platform-ios.workspace = true
 objc2 = "0.6.5"
 objc2-core-foundation = { version = "0.3.2", default-features = false, features = ["std", "CFCGTypes"] }
-objc2-foundation = { version = "0.3.2", default-features = false, features = ["std", "NSString"] }
+objc2-foundation = { version = "0.3.2", default-features = false, features = ["std", "NSArray", "NSString"] }
 objc2-quartz-core = { version = "0.3.2", default-features = false, features = ["std", "CALayer"] }
 objc2-ui-kit = { version = "0.3.2", default-features = false, features = [
     "std", "block2", "objc2-core-foundation", "objc2-quartz-core", "UIAction",
     "UIButton", "UIButtonConfiguration", "UIColor", "UIControl", "UIGeometry",
-    "UIImage", "UIInterface", "UIMenuElement",
+    "UIImage", "UIInterface", "UIMenu", "UIMenuElement",
     "UIResponder", "UIView",
     "UIVisualEffect", "UIVisualEffectView",
 ] }
