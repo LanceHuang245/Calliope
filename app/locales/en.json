@@ -85,6 +85,8 @@
   "search": "Search",
   "search_notes": "Search all notes",
   "no_hits": "No note holds that.",
+  "searching_notes": "Searching…",
+  "search_truncated": "Showing the first 200 results. Refine your search to see other matches.",
   "type_to_search": "Type to search every note.",
   "find_note": "Find or create a note",
   "run_command": "Run a command",

@@ -14,7 +14,6 @@ use crate::{
 };
 
 pub(crate) fn search_page() -> impl IntoElement {
-    let query = signal(String::new());
     let content = view()
         .flex_1()
         .child(
@@ -29,9 +28,9 @@ pub(crate) fn search_page() -> impl IntoElement {
                 .child(
                     field(t("search_notes"))
                         .label(t("search_notes"))
-                        .value(query)
+                        .value(|| store::query().to_string())
                         .auto_focus(true)
-                        .on_change(move |text: &str| store::set_query(text))
+                        .on_change(store::set_query)
                         .flex_1(),
                 ),
         )
@@ -41,32 +40,43 @@ pub(crate) fn search_page() -> impl IntoElement {
 
 /// The hits, or what to do before there are any.
 fn results() -> AnyElement {
-    let hits = store::hits();
+    let results = store::search_results();
     let typed = !store::query().trim().is_empty();
-    untracked(|| match (hits.is_empty(), typed) {
-        (false, _) => list(hits).into_element(),
-        (true, true) => view().p_6().child(muted(t("no_hits"))).into_element(),
-        (true, false) => view()
-            .p_6()
-            .child(muted(t("type_to_search")))
-            .into_element(),
+    untracked(|| {
+        let message = match results {
+            Some((hits, truncated)) if !hits.is_empty() => {
+                return list(hits, truncated).into_element();
+            }
+            Some(_) => "no_hits",
+            None if typed => "searching_notes",
+            None => "type_to_search",
+        };
+        view().p_6().child(muted(t(message))).into_element()
     })
 }
 
-fn list(hits: Vec<Hit>) -> impl IntoElement {
+fn list(hits: Vec<Hit>, truncated: bool) -> impl IntoElement {
     view()
         .w_full()
         .max_w(px(720.0))
         .p_4()
         .gap(px(2.0))
+        .child(truncated.then(|| muted(t("search_truncated"))))
         .child(hits.into_iter().map(row))
 }
 
 /// A hit: the note's title and where it is, the line under them; a press
 /// opens the note there.
-fn row(hit: Hit) -> impl IntoElement {
-    let opened = hit.clone();
-    let where_ = format!("{}:{}", hit.path, hit.line);
+fn row(
+    Hit {
+        path,
+        line,
+        context,
+    }: Hit,
+) -> impl IntoElement {
+    let title = note::title(&path).to_owned();
+    let location = format!("{path}:{line}");
+    let path = SharedString::from(path);
     button()
         .w_full()
         .items_start()
@@ -76,21 +86,17 @@ fn row(hit: Hit) -> impl IntoElement {
         .rounded(move || theme().radius)
         .hover(|s| s.bg(theme().accent))
         .active(|s| s.bg(theme().accent))
-        .on_press(move || store::open_hit(&opened))
+        .on_press(move || store::open_hit(&path, line))
         .child(
             view()
                 .flex_row()
                 .items_center()
                 .gap_2()
-                .child(
-                    text(note::title(&hit.path).to_owned())
-                        .text_sm()
-                        .text_color(move || theme().foreground),
-                )
-                .child(muted(where_)),
+                .child(text(title).text_sm().text_color(move || theme().foreground))
+                .child(muted(location)),
         )
         .child(
-            text(hit.context)
+            text(context)
                 .text_xs()
                 .text_color(move || theme().muted_foreground),
         )

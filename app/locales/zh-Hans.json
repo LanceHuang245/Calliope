@@ -85,6 +85,8 @@
   "search": "搜索",
   "search_notes": "搜索所有笔记",
   "no_hits": "没有笔记包含这些内容。",
+  "searching_notes": "正在搜索…",
+  "search_truncated": "仅显示前 200 条结果。缩小搜索范围可查看其他匹配项。",
   "type_to_search": "输入以搜索所有笔记。",
   "find_note": "查找或新建笔记",
   "run_command": "运行命令",

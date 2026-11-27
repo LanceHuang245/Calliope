@@ -45,7 +45,9 @@ pub(crate) use self::{
         conflict, edit, image_src, note_path, note_title, opened, preview, resolve_conflict,
         save_as_copy, select, text,
     },
-    search::{clear_jump_line, hits, jump_line, open_hit, query, set_query, toggle_search},
+    search::{
+        clear_jump_line, jump_line, open_hit, query, search_results, set_query, toggle_search,
+    },
     sync::{
         SyncStatus, connecting, create_from_sync, save_sync, secret_in_file, sync_config, sync_now,
         sync_status, test_sync,
@@ -250,11 +252,15 @@ pub(crate) fn toggle_read() {
 
 /// Shows `route`, closing the menu; leaving the note saves it.
 pub(crate) fn set_route(route: Route) {
+    let was_searching = untracked(self::route) == Route::Search;
     if route != Route::Note {
         save_or_copy();
     }
     set(MenuOpen(false));
     set(route);
+    if was_searching != (route == Route::Search) {
+        search::refresh_search();
+    }
 }
 
 /// Returns to the open note, or the home screen on a phone without one.

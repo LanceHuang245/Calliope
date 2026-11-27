@@ -31,6 +31,7 @@ struct Switching(bool);
 
 /// Forgets the index: another vault opens.
 pub(super) fn reset_links() {
+    global::<Reindexing>().update(|r| r.0 += 1);
     set(Links::default());
 }
 
@@ -51,7 +52,10 @@ pub(super) fn reindex() {
         match done.await {
             // A run started since replaces this one.
             _ if untracked(|| get::<Reindexing>().0) != run => {}
-            Ok(Ok((true, index))) => set(Links(Arc::new(index))),
+            Ok(Ok((true, index))) => {
+                set(Links(Arc::new(index)));
+                search::refresh_search();
+            }
             Ok(Ok(_)) => {}
             Ok(Err(e)) => log::warn!("cannot index the vault: {e}"),
             Err(e) => log::warn!("cannot index the vault: {e}"),

@@ -76,13 +76,13 @@ pub(crate) fn open_vault(root: PathBuf) {
                 log::warn!("cannot empty the trash: {e}");
             }
             log::info!("opened the vault {}", root.display());
+            reset_search();
+            reset_links();
             set(OpenVault(Some(vault)));
             set(NotePath(None));
             set(Selected(None));
             set(Expanded(Vec::new()));
             set(Route::Home);
-            reset_links();
-            reset_search();
             refresh();
             load_sync();
         }

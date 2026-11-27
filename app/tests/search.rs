@@ -87,7 +87,7 @@ fn desktop_runs_commands_from_the_palette() {
 #[test]
 fn desktop_scrolls_long_result_lists() {
     let root = vault("hits");
-    for i in 0..40 {
+    for i in 0..201 {
         let note = format!("Note {i:02}.md");
         fs::write(
             root.join(note),
@@ -102,6 +102,8 @@ fn desktop_scrolls_long_result_lists() {
     app.type_text("label:Search all notes", "needle").unwrap();
     let hit = "text:Note 00.md:3";
     app.wait_for(hit).unwrap();
+    app.wait_for("Showing the first 200 results. Refine your search to see other matches.")
+        .unwrap();
     let before = app.screen().layout(hit).unwrap().unwrap().bounds;
     app.scroll(hit, px(300.0)).unwrap();
     let after = app.screen().layout(hit).unwrap().unwrap().bounds;
@@ -144,13 +146,96 @@ fn desktop_searches_every_notes_text() {
     app.wait_for_gone("label:Search all notes", Duration::from_secs(2))
         .unwrap();
 
+    // The query and results survive opening a hit and coming back.
+    app.press_key("mod+shift+f").unwrap();
+    app.wait_for("text:Hello.md:6").unwrap();
+    assert_eq!(
+        app.screen().input_text("label:Search all notes").unwrap(),
+        Some("bold")
+    );
+    app.press_key("mod+shift+f").unwrap();
+    app.wait_for("label:Markdown source").unwrap();
+
     // What is typed into the note is found once it is saved, without
     // reading the note's old text.
     app.type_text("label:Markdown source", "Zebra").unwrap();
-    app.wait(Duration::from_millis(2000)).unwrap();
+    // Opening search leaves the note and saves it immediately.
+    app.press_key("mod+shift+f").unwrap();
+    app.clear("label:Search all notes").unwrap();
+    app.type_text("label:Search all notes", "zebra").unwrap();
+    app.wait_for_within("text:/Zebra/", Duration::from_secs(1))
+        .unwrap();
+    let _ = fs::remove_dir_all(&root);
+}
+
+#[test]
+fn desktop_refreshes_an_open_search_after_a_file_changes() {
+    let root = vault("live-search");
+    let mut app = Headless::start(desktop(&root)).unwrap();
+    app.wait_for("Hello").unwrap();
     app.press_key("mod+shift+f").unwrap();
     app.type_text("label:Search all notes", "zebra").unwrap();
-    app.wait_for("text:/^Hello\\.md:/").unwrap();
-    app.wait_for("text:/Zebra/").unwrap();
+    app.wait_for("No note holds that.").unwrap();
+
+    // A new on-disk match updates the results without editing the query.
+    fs::write(root.join("Hello.md"), "A Zebra arrived.\n").unwrap();
+    app.wait_for("text:A Zebra arrived.").unwrap();
     let _ = fs::remove_dir_all(&root);
+}
+
+#[test]
+fn desktop_search_is_scoped_to_the_open_vault() {
+    let first = vault("search-first");
+    let second = vault("search-second");
+    fs::write(first.join("Hello.md"), "Some Zebra in the first vault.\n").unwrap();
+    fs::write(second.join("New.md"), "Some Zebra in the second vault.\n").unwrap();
+    let mut app = Headless::start(desktop(&first)).unwrap();
+    app.on_pick_paths(vec![second.clone()]).unwrap();
+    app.wait_for("Hello").unwrap();
+    app.press_key("mod+shift+f").unwrap();
+    app.type_text("label:Search all notes", "zebra").unwrap();
+    app.wait_for("Some Zebra in the first vault.").unwrap();
+
+    // Leave with another query pending and switch using the vault picker.
+    app.type_text("label:Search all notes", " in").unwrap();
+    app.press("label:Settings").unwrap();
+    app.press("label:Sync").unwrap();
+    app.press("text:Open folder…").unwrap();
+    app.wait_for("New").unwrap();
+
+    app.press_key("mod+shift+f").unwrap();
+    app.wait_for("Type to search every note.").unwrap();
+    app.type_text("label:Search all notes", "zebra").unwrap();
+    app.wait_for("Some Zebra in the second vault.").unwrap();
+    assert!(!app.shows("Some Zebra in the first vault."));
+    let _ = fs::remove_dir_all(first);
+    let _ = fs::remove_dir_all(second);
+}
+
+#[test]
+fn desktop_scrolls_from_read_mode_to_the_matching_line() {
+    let root = vault("search-jump");
+    let mut lines = vec!["A line of prose."; 500];
+    lines[399] = "Unique scroll target";
+    fs::write(root.join("Hello.md"), lines.join("\n")).unwrap();
+    let mut app = Headless::start(desktop(&root)).unwrap();
+    app.wait_for("Hello").unwrap();
+    app.press("Hello").unwrap();
+    app.wait_for("text:Read").unwrap();
+    app.press("text:Read").unwrap();
+
+    app.press_key("mod+shift+f").unwrap();
+    app.type_text("label:Search all notes", "unique scroll target")
+        .unwrap();
+    app.wait_for("text:Hello.md:400").unwrap();
+    app.press("text:Hello.md:400").unwrap();
+    app.wait_for("label:Markdown source").unwrap();
+    app.wait_for("text:Unique scroll target").unwrap();
+    let line = app
+        .screen()
+        .layout("text:Unique scroll target")
+        .unwrap()
+        .unwrap();
+    assert!(!line.hidden && !line.clipped);
+    let _ = fs::remove_dir_all(root);
 }
