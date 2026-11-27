@@ -28,8 +28,8 @@ const GLASS_INSET: f32 = 4.0;
 const GLASS_BUTTON: f32 = 44.0;
 const GLASS_STRIDE: f32 = GLASS_BUTTON + 4.0;
 
-/// The filter's symbol in the capsule, where UIKit draws the icons.
-const FILTER_SYMBOL: &str = "line.3.horizontal.decrease";
+/// The more button's symbol in the capsule, where UIKit draws the icons.
+const MORE_SYMBOL: &str = "ellipsis";
 
 struct ToolbarAction {
     icon: &'static str,
@@ -342,7 +342,7 @@ fn filter_menu(actions: &'static [ToolbarAction]) -> Option<impl IntoElement> {
             .justify_center()
             .rounded_full()
             .child(
-                icons::icon(icons::FILTER)
+                icons::icon(icons::MORE)
                     .w(px(20.0))
                     .h(px(20.0))
                     .pointer_events(PointerEvents::None)
@@ -393,7 +393,7 @@ fn glass_toolbar(
         .prop("filter", move || {
             serde_json::json!({
                 "label": t("more_actions"),
-                "symbol": FILTER_SYMBOL,
+                "symbol": MORE_SYMBOL,
                 "rows": filtered
                     .iter()
                     .filter(|action| (action.visible)())
