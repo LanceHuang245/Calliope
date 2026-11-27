@@ -8,5 +8,6 @@
   "root": "App",
   "theme": "theme.json",
   "appearance": "system",
-  "window": { "defaultPosition": "center", "restoreBounds": true }
+  "window": { "defaultPosition": "center", "restoreBounds": true },
+  "dependencies": { "nsh-system-controls": "^0.1.0" }
 }

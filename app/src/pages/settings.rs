@@ -1,12 +1,8 @@
 //! Settings categories share their contents across desktop and mobile.
 
 use nsh_base::{MenuButtonItem, menu_button, theme};
-use nsh_core::{
-    element::AnyElement,
-    mobile::{self, SegmentedControlItem, segmented_control},
-    platform::Os,
-    prelude::*,
-};
+use nsh_core::{element::AnyElement, platform::Os, prelude::*};
+use nsh_system_controls::{SegmentedControlItem, segmented_control};
 
 use super::sync::sync_settings;
 use crate::i18n::t;
@@ -188,7 +184,7 @@ fn live_grammar_setting() -> AnyElement {
             .gap_2()
             .child(text(t("live_grammar")).flex_1().text_sm())
             .child(
-                mobile::switch()
+                nsh_system_controls::switch()
                     .accessibility_label(t("live_grammar"))
                     .checked(store::grammar::live)
                     .on_change(store::grammar::set_live),

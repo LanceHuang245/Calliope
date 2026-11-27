@@ -11,15 +11,11 @@ use nsh_base::{
     Editor, EditorApi, EditorClasses, EditorCommand, EditorSearch, MarkdownPlugins, TextViewLinks,
     editor::{EditorCompletionItem, EditorCompletionRequest},
     h_resizable, input, resizable_panel, text_view,
-    text_view::{CustomNode, Image},
+    text_view::{CustomNode, Image, TextViewImageContext},
     theme,
 };
-use nsh_core::{
-    keymap::When,
-    mobile::{SegmentedControlItem, segmented_control},
-    platform::Os,
-    prelude::*,
-};
+use nsh_core::{keymap::When, platform::Os, prelude::*};
+use nsh_system_controls::{SegmentedControlItem, segmented_control};
 
 use super::{
     home::{home_page, menu_button, phone_toolbar},
@@ -341,7 +337,12 @@ fn preview() -> impl IntoElement {
                     .extensions(vec![wiki_links(), mermaid_blocks()])
                     // The wiki links are `WikiLinks`' to show.
                     .render_custom(|node: &CustomNode| mermaid(node))
-                    .render_image(|img: &Image| vault_image(img))
+                    // An image comes with the context it was converted in.
+                    .render_image(
+                        |InContext(img, _): &InContext<Image, TextViewImageContext>| {
+                            vault_image(img)
+                        },
+                    )
                     .text_color(move || theme().foreground),
             ),
     )

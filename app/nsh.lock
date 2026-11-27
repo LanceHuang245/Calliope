@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "packages": [
+    {
+      "name": "nsh-system-controls",
+      "version": "0.1.0",
+      "source": "crates.io",
+      "checksum": "sha256-9a90969b2a893074011f9087e0d141594c9230fad45b0cb96fa61f1437260b4d",
+      "dir": "nsh-system-controls/0.1.0",
+      "module": "nsh-system-controls"
+    }
+  ]
+}

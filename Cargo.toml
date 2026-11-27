@@ -86,3 +86,10 @@ log = "0.4"
 notify = "8"
 thiserror = "2"
 url = "2"
+
+# The nshm `app/src/pages/settings.rs` uses asks for `nsh-core` from crates.io
+# while the app takes nsh's crates from Git: this sends its requirement to the
+# same checkout, so the app and the nshm build on one `nsh-core`. `make update`
+# moves this `rev` with the rest. (`nsh`'s own workspace patches the same way.)
+[patch.crates-io]
+nsh-core = { git = "https://github.com/longbridge/nsh", rev = "54ca221590c001c86d07874f06f7e42954ae39e9" }

@@ -17,6 +17,9 @@ merman.workspace = true
 merman-export.workspace = true
 nsh-base.workspace = true
 nsh-core.workspace = true
+# The system's own segmented control and switch on iOS, an nshm (`nsh add`):
+# UIKit's look there; the elements take no room where a platform has none.
+nsh-system-controls = "0.1.0"
 pulldown-cmark = { version = "0.13", default-features = false }
 serde_json.workspace = true
 usvg.workspace = true
