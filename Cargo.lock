@@ -635,10 +635,10 @@ dependencies = [
  "log",
  "merman",
  "merman-export",
- "nsh-base 0.7.2 (git+https://github.com/longbridge/nsh?rev=54ca221590c001c86d07874f06f7e42954ae39e9)",
+ "nsh-base 0.7.2 (git+https://github.com/longbridge/nsh?rev=830435228dabe211ec58678f03f226c2213bef49)",
  "nsh-core",
- "nsh-engine 0.7.2 (git+https://github.com/longbridge/nsh?rev=54ca221590c001c86d07874f06f7e42954ae39e9)",
- "nsh-platform-ios 0.7.2 (git+https://github.com/longbridge/nsh?rev=54ca221590c001c86d07874f06f7e42954ae39e9)",
+ "nsh-engine 0.7.2 (git+https://github.com/longbridge/nsh?rev=830435228dabe211ec58678f03f226c2213bef49)",
+ "nsh-platform-ios 0.7.2 (git+https://github.com/longbridge/nsh?rev=830435228dabe211ec58678f03f226c2213bef49)",
  "nsh-platform-linux",
  "nsh-platform-macos",
  "nsh-platform-windows",
@@ -3459,7 +3459,7 @@ dependencies = [
 [[package]]
 name = "nsh-base"
 version = "0.7.2"
-source = "git+https://github.com/longbridge/nsh?rev=54ca221590c001c86d07874f06f7e42954ae39e9#54ca221590c001c86d07874f06f7e42954ae39e9"
+source = "git+https://github.com/longbridge/nsh?rev=830435228dabe211ec58678f03f226c2213bef49#830435228dabe211ec58678f03f226c2213bef49"
 dependencies = [
  "chrono",
  "html5ever 0.27.0",
@@ -3490,7 +3490,7 @@ dependencies = [
 [[package]]
 name = "nsh-core"
 version = "0.7.2"
-source = "git+https://github.com/longbridge/nsh?rev=54ca221590c001c86d07874f06f7e42954ae39e9#54ca221590c001c86d07874f06f7e42954ae39e9"
+source = "git+https://github.com/longbridge/nsh?rev=830435228dabe211ec58678f03f226c2213bef49#830435228dabe211ec58678f03f226c2213bef49"
 dependencies = [
  "cap-std",
  "crc32fast",
@@ -3504,7 +3504,7 @@ dependencies = [
  "log",
  "naga",
  "nsh-macros",
- "nsh-updater 0.7.2 (git+https://github.com/longbridge/nsh?rev=54ca221590c001c86d07874f06f7e42954ae39e9)",
+ "nsh-updater 0.7.2 (git+https://github.com/longbridge/nsh?rev=830435228dabe211ec58678f03f226c2213bef49)",
  "ordered-float",
  "percent-encoding",
  "resvg",
@@ -3551,7 +3551,7 @@ dependencies = [
 [[package]]
 name = "nsh-engine"
 version = "0.7.2"
-source = "git+https://github.com/longbridge/nsh?rev=54ca221590c001c86d07874f06f7e42954ae39e9#54ca221590c001c86d07874f06f7e42954ae39e9"
+source = "git+https://github.com/longbridge/nsh?rev=830435228dabe211ec58678f03f226c2213bef49#830435228dabe211ec58678f03f226c2213bef49"
 dependencies = [
  "crossbeam-channel",
  "env_filter",
@@ -3569,7 +3569,7 @@ dependencies = [
 [[package]]
 name = "nsh-macros"
 version = "0.7.2"
-source = "git+https://github.com/longbridge/nsh?rev=54ca221590c001c86d07874f06f7e42954ae39e9#54ca221590c001c86d07874f06f7e42954ae39e9"
+source = "git+https://github.com/longbridge/nsh?rev=830435228dabe211ec58678f03f226c2213bef49#830435228dabe211ec58678f03f226c2213bef49"
 dependencies = [
  "imagesize 0.15.0",
  "proc-macro2",
@@ -3626,7 +3626,7 @@ dependencies = [
 [[package]]
 name = "nsh-platform-apple"
 version = "0.7.2"
-source = "git+https://github.com/longbridge/nsh?rev=54ca221590c001c86d07874f06f7e42954ae39e9#54ca221590c001c86d07874f06f7e42954ae39e9"
+source = "git+https://github.com/longbridge/nsh?rev=830435228dabe211ec58678f03f226c2213bef49#830435228dabe211ec58678f03f226c2213bef49"
 dependencies = [
  "block2",
  "cc",
@@ -3634,7 +3634,7 @@ dependencies = [
  "libc",
  "log",
  "nsh-core",
- "nsh-engine 0.7.2 (git+https://github.com/longbridge/nsh?rev=54ca221590c001c86d07874f06f7e42954ae39e9)",
+ "nsh-engine 0.7.2 (git+https://github.com/longbridge/nsh?rev=830435228dabe211ec58678f03f226c2213bef49)",
  "objc2",
  "objc2-app-kit",
  "objc2-core-foundation",
@@ -3680,16 +3680,16 @@ dependencies = [
 [[package]]
 name = "nsh-platform-ios"
 version = "0.7.2"
-source = "git+https://github.com/longbridge/nsh?rev=54ca221590c001c86d07874f06f7e42954ae39e9#54ca221590c001c86d07874f06f7e42954ae39e9"
+source = "git+https://github.com/longbridge/nsh?rev=830435228dabe211ec58678f03f226c2213bef49#830435228dabe211ec58678f03f226c2213bef49"
 dependencies = [
  "block2",
  "dispatch2",
  "libc",
  "log",
- "nsh-base 0.7.2 (git+https://github.com/longbridge/nsh?rev=54ca221590c001c86d07874f06f7e42954ae39e9)",
+ "nsh-base 0.7.2 (git+https://github.com/longbridge/nsh?rev=830435228dabe211ec58678f03f226c2213bef49)",
  "nsh-core",
- "nsh-engine 0.7.2 (git+https://github.com/longbridge/nsh?rev=54ca221590c001c86d07874f06f7e42954ae39e9)",
- "nsh-platform-apple 0.7.2 (git+https://github.com/longbridge/nsh?rev=54ca221590c001c86d07874f06f7e42954ae39e9)",
+ "nsh-engine 0.7.2 (git+https://github.com/longbridge/nsh?rev=830435228dabe211ec58678f03f226c2213bef49)",
+ "nsh-platform-apple 0.7.2 (git+https://github.com/longbridge/nsh?rev=830435228dabe211ec58678f03f226c2213bef49)",
  "objc2",
  "objc2-authentication-services",
  "objc2-core-foundation",
@@ -3708,15 +3708,15 @@ dependencies = [
 [[package]]
 name = "nsh-platform-linux"
 version = "0.7.2"
-source = "git+https://github.com/longbridge/nsh?rev=54ca221590c001c86d07874f06f7e42954ae39e9#54ca221590c001c86d07874f06f7e42954ae39e9"
+source = "git+https://github.com/longbridge/nsh?rev=830435228dabe211ec58678f03f226c2213bef49#830435228dabe211ec58678f03f226c2213bef49"
 dependencies = [
  "crossbeam-channel",
  "gtk4",
  "image",
  "log",
- "nsh-base 0.7.2 (git+https://github.com/longbridge/nsh?rev=54ca221590c001c86d07874f06f7e42954ae39e9)",
+ "nsh-base 0.7.2 (git+https://github.com/longbridge/nsh?rev=830435228dabe211ec58678f03f226c2213bef49)",
  "nsh-core",
- "nsh-engine 0.7.2 (git+https://github.com/longbridge/nsh?rev=54ca221590c001c86d07874f06f7e42954ae39e9)",
+ "nsh-engine 0.7.2 (git+https://github.com/longbridge/nsh?rev=830435228dabe211ec58678f03f226c2213bef49)",
  "pango",
  "pangocairo",
  "rustc-hash 2.1.3",
@@ -3727,17 +3727,17 @@ dependencies = [
 [[package]]
 name = "nsh-platform-macos"
 version = "0.7.2"
-source = "git+https://github.com/longbridge/nsh?rev=54ca221590c001c86d07874f06f7e42954ae39e9#54ca221590c001c86d07874f06f7e42954ae39e9"
+source = "git+https://github.com/longbridge/nsh?rev=830435228dabe211ec58678f03f226c2213bef49#830435228dabe211ec58678f03f226c2213bef49"
 dependencies = [
  "block2",
  "crossbeam-channel",
  "dispatch2",
  "libc",
  "log",
- "nsh-base 0.7.2 (git+https://github.com/longbridge/nsh?rev=54ca221590c001c86d07874f06f7e42954ae39e9)",
+ "nsh-base 0.7.2 (git+https://github.com/longbridge/nsh?rev=830435228dabe211ec58678f03f226c2213bef49)",
  "nsh-core",
- "nsh-engine 0.7.2 (git+https://github.com/longbridge/nsh?rev=54ca221590c001c86d07874f06f7e42954ae39e9)",
- "nsh-platform-apple 0.7.2 (git+https://github.com/longbridge/nsh?rev=54ca221590c001c86d07874f06f7e42954ae39e9)",
+ "nsh-engine 0.7.2 (git+https://github.com/longbridge/nsh?rev=830435228dabe211ec58678f03f226c2213bef49)",
+ "nsh-platform-apple 0.7.2 (git+https://github.com/longbridge/nsh?rev=830435228dabe211ec58678f03f226c2213bef49)",
  "objc2",
  "objc2-app-kit",
  "objc2-core-foundation",
@@ -3756,14 +3756,14 @@ dependencies = [
 [[package]]
 name = "nsh-platform-windows"
 version = "0.7.2"
-source = "git+https://github.com/longbridge/nsh?rev=54ca221590c001c86d07874f06f7e42954ae39e9#54ca221590c001c86d07874f06f7e42954ae39e9"
+source = "git+https://github.com/longbridge/nsh?rev=830435228dabe211ec58678f03f226c2213bef49#830435228dabe211ec58678f03f226c2213bef49"
 dependencies = [
  "crossbeam-channel",
  "image",
  "log",
- "nsh-base 0.7.2 (git+https://github.com/longbridge/nsh?rev=54ca221590c001c86d07874f06f7e42954ae39e9)",
+ "nsh-base 0.7.2 (git+https://github.com/longbridge/nsh?rev=830435228dabe211ec58678f03f226c2213bef49)",
  "nsh-core",
- "nsh-engine 0.7.2 (git+https://github.com/longbridge/nsh?rev=54ca221590c001c86d07874f06f7e42954ae39e9)",
+ "nsh-engine 0.7.2 (git+https://github.com/longbridge/nsh?rev=830435228dabe211ec58678f03f226c2213bef49)",
  "rustc-hash 2.1.3",
  "serde_json",
  "ttf-parser",
@@ -3795,12 +3795,12 @@ dependencies = [
 [[package]]
 name = "nsh-testing"
 version = "0.7.2"
-source = "git+https://github.com/longbridge/nsh?rev=54ca221590c001c86d07874f06f7e42954ae39e9#54ca221590c001c86d07874f06f7e42954ae39e9"
+source = "git+https://github.com/longbridge/nsh?rev=830435228dabe211ec58678f03f226c2213bef49#830435228dabe211ec58678f03f226c2213bef49"
 dependencies = [
  "crossbeam-channel",
  "log",
  "nsh-core",
- "nsh-engine 0.7.2 (git+https://github.com/longbridge/nsh?rev=54ca221590c001c86d07874f06f7e42954ae39e9)",
+ "nsh-engine 0.7.2 (git+https://github.com/longbridge/nsh?rev=830435228dabe211ec58678f03f226c2213bef49)",
  "regex",
  "ureq",
  "url",
@@ -3828,7 +3828,7 @@ dependencies = [
 [[package]]
 name = "nsh-updater"
 version = "0.7.2"
-source = "git+https://github.com/longbridge/nsh?rev=54ca221590c001c86d07874f06f7e42954ae39e9#54ca221590c001c86d07874f06f7e42954ae39e9"
+source = "git+https://github.com/longbridge/nsh?rev=830435228dabe211ec58678f03f226c2213bef49#830435228dabe211ec58678f03f226c2213bef49"
 dependencies = [
  "base64 0.22.1",
  "ed25519-dalek",
