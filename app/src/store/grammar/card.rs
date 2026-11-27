@@ -1,14 +1,16 @@
-//! The card beside a word with a grammar issue: it opens once the pointer
-//! rested on the word for `OPEN_DELAY`, stays while the pointer is on it,
-//! and goes once the pointer left both, as a browser plugin's hover card.
-//! The word under the pointer is the trigger: the editor reports a rest on
-//! a character, and only the issues marked there show.
+//! The card beside a word with a grammar issue: on the desktops it opens
+//! once the pointer rested on the word for `OPEN_DELAY`, stays while the
+//! pointer is on it, and goes once the pointer left both, as a browser
+//! plugin's hover card; on the phones a tap on the word opens it at once.
+//! The word under the pointer or the finger is the trigger: the editor
+//! reports the character it rests on or the word it was pressed on, and
+//! only the issues marked there show.
 
 use std::time::Duration;
 
 use nsh_base::{
-    Editor,
-    editor::{EditorDiagnostic, EditorHoverEvent},
+    Editor, EditorApi,
+    editor::{EditorDiagnostic, EditorHoverEvent, EditorRange, EditorTextPressEvent},
     theme as tokens,
 };
 // The text elements, which the store's own `text` (`super::*`) hides.
@@ -80,6 +82,22 @@ fn indices(report: &Report, diagnostics: &[EditorDiagnostic]) -> Vec<usize> {
         .collect()
 }
 
+/// The card's issues for a finger's word: the report's ones marked within
+/// `range`, which is the whole word the finger went down on (a mark can be
+/// shorter, or run over two words).
+fn touched(report: &Report, range: EditorRange) -> Vec<usize> {
+    report
+        .issues
+        .iter()
+        .enumerate()
+        .filter(|(_, issue)| {
+            let mark = issue.mark.range;
+            mark.start <= range.end && range.start <= mark.end
+        })
+        .map(|(index, _)| index)
+        .collect()
+}
+
 /// The pointer rests on `event`'s character (`onHover`): the card of the
 /// issues there opens once the pointer rested long enough on them, or the
 /// last word's card goes.
@@ -107,6 +125,35 @@ pub(super) fn hovered(event: &EditorHoverEvent) {
             false,
         );
     });
+}
+
+/// A finger pressed `event`'s word (`onTextPress`): the card of the issues
+/// there opens at once, or the last card goes. The desktops keep the
+/// pointer's hover.
+pub(super) fn pressed(editor: ComponentRef<Editor>, event: &EditorTextPressEvent) {
+    if is_desktop() {
+        return;
+    }
+    let Some(report) = report() else { return };
+    let issues = touched(&report, event.range);
+    let bounds = editor.api::<EditorApi>().and_then(|api| {
+        api.range_bounds(event.range)
+            .first()
+            .map(|it| it.page_bounds)
+    });
+    let Some(bounds) = bounds.filter(|_| !issues.is_empty()) else {
+        // Another word, or none: the card the tap replaced goes.
+        left();
+        return;
+    };
+    moved(
+        Some(Rc::new(Card {
+            bounds,
+            report,
+            issues,
+        })),
+        false,
+    );
 }
 
 /// The pointer left the word (`onHoverEnd`): the card stays while the
@@ -140,7 +187,8 @@ pub(super) fn reset() {
     moved(None, false);
 }
 
-/// The card beside the word the pointer rests on, above everything else.
+/// The card beside the word the pointer rests on or the finger pressed,
+/// above everything else.
 pub(crate) fn hover_card(editor: ComponentRef<Editor>) -> impl IntoElement {
     when(
         move || shown().is_some(),
@@ -149,11 +197,12 @@ pub(crate) fn hover_card(editor: ComponentRef<Editor>) -> impl IntoElement {
 }
 
 /// The card's box: placed under the word, it keeps open while the pointer
-/// is on it.
+/// is on it, and goes when a press lands outside it or the system's back
+/// asks (the phones' way out of it).
 fn body(editor: ComponentRef<Editor>, card: Rc<Card>) -> impl IntoElement {
-    let bounds = card.bounds;
+    let word = card.bounds;
     overlay()
-        .anchor_bounds(move || bounds)
+        .anchor_bounds(move || word)
         .placement(Placement::Bottom)
         .align(Align::Start)
         .offset(px(6.0))
@@ -172,12 +221,29 @@ fn body(editor: ComponentRef<Editor>, card: Rc<Card>) -> impl IntoElement {
         // stays until it leaves the card too.
         .on_mouse_enter(move |_: &MouseEvent| entered())
         .on_mouse_leave(move |_: &MouseEvent| left())
+        // The finger that opened the card is on its word, and its lift is
+        // reported here too: only a press anywhere else closes the card.
+        .on_press_outside(move |at: &Point<Points>| {
+            if !within(word, *at) {
+                left();
+            }
+        })
+        .on_cancel(left)
         .child(
             card.issues
                 .iter()
                 .map(|index| issue(editor, &card, *index))
                 .collect::<Vec<_>>(),
         )
+}
+
+/// Whether `point` is in `bounds`.
+fn within(bounds: Bounds<Points>, point: Point<Points>) -> bool {
+    let (x, y) = (bounds.origin.x.0, bounds.origin.y.0);
+    x <= point.x.0
+        && point.x.0 <= x + bounds.size.width.0
+        && y <= point.y.0
+        && point.y.0 <= y + bounds.size.height.0
 }
 
 /// One issue of the card: what it says, then the fixes of it.
@@ -241,5 +307,20 @@ mod tests {
         );
         assert!(indices(&report, &[mark(20, 24, "elsewhere")]).is_empty());
         assert!(indices(&report, &[]).is_empty());
+    }
+
+    /// A word, as the editor reports the one a finger pressed.
+    fn word(start: u32, end: u32) -> EditorRange {
+        EditorRange::new(EditorPosition::new(0, start), EditorPosition::new(0, end))
+    }
+
+    #[test]
+    fn a_tap_shows_the_issues_marked_in_its_word() {
+        let report = report();
+        assert_eq!(touched(&report, word(4, 7)), [0]);
+        // A mark running over two words is in either of them.
+        assert_eq!(touched(&report, word(2, 5)), [0]);
+        assert_eq!(touched(&report, word(3, 14)), [0, 1]);
+        assert!(touched(&report, word(20, 24)).is_empty());
     }
 }

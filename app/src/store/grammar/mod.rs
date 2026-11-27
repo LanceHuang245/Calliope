@@ -13,12 +13,12 @@ use std::{
 use harper_core::linting::LintGroup;
 use nsh_base::{
     Editor, EditorApi, EditorElement,
-    editor::{EditorCodeActionRequest, EditorDiagnostic, EditorEdit, EditorHoverEvent},
+    editor::{
+        EditorCodeActionRequest, EditorDiagnostic, EditorEdit, EditorHoverEvent,
+        EditorTextPressEvent,
+    },
 };
-use nsh_core::{
-    element::desktop::{MenuItem, popup_menu_at},
-    platform::Os,
-};
+use nsh_core::element::desktop::{MenuItem, popup_menu_at};
 
 use super::*;
 pub(crate) use card::hover_card;
@@ -64,16 +64,12 @@ struct Work {
 #[derive(Clone, Default)]
 struct Results(Option<Rc<Report>>);
 
-pub(crate) fn supported() -> bool {
-    os() == Os::Windows
-}
-
 pub(crate) fn available() -> bool {
     version().is_some()
 }
 
 fn version() -> Option<Version> {
-    if !supported() || !matches!(route(), Route::Home | Route::Note) || mode() == Mode::Read {
+    if !matches!(route(), Route::Home | Route::Note) || mode() == Mode::Read {
         return None;
     }
     Some(Version {
@@ -99,10 +95,13 @@ pub(crate) fn set_live(value: &bool) {
     changed();
 }
 
+/// Turns the live check on or off: the settings' switch, and the command
+/// the palette lists.
+pub(crate) fn toggle() {
+    set_live(&!live());
+}
+
 pub(super) fn start() {
-    if !supported() {
-        return;
-    }
     set(Live(Storage::get_item(LIVE).as_deref() == Some("on")));
     let version = computed(version);
     effect(move || {
@@ -224,7 +223,8 @@ pub(crate) fn count() -> Option<usize> {
 }
 
 /// `source` with what the issues show: their marks, the fixes `mod+.`
-/// lists, and the card the pointer resting on a marked word opens.
+/// lists, and the card a pointer resting on a marked word opens, or a tap
+/// on it on a touch screen.
 pub(crate) fn hooks(source: EditorElement, editor: ComponentRef<Editor>) -> EditorElement {
     source
         .diagnostics(diagnostics)
@@ -233,6 +233,7 @@ pub(crate) fn hooks(source: EditorElement, editor: ComponentRef<Editor>) -> Edit
         })
         .on_hover(move |event: &EditorHoverEvent| card::hovered(event))
         .on_hover_end(card::hover_ended)
+        .on_text_press(move |event: &EditorTextPressEvent| card::pressed(editor, event))
 }
 
 pub(crate) fn diagnostics() -> Vec<EditorDiagnostic> {

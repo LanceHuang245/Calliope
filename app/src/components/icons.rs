@@ -23,6 +23,8 @@ pub(crate) const CHEVRON_DOWN: &str = r#"<path d="m6 9 6 6 6-6"/>"#;
 pub(crate) const LIST: &str = r#"<path d="M3 12h.01"/><path d="M3 18h.01"/><path d="M3 6h.01"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M8 6h13"/>"#;
 pub(crate) const SQUARE_CHECK: &str =
     r#"<rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9 12 2 2 4-4"/>"#;
+pub(crate) const COMMAND: &str =
+    r#"<path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3"/>"#;
 pub(crate) const CODE: &str = r#"<path d="m16 18 6-6-6-6"/><path d="m8 6-6 6 6 6"/>"#;
 pub(crate) const PLUS: &str = r#"<path d="M5 12h14"/><path d="M12 5v14"/>"#;
 pub(crate) const MENU: &str = r#"<path d="M4 12h16"/><path d="M4 18h16"/><path d="M4 6h16"/>"#;

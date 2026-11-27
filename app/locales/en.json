@@ -147,6 +147,7 @@
   "check_current_note": "Check current note",
   "editor_settings": "Editor",
   "live_grammar": "Live grammar checking",
+  "toggle_grammar": "Toggle live grammar checking",
   "grammar_issue_one": "%{count} grammar issue",
   "grammar_issue_many": "%{count} grammar issues",
   "grammar_setting_failed": "Could not save the grammar checking setting.",

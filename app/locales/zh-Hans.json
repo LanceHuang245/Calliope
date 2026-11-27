@@ -147,6 +147,7 @@
   "check_current_note": "检查当前笔记",
   "editor_settings": "编辑器",
   "live_grammar": "实时语法检查",
+  "toggle_grammar": "开启或关闭实时语法检查",
   "grammar_issue_one": "%{count} 个语法问题",
   "grammar_issue_many": "%{count} 个语法问题",
   "grammar_setting_failed": "无法保存语法检查设置。",

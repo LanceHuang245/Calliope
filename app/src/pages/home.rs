@@ -143,12 +143,13 @@ pub(crate) fn menu_button() -> impl IntoElement {
 
 /// The phones' floating toolbar, over the home page and the note (the
 /// desktops have these under the files): sync (filled while it runs), the
-/// quick switcher, the graph, the note's backlinks (with a note open) and
-/// the trash, with the new note button beside them. Gone while
-/// the keyboard is up, the text taking the room.
+/// quick switcher, the graph, the note's backlinks (with a note open), the
+/// commands (`mod+p` on the desktops) and the trash, with the new note
+/// button beside them.
+/// Gone while the keyboard is up, the text taking the room.
 pub(crate) fn phone_toolbar() -> impl IntoElement {
     // Native buttons and the fallback both use the same visibility, state and actions.
-    static ACTIONS: [ToolbarAction; 5] = [
+    static ACTIONS: [ToolbarAction; 6] = [
         ToolbarAction {
             icon: icons::REFRESH,
             symbol: "arrow.clockwise",
@@ -180,6 +181,14 @@ pub(crate) fn phone_toolbar() -> impl IntoElement {
             selected: Some(store::backlinks_shown),
             visible: || store::opened().is_some(),
             press: store::toggle_backlinks,
+        },
+        ToolbarAction {
+            icon: icons::COMMAND,
+            symbol: "command",
+            label: "run_command",
+            selected: None,
+            visible: || true,
+            press: || store::set_palette(true),
         },
         ToolbarAction {
             icon: icons::TRASH,

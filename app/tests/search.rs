@@ -67,7 +67,7 @@ fn desktop_runs_commands_from_the_palette() {
     // shows and run the last command (the theme, kept on the device).
     app.press_key("mod+p").unwrap();
     app.wait_for("label:Run a command").unwrap();
-    for _ in 0..12 {
+    for _ in 0..13 {
         app.press_key("down").unwrap();
     }
     app.press_key("enter").unwrap();

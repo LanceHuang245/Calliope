@@ -29,9 +29,13 @@ zbus-secret-service-keyring-store.workspace = true
 nsh-platform-macos.workspace = true
 apple-native-keyring-store = { workspace = true, features = ["keychain"] }
 
-[target.'cfg(target_os = "windows")'.dependencies]
+# Harper checks a note's grammar (src/store/grammar) on this machine's
+# desktops and on the phones.
+[target.'cfg(any(target_os = "windows", target_os = "android", target_os = "ios"))'.dependencies]
 harper-core = { version = "0.42", default-features = false, features = ["concurrent"] }
 pulldown-cmark = { version = "0.13", default-features = false }
+
+[target.'cfg(target_os = "windows")'.dependencies]
 nsh-platform-windows.workspace = true
 windows = { version = "0.62", features = ["Win32_UI_TextServices", "Win32_UI_Input_Ime", "Win32_UI_Input_KeyboardAndMouse"] }
 windows-native-keyring-store.workspace = true

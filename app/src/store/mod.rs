@@ -18,7 +18,7 @@
 mod commands;
 mod confirm;
 mod files;
-#[cfg(target_os = "windows")]
+#[cfg(any(target_os = "windows", target_os = "android", target_os = "ios"))]
 pub(crate) mod grammar;
 mod links;
 mod note;
@@ -87,7 +87,7 @@ pub(crate) enum Mode {
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(crate) enum SettingsCategory {
     Appearance,
-    #[cfg(target_os = "windows")]
+    #[cfg(any(target_os = "windows", target_os = "android", target_os = "ios"))]
     Editor,
     Sync,
     About,
@@ -200,7 +200,7 @@ pub(crate) fn init() {
         open_vault(root);
     }
 
-    #[cfg(target_os = "windows")]
+    #[cfg(any(target_os = "windows", target_os = "android", target_os = "ios"))]
     grammar::start();
     start_autosave();
     watch_other_apps();
@@ -245,7 +245,7 @@ pub(crate) fn set_menu_open(open: bool) {
 }
 
 pub(crate) fn set_mode(mode: Mode) {
-    #[cfg(target_os = "windows")]
+    #[cfg(any(target_os = "windows", target_os = "android", target_os = "ios"))]
     if (untracked(self::mode) == Mode::Read) != (mode == Mode::Read) {
         grammar::changed();
     }
@@ -264,7 +264,7 @@ pub(crate) fn toggle_read() {
 pub(crate) fn set_route(route: Route) {
     let old = untracked(self::route);
     let was_searching = old == Route::Search;
-    #[cfg(target_os = "windows")]
+    #[cfg(any(target_os = "windows", target_os = "android", target_os = "ios"))]
     if matches!(old, Route::Home | Route::Note) != matches!(route, Route::Home | Route::Note) {
         grammar::changed();
     }

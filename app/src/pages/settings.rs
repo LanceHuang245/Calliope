@@ -3,7 +3,7 @@
 use nsh_base::{MenuButtonItem, menu_button, theme};
 use nsh_core::{
     element::AnyElement,
-    mobile::{SegmentedControlItem, segmented_control},
+    mobile::{self, SegmentedControlItem, segmented_control},
     platform::Os,
     prelude::*,
 };
@@ -17,6 +17,17 @@ use crate::{
     store::{self, Route, SettingsCategory, Theme},
 };
 
+/// The categories in the order the lists show them: the phones' list, and
+/// the desktops' sidebar. The editor's settings (where grammar checking
+/// is) come before Sync, and only where the build checks grammar.
+#[cfg(any(target_os = "windows", target_os = "android", target_os = "ios"))]
+pub(crate) const CATEGORIES: [SettingsCategory; 4] = [
+    SettingsCategory::Appearance,
+    SettingsCategory::Editor,
+    SettingsCategory::Sync,
+    SettingsCategory::About,
+];
+#[cfg(not(any(target_os = "windows", target_os = "android", target_os = "ios")))]
 pub(crate) const CATEGORIES: [SettingsCategory; 3] = [
     SettingsCategory::Appearance,
     SettingsCategory::Sync,
@@ -27,7 +38,7 @@ impl SettingsCategory {
     fn title(self) -> String {
         match self {
             Self::Appearance => t("appearance"),
-            #[cfg(target_os = "windows")]
+            #[cfg(any(target_os = "windows", target_os = "android", target_os = "ios"))]
             Self::Editor => t("editor_settings"),
             Self::Sync => t("sync"),
             Self::About => t("about"),
@@ -37,7 +48,7 @@ impl SettingsCategory {
     fn icon(self) -> &'static str {
         match self {
             Self::Appearance => icons::SUN,
-            #[cfg(target_os = "windows")]
+            #[cfg(any(target_os = "windows", target_os = "android", target_os = "ios"))]
             Self::Editor => icons::PENCIL,
             Self::Sync => icons::REFRESH,
             Self::About => icons::INFO,
@@ -53,12 +64,7 @@ fn selected_category() -> SettingsCategory {
 }
 
 pub(crate) fn desktop_settings() -> impl IntoElement {
-    // Only the right pane changes when a category is selected. The
-    // editor's settings (where grammar checking is) come before Sync.
-    let mut categories = vec![SettingsCategory::Appearance];
-    #[cfg(target_os = "windows")]
-    categories.extend(store::grammar::supported().then_some(SettingsCategory::Editor));
-    categories.extend([SettingsCategory::Sync, SettingsCategory::About]);
+    // Only the right pane changes when a category is selected.
     let sidebar = view()
         .w(px(160.0))
         .flex_shrink_0()
@@ -66,11 +72,7 @@ pub(crate) fn desktop_settings() -> impl IntoElement {
         .border_color(move || theme().border)
         .p_2()
         .gap_1()
-        .child(
-            categories
-                .into_iter()
-                .map(|category| category_button(category, true)),
-        );
+        .child(CATEGORIES.map(|category| category_button(category, true)));
     let body =
         view()
             .flex_1()
@@ -133,29 +135,8 @@ fn category_button(category: SettingsCategory, desktop: bool) -> impl IntoElemen
 fn category_content(category: SettingsCategory) -> impl IntoElement {
     let content: AnyElement = match category {
         SettingsCategory::Appearance => appearance_settings().into_element(),
-        #[cfg(target_os = "windows")]
-        SettingsCategory::Editor => nsh_base::switch()
-            .accessibility_label(t("live_grammar"))
-            .checked(store::grammar::live)
-            .on_change(store::grammar::set_live)
-            .flex_row()
-            .items_center()
-            .gap_2()
-            .track_style(|s| {
-                s.w(px(32.0))
-                    .p(px(2.0))
-                    .rounded_full()
-                    .bg(theme().border)
-                    .checked(|s| s.bg(theme().primary))
-            })
-            .thumb_style(|s| {
-                s.size(px(14.0))
-                    .rounded_full()
-                    .bg(theme().foreground)
-                    .checked(|s| s.translate_x(px(14.0)).bg(theme().primary_foreground))
-            })
-            .child(text(t("live_grammar")))
-            .into_element(),
+        #[cfg(any(target_os = "windows", target_os = "android", target_os = "ios"))]
+        SettingsCategory::Editor => live_grammar_setting(),
         SettingsCategory::Sync => view()
             .w_full()
             .gap_2()
@@ -202,6 +183,51 @@ fn appearance_settings() -> impl IntoElement {
             ),
         ))
         .child(labeled(t("interface_language"), false, language_list()))
+}
+
+/// Grammar checking's setting: UIKit's own switch (`UISwitch`) under the
+/// setting's name on iOS, the app's styled switch with the name in it on
+/// the other platforms (their dialogs and pages have one look).
+#[cfg(any(target_os = "windows", target_os = "android", target_os = "ios"))]
+fn live_grammar_setting() -> AnyElement {
+    if cfg!(target_os = "ios") && os() == Os::Ios {
+        return view()
+            .w_full()
+            .max_w(px(420.0))
+            .flex_row()
+            .items_center()
+            .gap_2()
+            .child(text(t("live_grammar")).flex_1().text_sm())
+            .child(
+                mobile::switch()
+                    .accessibility_label(t("live_grammar"))
+                    .checked(store::grammar::live)
+                    .on_change(store::grammar::set_live),
+            )
+            .into_element();
+    }
+    nsh_base::switch()
+        .accessibility_label(t("live_grammar"))
+        .checked(store::grammar::live)
+        .on_change(store::grammar::set_live)
+        .flex_row()
+        .items_center()
+        .gap_2()
+        .track_style(|s| {
+            s.w(px(32.0))
+                .p(px(2.0))
+                .rounded_full()
+                .bg(theme().border)
+                .checked(|s| s.bg(theme().primary))
+        })
+        .thumb_style(|s| {
+            s.size(px(14.0))
+                .rounded_full()
+                .bg(theme().foreground)
+                .checked(|s| s.translate_x(px(14.0)).bg(theme().primary_foreground))
+        })
+        .child(text(t("live_grammar")))
+        .into_element()
 }
 
 /// Keeps `language` on this device, and says what shows it: the pages
