@@ -51,6 +51,7 @@
   "interface_language": "Language",
   "language_saved_title": "The language was saved.",
   "language_saved_description": "Restart Calliope, and the interface speaks it.",
+  "language_save_failed": "The interface language could not be saved.",
   "system": "System",
   "light": "Light",
   "dark": "Dark",

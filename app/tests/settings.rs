@@ -2,9 +2,10 @@
 
 mod common;
 
-use std::{fs, sync::Arc, time::Duration};
+use std::{collections::BTreeMap, fs, sync::Arc, time::Duration};
 
 use common::{desktop, vault};
+use nsh_core::storage::{StorageBackend, StorageChange};
 use nsh_testing::{Headless, MemoryStorage};
 
 /// Sync in the settings: the toolbar shortcut follows the saved provider.
@@ -116,6 +117,13 @@ fn desktop_keeps_the_chosen_language() {
     app.wait_for_gone("The language was saved.", Duration::from_secs(2))
         .unwrap();
 
+    // Pages and dialogs opened after saving still use the startup language.
+    app.press("label:About").unwrap();
+    app.wait_for("Export logs…").unwrap();
+    app.press_key("mod+p").unwrap();
+    app.wait_for("label:Run a command").unwrap();
+    app.wait_for("text:New note").unwrap();
+
     // The next start speaks it: the same device, opened again.
     let mut config = desktop(&root);
     config.storage = Some(stored.clone() as Arc<dyn nsh_core::storage::StorageBackend>);
@@ -124,5 +132,41 @@ fn desktop_keeps_the_chosen_language() {
     app.press("label:设置").unwrap();
     app.wait_for("外观").unwrap();
     assert!(app.shows("语言"));
+    let _ = fs::remove_dir_all(&root);
+}
+
+#[test]
+fn desktop_reports_a_refused_language_write() {
+    struct RefusesLanguage(Arc<MemoryStorage>);
+
+    impl StorageBackend for RefusesLanguage {
+        fn load(&self) -> Result<BTreeMap<String, String>, String> {
+            self.0.load()
+        }
+
+        fn write(&self, change: StorageChange) -> Result<(), String> {
+            if matches!(&change, StorageChange::Set(key, _) if key == "language") {
+                return Err("test backend refuses the language write".into());
+            }
+            self.0.write(change)
+        }
+    }
+
+    let root = vault("refused-language");
+    let stored = MemoryStorage::new([("vault".to_owned(), root.display().to_string())]);
+    let mut config = desktop(&root);
+    config.storage = Some(Arc::new(RefusesLanguage(stored.clone())));
+    let mut app = Headless::start(config).unwrap();
+    app.wait_for("label:Settings").unwrap();
+    app.press("label:Settings").unwrap();
+    app.wait_for("label:Language").unwrap();
+    app.press("label:Language").unwrap();
+    app.wait_for("label:简体中文").unwrap();
+    app.press("label:简体中文").unwrap();
+    app.wait_for("The interface language could not be saved.")
+        .unwrap();
+    assert!(app.shows("English"));
+    assert!(!app.shows("The language was saved."));
+    assert!(!stored.entries().contains_key("language"));
     let _ = fs::remove_dir_all(&root);
 }

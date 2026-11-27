@@ -171,12 +171,15 @@ fn appearance_settings() -> impl IntoElement {
 /// Keeps `language` on this device, and says what shows it: the pages
 /// showing were made with the old texts.
 fn choose_language(language: Language) {
-    // Said in the language showing, which the pages keep until the restart.
-    let title = t("language_saved_title");
-    let description = t("language_saved_description");
-    let action = t("ok");
-    i18n::set_language(language);
-    store::tell(title, description, action);
+    if i18n::save_language(language).is_err() {
+        store::notify(t("language_save_failed"));
+        return;
+    }
+    store::tell(
+        t("language_saved_title"),
+        t("language_saved_description"),
+        t("ok"),
+    );
 }
 
 /// The languages, each in its own language and the chosen one marked.
@@ -210,7 +213,7 @@ fn unfolding_language_list() -> impl IntoElement {
                 .accessibility_label(t("interface_language"))
                 .on_press(move || open.update(|open| *open = !*open))
                 .child(dynamic(|| {
-                    text(i18n::language().title())
+                    text(i18n::saved_language().title())
                         .flex_1()
                         .text_sm()
                         .text_color(move || theme().foreground)
@@ -236,7 +239,7 @@ fn unfolding_language_list() -> impl IntoElement {
 /// A language of the unfolding list: its own name, the chosen one on the
 /// theme's accent as the settings' categories are.
 fn language_row(language: Language, open: Signal<bool>) -> impl IntoElement {
-    let on = move || i18n::language() == language;
+    let on = move || i18n::saved_language() == language;
     nsh_base::button()
         .flex_row()
         .items_center()
@@ -269,7 +272,7 @@ fn native_language_list() -> impl IntoElement {
                 .into_iter()
                 .map(|language| {
                     MenuButtonItem::new(language.code(), language.title())
-                        .checked(language == i18n::language())
+                        .checked(language == i18n::saved_language())
                 })
                 .collect::<Vec<_>>()
         })
@@ -288,7 +291,7 @@ fn native_language_list() -> impl IntoElement {
         .border_color(move || theme().input)
         .rounded(move || theme().radius)
         .child(dynamic(|| {
-            text(i18n::language().title())
+            text(i18n::saved_language().title())
                 .flex_1()
                 .text_sm()
                 .text_color(move || theme().foreground)

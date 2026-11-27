@@ -2,12 +2,17 @@
 //! `locales/` files (rust-i18n's format, which `nsh`'s build reads), and this
 //! module says which language shows them.
 //!
-//! A text is read when a page is made ([`t!`]), so a new language shows from
-//! the next start on: a page built once keeps the texts it was made with.
+//! The running language is fixed at startup. Settings show the choice saved
+//! for the next start, including on pages opened before the app restarts.
 
 use std::{collections::HashMap, fmt::Display};
 
-use nsh_core::{i18n::Translations, platform::Locale, prelude::*, storage::Storage};
+use nsh_core::{
+    i18n::Translations,
+    platform::Locale,
+    prelude::*,
+    storage::{Storage, StorageFull},
+};
 
 /// The app's name, the same in every language.
 pub(crate) const APP_NAME: &str = "Calliope";
@@ -52,12 +57,14 @@ impl Language {
 /// The item of the device's storage the choice is kept in, as the theme's.
 const LANGUAGE: &str = "language";
 
-/// The language the interface speaks, as the app's one value.
 #[derive(Clone, Copy, Default)]
-struct Chosen(Language);
+struct Languages {
+    running: Language,
+    saved: Language,
+}
 
-pub(crate) fn language() -> Language {
-    global::<Chosen>().get().0
+pub(crate) fn saved_language() -> Language {
+    global::<Languages>().get().saved
 }
 
 /// Reads the language saved on this device: called once, at start.
@@ -65,16 +72,19 @@ pub(crate) fn restore_language() {
     let language = Storage::get_item(LANGUAGE)
         .and_then(|code| Language::from_code(&code))
         .unwrap_or_default();
-    set_language(language);
+    global::<Languages>().set(Languages {
+        running: language,
+        saved: language,
+    });
+    // Framework-owned text uses the same startup language.
+    nsh_core::i18n::set_locale(Locale::parse(language.code()));
 }
 
 /// Saves `language` for this device: the next start speaks it.
-pub(crate) fn set_language(language: Language) {
-    let _ = Storage::set_item(LANGUAGE, language.code());
-    // nsh's own text (an editor's menus, a picker) follows the same
-    // language; the app's comes from [`t!`]'s explicit locale.
-    nsh_core::i18n::set_locale(Locale::parse(language.code()));
-    global::<Chosen>().set(Chosen(language));
+pub(crate) fn save_language(language: Language) -> Result<(), StorageFull> {
+    Storage::set_item(LANGUAGE, language.code())?;
+    global::<Languages>().update(|languages| languages.saved = language);
+    Ok(())
 }
 
 /// The app's translations: its `locales/` files, as `nsh`'s build reads
@@ -102,7 +112,8 @@ pub(crate) fn t(key: &str) -> String {
 /// The text of `key` with its `%{name}`s filled from `args` (nsh's own
 /// `i18n::translate`, given the language this device keeps).
 pub(crate) fn translate(key: &str, args: &[(&str, &dyn Display)]) -> String {
-    nsh_core::i18n::translate(key, Some(language().code()), args)
+    let running = untracked(|| global::<Languages>().get().running);
+    nsh_core::i18n::translate(key, Some(running.code()), args)
 }
 
 /// What the desktops do with a file the user deletes: each names its own
@@ -161,7 +172,7 @@ pub(crate) fn sync_error(error: &dyn Display) -> String {
 }
 
 pub(crate) fn conflict_copies(copies: &[String]) -> String {
-    let separator = match language() {
+    let separator = match untracked(|| global::<Languages>().get().running) {
         Language::English => ", ",
         Language::SimplifiedChinese => "、",
     };

@@ -39,9 +39,12 @@ pub(crate) fn command_palette() -> impl IntoElement {
 fn items() -> Vec<CommandItem> {
     store::commands()
         .iter()
-        .map(|found| match found.keys {
-            Some(keys) => CommandItem::new(found.id, t!(found.title)).shortcut(keys),
-            None => CommandItem::new(found.id, t!(found.title)),
+        .map(|found| {
+            let item = CommandItem::new(found.id, t(found.title));
+            match found.keys {
+                Some(keys) => item.shortcut(keys),
+                None => item,
+            }
         })
         .collect()
 }
