@@ -46,6 +46,16 @@ fn phone_opens_reads_and_creates_notes() {
     app.wait_for("Journal").unwrap();
     app.wait_for("Hello").unwrap();
 
+    // A held finger on a note opens its menu over the files: the note under
+    // it stays shut, and a tap opens one again once the menu is gone (the
+    // system's back closes it with the files, which the menu opens again).
+    app.long_press("text:Hello").unwrap();
+    app.wait_for("text:Delete").unwrap();
+    assert!(!app.shows("label:Markdown source"), "the note opens");
+    app.back().unwrap();
+    app.press("label:Menu").unwrap();
+    app.wait_for("Journal").unwrap();
+
     // A held finger on a row offers renaming, in the system's alert with a
     // text field.
     app.on_dialog(|_| DialogAnswer::TypeAndPress {

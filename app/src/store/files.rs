@@ -24,6 +24,16 @@ pub(crate) fn set_expanded(expanded: &[SharedString]) {
     set(Expanded(expanded.to_vec()));
 }
 
+/// Whether a row's menu is up: a held finger's press still reaches the
+/// tree then, and it is no tap.
+pub(crate) fn row_menu_open() -> bool {
+    get::<RowMenuOpen>().0
+}
+
+pub(crate) fn set_row_menu_open(open: bool) {
+    set(RowMenuOpen(open));
+}
+
 /// The folder new items go in: the selected folder, or the selected
 /// file's folder.
 fn target_dir() -> String {

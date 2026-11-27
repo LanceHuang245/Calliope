@@ -36,7 +36,8 @@ pub(crate) use self::{
     confirm::{answer, asking, dismiss_message, tell, telling},
     files::{
         cancel_rename, delete, expanded, new_folder, new_folder_in, new_note, new_note_in, rename,
-        rename_note, renaming, selected, set_expanded, start_rename,
+        rename_note, renaming, row_menu_open, selected, set_expanded, set_row_menu_open,
+        start_rename,
     },
     links::{
         backlinks, backlinks_shown, create_note, graph, link_exists, note_paths, open_link,
@@ -155,6 +156,9 @@ struct SidebarHidden(bool);
 /// The phone's menu: the files, slid in from the left over the page.
 #[derive(Clone, Default)]
 struct MenuOpen(bool);
+/// A row of the files has its menu up (a held finger, a right click).
+#[derive(Clone, Default)]
+struct RowMenuOpen(bool);
 /// The root's owner: tasks run under it outlive the view that started
 /// them (a menu closes as its item is chosen).
 #[derive(Clone, Default)]
@@ -239,6 +243,9 @@ pub(crate) fn menu_open() -> bool {
 
 pub(crate) fn set_menu_open(open: bool) {
     set(MenuOpen(open));
+    // A row's menu goes with the files it is in (the system's back takes
+    // both away without the menu saying so).
+    set(RowMenuOpen(false));
 }
 
 pub(crate) fn set_mode(mode: Mode) {
@@ -266,7 +273,7 @@ pub(crate) fn set_route(route: Route) {
     if route != Route::Note {
         save_or_copy();
     }
-    set(MenuOpen(false));
+    set_menu_open(false);
     set(route);
     if was_searching != (route == Route::Search) {
         search::refresh_search();

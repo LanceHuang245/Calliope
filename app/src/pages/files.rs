@@ -4,7 +4,7 @@
 //! its item. The desktops show it in the sidebar, the phones as a screen.
 
 use calliope_core::vault::EntryKind;
-use nsh_base::{TreeEntry, context_menu, menu_separator, theme, tree};
+use nsh_base::{ContextMenuEvents, TreeEntry, context_menu, menu_separator, theme, tree};
 use nsh_core::prelude::*;
 
 use super::home::sync_button;
@@ -119,8 +119,20 @@ fn files_tree() -> impl IntoElement {
         .items(store::tree_items)
         .expanded(store::expanded)
         .selected(tree_selected)
-        .on_expanded_change(|expanded: &Vec<SharedString>| store::set_expanded(expanded))
-        .on_selected_change(store::select)
+        // A held finger that opens a row's menu still reports its press to
+        // the tree: a context menu cancels the presses of its row alone, and
+        // this press is the row's parent's (see `item_menu`). It is no tap,
+        // so it neither expands nor opens its item.
+        .on_expanded_change(|expanded: &Vec<SharedString>| {
+            if !store::row_menu_open() {
+                store::set_expanded(expanded);
+            }
+        })
+        .on_selected_change(|id: &SharedString| {
+            if !store::row_menu_open() {
+                store::select(id);
+            }
+        })
         .accessibility_label(t("files"))
         .flex_1()
         .render_item(|entry: &TreeEntry| {
@@ -179,6 +191,13 @@ fn item_menu(path: String, kind: Option<EntryKind>, row: View) -> impl IntoEleme
     context_menu()
         .popup_style(menu_popup)
         .backdrop_style(|s| s.bg(overlay()))
+        // The store follows the menu: the press a held finger goes on to
+        // report to the tree acts on nothing while it is up.
+        .on_open_change(|e: &ContextMenuEvents| {
+            if let ContextMenuEvents::OpenChange(open, _) = e {
+                store::set_row_menu_open(*open);
+            }
+        })
         .trigger(row)
         .child(folder)
         .child(menu_entry(icons::PENCIL, t("rename"), false, move || {
