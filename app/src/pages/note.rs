@@ -108,8 +108,7 @@ fn note_view() -> impl IntoElement {
         .child((!desktop_layout()).then(|| keyboard_bar(editor, editing)));
     // The grammar issue of the word under the pointer, or of the one a
     // finger pressed.
-    let page = page.child(store::grammar::hover_card(editor));
-    page
+    page.child(store::grammar::hover_card(editor))
 }
 
 /// Scrolls the editor to the line a search hit opened its note at, once
