@@ -27,6 +27,8 @@ impl SettingsCategory {
     fn title(self) -> String {
         match self {
             Self::Appearance => t("appearance"),
+            #[cfg(target_os = "windows")]
+            Self::Editor => t("editor_settings"),
             Self::Sync => t("sync"),
             Self::About => t("about"),
         }
@@ -35,6 +37,8 @@ impl SettingsCategory {
     fn icon(self) -> &'static str {
         match self {
             Self::Appearance => icons::SUN,
+            #[cfg(target_os = "windows")]
+            Self::Editor => icons::PENCIL,
             Self::Sync => icons::REFRESH,
             Self::About => icons::INFO,
         }
@@ -49,24 +53,33 @@ fn selected_category() -> SettingsCategory {
 }
 
 pub(crate) fn desktop_settings() -> impl IntoElement {
-    // Only the right pane changes when a category is selected.
-    let body = view()
-        .flex_1()
-        .flex_row()
+    // Only the right pane changes when a category is selected. The
+    // editor's settings (where grammar checking is) come before Sync.
+    let mut categories = vec![SettingsCategory::Appearance];
+    #[cfg(target_os = "windows")]
+    categories.extend(store::grammar::supported().then_some(SettingsCategory::Editor));
+    categories.extend([SettingsCategory::Sync, SettingsCategory::About]);
+    let sidebar = view()
+        .w(px(160.0))
+        .flex_shrink_0()
+        .border_r_1()
+        .border_color(move || theme().border)
+        .p_2()
+        .gap_1()
         .child(
-            view()
-                .w(px(160.0))
-                .flex_shrink_0()
-                .border_r_1()
-                .border_color(move || theme().border)
-                .p_2()
-                .gap_1()
-                .child(CATEGORIES.map(|category| category_button(category, true))),
-        )
-        .child(view().flex_1().min_w(px(0.0)).child(dynamic(move || {
-            let category = selected_category();
-            untracked(|| scroll().flex_1().child(category_content(category)))
-        })));
+            categories
+                .into_iter()
+                .map(|category| category_button(category, true)),
+        );
+    let body =
+        view()
+            .flex_1()
+            .flex_row()
+            .child(sidebar)
+            .child(view().flex_1().min_w(px(0.0)).child(dynamic(move || {
+                let category = selected_category();
+                untracked(|| scroll().flex_1().child(category_content(category)))
+            })));
     page(t("settings"), store::back_to_note, None, body)
 }
 
@@ -120,6 +133,29 @@ fn category_button(category: SettingsCategory, desktop: bool) -> impl IntoElemen
 fn category_content(category: SettingsCategory) -> impl IntoElement {
     let content: AnyElement = match category {
         SettingsCategory::Appearance => appearance_settings().into_element(),
+        #[cfg(target_os = "windows")]
+        SettingsCategory::Editor => nsh_base::switch()
+            .accessibility_label(t("live_grammar"))
+            .checked(store::grammar::live)
+            .on_change(store::grammar::set_live)
+            .flex_row()
+            .items_center()
+            .gap_2()
+            .track_style(|s| {
+                s.w(px(32.0))
+                    .p(px(2.0))
+                    .rounded_full()
+                    .bg(theme().border)
+                    .checked(|s| s.bg(theme().primary))
+            })
+            .thumb_style(|s| {
+                s.size(px(14.0))
+                    .rounded_full()
+                    .bg(theme().foreground)
+                    .checked(|s| s.translate_x(px(14.0)).bg(theme().primary_foreground))
+            })
+            .child(text(t("live_grammar")))
+            .into_element(),
         SettingsCategory::Sync => view()
             .w_full()
             .gap_2()

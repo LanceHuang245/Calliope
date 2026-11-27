@@ -116,6 +116,15 @@ pub(crate) fn translate(key: &str, args: &[(&str, &dyn Display)]) -> String {
     nsh_core::i18n::translate(key, Some(running.code()), args)
 }
 
+pub(crate) fn grammar_issues(count: usize) -> String {
+    let key = if count == 1 {
+        "grammar_issue_one"
+    } else {
+        "grammar_issue_many"
+    };
+    translate(key, &[("count", &count)])
+}
+
 /// What the desktops do with a file the user deletes: each names its own
 /// place for them.
 pub(crate) fn delete_to_system() -> String {

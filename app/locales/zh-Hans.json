@@ -143,5 +143,12 @@
   "conflict_copies": "本地和其他地方都改过，两个版本都保留了：%{copies}",
   "create_note": "新建笔记“%{name}”",
   "version": "版本 %{version}",
-  "saved_copy": "你的修改已保存到 %{path}。"
+  "saved_copy": "你的修改已保存到 %{path}。",
+  "check_current_note": "检查当前笔记",
+  "editor_settings": "编辑器",
+  "live_grammar": "实时语法检查",
+  "grammar_issue_one": "%{count} 个语法问题",
+  "grammar_issue_many": "%{count} 个语法问题",
+  "grammar_setting_failed": "无法保存语法检查设置。",
+  "grammar_check_failed": "无法检查当前笔记。"
 }

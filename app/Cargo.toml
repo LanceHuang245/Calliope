@@ -30,7 +30,10 @@ nsh-platform-macos.workspace = true
 apple-native-keyring-store = { workspace = true, features = ["keychain"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
+harper-core = { version = "0.42", default-features = false, features = ["concurrent"] }
+pulldown-cmark = { version = "0.13", default-features = false }
 nsh-platform-windows.workspace = true
+windows = { version = "0.62", features = ["Win32_UI_TextServices", "Win32_UI_Input_Ime", "Win32_UI_Input_KeyboardAndMouse"] }
 windows-native-keyring-store.workspace = true
 
 [target.'cfg(target_os = "android")'.dependencies]

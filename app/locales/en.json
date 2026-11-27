@@ -143,5 +143,12 @@
   "conflict_copies": "Changed here and elsewhere, so both versions were kept: %{copies}",
   "create_note": "Create the note “%{name}”",
   "version": "Version %{version}",
-  "saved_copy": "Your changes were saved to %{path}."
+  "saved_copy": "Your changes were saved to %{path}.",
+  "check_current_note": "Check current note",
+  "editor_settings": "Editor",
+  "live_grammar": "Live grammar checking",
+  "grammar_issue_one": "%{count} grammar issue",
+  "grammar_issue_many": "%{count} grammar issues",
+  "grammar_setting_failed": "Could not save the grammar checking setting.",
+  "grammar_check_failed": "Could not check this note."
 }

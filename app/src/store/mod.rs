@@ -18,6 +18,8 @@
 mod commands;
 mod confirm;
 mod files;
+#[cfg(target_os = "windows")]
+pub(crate) mod grammar;
 mod links;
 mod note;
 mod search;
@@ -31,7 +33,7 @@ use calliope_core::vault::{Entry, EntryKind, Vault};
 use nsh_core::{file_dialog::SaveDialog, prelude::*, storage::Storage};
 
 pub(crate) use self::{
-    commands::{commands, palette, run_command, set_palette},
+    commands::{command_available, commands, palette, run_command, set_palette},
     confirm::{answer, asking, dismiss_message, tell, telling},
     files::{
         cancel_rename, delete, expanded, new_folder, new_folder_in, new_note, new_note_in, rename,
@@ -85,6 +87,8 @@ pub(crate) enum Mode {
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(crate) enum SettingsCategory {
     Appearance,
+    #[cfg(target_os = "windows")]
+    Editor,
     Sync,
     About,
 }
@@ -196,6 +200,8 @@ pub(crate) fn init() {
         open_vault(root);
     }
 
+    #[cfg(target_os = "windows")]
+    grammar::start();
     start_autosave();
     watch_other_apps();
     start_sync_timers();
@@ -239,6 +245,10 @@ pub(crate) fn set_menu_open(open: bool) {
 }
 
 pub(crate) fn set_mode(mode: Mode) {
+    #[cfg(target_os = "windows")]
+    if (untracked(self::mode) == Mode::Read) != (mode == Mode::Read) {
+        grammar::changed();
+    }
     set(mode);
 }
 
@@ -252,7 +262,12 @@ pub(crate) fn toggle_read() {
 
 /// Shows `route`, closing the menu; leaving the note saves it.
 pub(crate) fn set_route(route: Route) {
-    let was_searching = untracked(self::route) == Route::Search;
+    let old = untracked(self::route);
+    let was_searching = old == Route::Search;
+    #[cfg(target_os = "windows")]
+    if matches!(old, Route::Home | Route::Note) != matches!(route, Route::Home | Route::Note) {
+        grammar::changed();
+    }
     if route != Route::Note {
         save_or_copy();
     }

@@ -1,6 +1,6 @@
 //! The desktops' status bar (MVP 5.2), floating in the window's bottom
-//! right corner as Obsidian's does: how sync goes, while it is on; a press
-//! syncs.
+//! right corner: the grammar issue count and the sync state when enabled.
+//! The sync button also starts a sync.
 
 use calliope_sync::Provider;
 use nsh_base::{button, theme};
@@ -15,24 +15,49 @@ use crate::{
 };
 
 pub(crate) fn status_bar() -> impl IntoElement {
-    dynamic(|| (store::sync_config().provider != Provider::Off).then(|| untracked(bar)))
+    let syncing = || store::sync_config().provider != Provider::Off;
+    #[cfg(target_os = "windows")]
+    let grammar_count = {
+        let count = computed(store::grammar::count);
+        move || count.get()
+    };
+    #[cfg(not(target_os = "windows"))]
+    let grammar_count = || None::<usize>;
+    dynamic(move || {
+        let sync = syncing();
+        let count = grammar_count();
+        (sync || count.is_some()).then(|| {
+            view()
+                .absolute()
+                .bottom_0()
+                .right_0()
+                .flex_row()
+                .items_center()
+                .bg(move || theme().sidebar)
+                .border_t_1()
+                .border_l_1()
+                .border_color(move || theme().border)
+                .rounded_tl(move || theme().radius)
+                .overflow_hidden()
+                .child(count.map(|count| {
+                    text(i18n::grammar_issues(count))
+                        .px_2()
+                        .py_1()
+                        .text_xs()
+                        .text_color(move || theme().muted_foreground)
+                }))
+                .child(sync.then(sync_button))
+        })
+    })
 }
 
-fn bar() -> impl IntoElement {
+fn sync_button() -> impl IntoElement {
     button()
-        .absolute()
-        .bottom_0()
-        .right_0()
         .flex_row()
         .items_center()
         .gap_1()
         .px_2()
         .py_1()
-        .bg(move || theme().sidebar)
-        .border_t_1()
-        .border_l_1()
-        .border_color(move || theme().border)
-        .rounded_tl(move || theme().radius)
         .hover(|s| s.bg(theme().accent))
         .accessibility_label(t("sync_now"))
         .on_press(store::sync_now)

@@ -73,7 +73,7 @@ fn note_view() -> impl IntoElement {
         move |_| finding.set(true),
     );
     // A press on a blank part leaves the title (which renames).
-    view()
+    let page = view()
         .flex_1()
         .on_press(dismiss_keyboard)
         .child(header())
@@ -105,7 +105,12 @@ fn note_view() -> impl IntoElement {
         // A phone shows the backlinks in a sheet when asked.
         .child((!desktop_layout()).then(backlinks_sheet))
         .child((!desktop_layout()).then(phone_toolbar))
-        .child((!desktop_layout()).then(|| keyboard_bar(editor, editing)))
+        .child((!desktop_layout()).then(|| keyboard_bar(editor, editing)));
+    // The grammar issue of the word under the pointer (a Windows feature:
+    // the platform Harper is built for).
+    #[cfg(target_os = "windows")]
+    let page = page.child(store::grammar::hover_card(editor));
+    page
 }
 
 /// Scrolls the editor to the line a search hit opened its note at, once
@@ -208,7 +213,10 @@ fn source(
         classes.completion_item = Some("text-base".into());
         classes.completion_menu = Some("min-w-[240px]".into());
     }
-    nsh_base::editor()
+    let source = nsh_base::editor();
+    #[cfg(target_os = "windows")]
+    let source = store::grammar::hooks(source, editor);
+    source
         .value(move || Some(store::text()))
         .on_change(store::edit)
         .language("markdown")

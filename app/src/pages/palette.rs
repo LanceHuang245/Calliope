@@ -39,6 +39,7 @@ pub(crate) fn command_palette() -> impl IntoElement {
 fn items() -> Vec<CommandItem> {
     store::commands()
         .iter()
+        .filter(|found| store::command_available(found))
         .map(|found| {
             let item = CommandItem::new(found.id, t(found.title));
             match found.keys {
